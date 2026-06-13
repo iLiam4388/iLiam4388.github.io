@@ -28,24 +28,32 @@ body{
 }
 
 /* GO BACK BUTTON */
-
 .top-button{
     text-align:center;
     margin-top:20px;
     margin-bottom:35px;
 }
 
-.top-button a{
+.back-btn{
+
     text-decoration:none;
 
     padding:14px 34px;
 
     border-radius:18px;
 
-    background:linear-gradient(to bottom,#59d7ff,#0077ff);
+    background:
+    linear-gradient(
+        to bottom,
+        #59d7ff,
+        #0077ff
+    );
 
     color:white;
+
     font-weight:bold;
+
+    font-size:20px;
 
     box-shadow:
         0 0 10px cyan,
@@ -54,10 +62,9 @@ body{
     transition:0.2s;
 }
 
-.top-button a:hover{
+.back-btn:hover{
     transform:scale(1.05);
 }
-
 /* CYAN DIVIDER */
 
 .divider{
@@ -180,9 +187,11 @@ body{
 <h1 class="page-title">DOWNLOADS</h1>
 
 <div class="top-button">
-<a href="index.html">← GO BACK</a>
+<div class="top-button">
+    <a href="index.html" class="back-btn">
+        ← BACK HOME
+    </a>
 </div>
-
 <div class="divider"></div>
 
 <div class="download-grid">
