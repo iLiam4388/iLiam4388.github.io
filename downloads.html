@@ -1,116 +1,217 @@
 <!DOCTYPE html>
-<html><head><title>Downloads</title><style>
-.card {
+<html>
+<head>
+<title>Downloads - iLiam</title>
 
-    width: 320px;
-
-    background:
-    linear-gradient(to bottom,#ff9cff,#d100ff);
-
-    border-radius: 28px;
-
-    padding: 20px;
-
-    margin: 30px auto;
-
-    box-shadow:
-    0 0 25px #ff66ff,
-    0 0 50px #00ffff55;
-
-    border:
-    3px solid white;
-
-    transition:0.2s;
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:linear-gradient(to bottom,#001133,#000011);
+    color:white;
 }
 
-.card:hover{
+/* TOP TITLE */
 
-    transform:
-    scale(1.03);
+.page-title{
+    text-align:center;
+    font-size:52px;
+    font-weight:bold;
+    margin-top:40px;
 
-    box-shadow:
-    0 0 40px white,
-    0 0 60px #ff66ff;
+    color:white;
+
+    text-shadow:
+        0 0 10px cyan,
+        0 0 20px cyan,
+        0 0 40px cyan;
 }
 
-.card img{
+/* GO BACK BUTTON */
 
-    width:100%;
+.top-button{
+    text-align:center;
+    margin-top:20px;
+    margin-bottom:35px;
+}
+
+.top-button a{
+    text-decoration:none;
+
+    padding:14px 34px;
 
     border-radius:18px;
 
-    box-shadow:
-    0 0 20px black;
-}
-
-.cardtitle{
-
-    margin-top:15px;
-
-    font-size:28px;
-
-    font-weight:bold;
+    background:linear-gradient(to bottom,#59d7ff,#0077ff);
 
     color:white;
-
-    text-shadow:
-    0 0 10px white,
-    0 0 20px cyan;
-}
-
-.price{
-
-    margin-top:10px;
-
-    font-size:22px;
-
-    color:#aaffaa;
-
-    text-shadow:
-    0 0 10px lime;
-}
-
-.downloadbtn{
-
-    display:inline-block;
-
-    margin-top:18px;
-
-    padding:
-    14px 28px;
-
-    background:
-    linear-gradient(to bottom,#66ff99,#00aa44);
-
-    border-radius:14px;
-
-    color:white;
-
-    font-size:22px;
-
     font-weight:bold;
 
-    text-decoration:none;
-
     box-shadow:
-    0 0 15px lime,
-    0 0 25px cyan;
+        0 0 10px cyan,
+        0 0 20px #00aaff;
 
     transition:0.2s;
 }
 
-.downloadbtn:hover{
-
-    transform:scale(1.08);
-
-    filter:brightness(1.2);
+.top-button a:hover{
+    transform:scale(1.05);
 }
 
-body{margin:0;background:#00112b;color:white;font-family:Verdana,Arial;text-align:center}
-.top{padding:35px;background:#050505;border-bottom:4px solid cyan;box-shadow:0 0 25px cyan}
-.box{width:75%;max-width:900px;margin:40px auto;padding:30px;background:linear-gradient(#fff,#ccc);color:black;border-radius:18px;box-shadow:0 0 25px cyan}
-a{color:cyan;font-weight:bold}
-</style></head><body>
-<div class="top"><h1>DOWNLOADS</h1><a href="index.html">← BACK HOME</a></div>
-<div class="box"><p>Put ZIP files, Blender files, wallpapers, and assets here.</p></div>
-</body></html>
+/* CYAN DIVIDER */
+
+.divider{
+    height:4px;
+
+    background:cyan;
+
+    box-shadow:
+        0 0 10px cyan,
+        0 0 20px cyan;
+}
+
+/* DOWNLOAD GRID */
+
+.download-grid{
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    flex-wrap:wrap;
+
+    padding:45px;
+}
+
+/* MAGENTA CARD */
+
+.download-card{
+
+    width:260px;
+
+    background:
+    linear-gradient(
+        to bottom,
+        #ff8ffb,
+        #ff53ff,
+        #cc00ff
+    );
+
+    border-radius:22px;
+
+    padding:25px;
+
+    text-align:center;
+
+    border:3px solid white;
+
+    box-shadow:
+        0 0 18px #ff66ff,
+        0 0 40px #ff00ff;
+}
+
+/* FILE NAME */
+
+.file-name{
+    font-size:28px;
+    font-weight:bold;
+
+    margin-top:15px;
+    margin-bottom:30px;
+
+    color:white;
+
+    text-shadow:
+        0 0 10px white,
+        0 0 20px #ffb3ff;
+}
+
+/* DOWNLOAD BUTTON */
+
+.download-btn{
+
+    display:inline-block;
+
+    padding:14px 30px;
+
+    border-radius:18px;
+
+    text-decoration:none;
+
+    background:
+    linear-gradient(
+        to bottom,
+        #5dff84,
+        #00c93a
+    );
+
+    color:white;
+
+    font-weight:bold;
+
+    box-shadow:
+        0 0 10px #00ff66,
+        0 0 25px #00ff66;
+
+    transition:0.2s;
+}
+
+.download-btn:hover{
+    transform:scale(1.06);
+}
+
+/* FOOTER */
+
+.footer{
+    text-align:center;
+
+    padding:20px;
+
+    margin-top:30px;
+
+    color:#88ffff;
+
+    font-size:14px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h1 class="page-title">DOWNLOADS</h1>
+
+<div class="top-button">
+<a href="index.html">← GO BACK</a>
+</div>
+
+<div class="divider"></div>
+
+<div class="download-grid">
+
+    <!-- ITEM 1 -->
+
+    <div class="download-card">
+
+        <div class="iLiam Logo">
+            Geometry Dash Portals
+        </div>
+
+        <a class="download-btn"
+        href="files/iliam.blend"
+        download>
+
+        DOWNLOAD
+
+        </a>
+
+    </div>
+
+</div>
+
+<div class="divider"></div>
+
+<div class="footer">
+© 2026 iLiam
+</div>
+
+</body>
+</html>
