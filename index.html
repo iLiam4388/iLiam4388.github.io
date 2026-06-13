@@ -2,51 +2,167 @@
 <html>
 
 <head>
-  <title>iLiam</title>
-
-<!DOCTYPE html>
-<html>
-
-<head>
-<title>Liam Website</title>
-
-<!DOCTYPE html>
-<html>
-
-<head>
 <title>Liam Website</title>
 
 <style>
 
 body {
-    background: linear-gradient(to bottom, #001133, #000000);
     margin: 0;
-    font-family: Arial;
+    background: linear-gradient(to bottom, #001133, #000000);
+    font-family: Arial, sans-serif;
+    color: white;
 }
 
 /* TOP BANNER */
+
 .topbanner {
     width: 100%;
-    height: 880px;
-
-    overflow: hidden;
+    min-height: 320px;
 
     display: flex;
     justify-content: center;
     align-items: center;
 
+    overflow: hidden;
+
     border-bottom: 3px solid cyan;
 
     box-shadow: 0 0 25px cyan;
+
+    background:
+    radial-gradient(circle at center, #001a55 0%, #000814 80%);
 }
 
 .topbanner img {
-    max-height: 200px;
-    width: auto;
+
+    max-width: 700px;
+    height: auto;
 
     filter:
-        drop-shadow(0 0 20px cyan)
-        drop-shadow(0 0 40px #00ffff88);
+    drop-shadow(0 0 20px cyan)
+    drop-shadow(0 0 40px #00ffff88);
+
+    transition: 0.3s;
+}
+
+.topbanner img:hover {
+
+    transform: scale(1.03);
+
+    filter:
+    drop-shadow(0 0 35px cyan)
+    drop-shadow(0 0 70px #00ffffcc);
+}
+
+/* NAVBAR */
+
+.navbar {
+
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+
+    padding: 18px;
+
+    background: rgba(0,0,0,0.75);
+
+    border-bottom: 2px solid cyan;
+
+    box-shadow: 0 0 18px cyan;
+}
+
+.navbutton {
+
+    padding: 14px 24px;
+
+    border-radius: 14px;
+
+    color: white;
+
+    text-decoration: none;
+
+    font-weight: bold;
+
+    font-size: 20px;
+
+    box-shadow: 0 0 15px #00ffff88;
+
+    transition: 0.2s;
+}
+
+/* BUTTON COLORS */
+
+.videos {
+    background: linear-gradient(to bottom, #55bbff, #0066ff);
+}
+
+.photos {
+    background: linear-gradient(to bottom, #66ff99, #00aa44);
+}
+
+.downloads {
+    background: linear-gradient(to bottom, #ff88ff, #bb00ff);
+}
+
+.store {
+    background: linear-gradient(to bottom, #ff8888, #ff2222);
+}
+
+.navbutton:hover {
+
+    transform: scale(1.08);
+
+    box-shadow:
+    0 0 20px white,
+    0 0 35px cyan;
+}
+
+/* CONTENT BOXES */
+
+.section {
+
+    width: 80%;
+
+    margin: 40px auto;
+
+    background:
+    linear-gradient(to bottom, #eeeeee, #cccccc);
+
+    color: black;
+
+    border-radius: 20px;
+
+    padding: 30px;
+
+    box-shadow:
+    0 0 20px cyan,
+    inset 0 0 15px white;
+}
+
+.section h1 {
+
+    text-align: center;
+
+    font-size: 42px;
+
+    margin-top: 0;
+}
+
+/* FOOTER */
+
+.footer {
+
+    margin-top: 60px;
+
+    padding: 20px;
+
+    text-align: center;
+
+    color: cyan;
+
+    border-top: 2px solid cyan;
+
+    background: rgba(0,0,0,0.7);
 }
 
 </style>
@@ -54,199 +170,97 @@ body {
 
 <body>
 
-<div class="topbanner">
-    <img src="banner.png">
-</div>
-
-</body>
-</html>
-/* TOP BANNER */
-.topbanner {
-    width: 100%;
-    height: 220px;
-
-    overflow: hidden;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    border-bottom: 3px solid cyan;
-
-    box-shadow: 0 0 25px cyan;
-}
-
-.topbanner img {
-    max-height: 200px;
-    width: auto;
-
-    filter:
-        drop-shadow(0 0 20px cyan)
-        drop-shadow(0 0 40px #00ffff88);
-}
-
-</style>
-</head>
-
-<body>
+<!-- TOP BANNER -->
 
 <div class="topbanner">
+
     <img src="banner.png">
+
 </div>
 
-</body>
-</html>
+<!-- NAVBAR -->
 
-    .banner {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-      border-bottom: 5px solid cyan;
-      box-shadow: 0 0 30px cyan;
-    }
+<div class="navbar">
 
-    .navbar {
-      text-align: center;
-      padding: 20px;
-      background: rgba(0,0,0,0.6);
-      border-bottom: 2px solid cyan;
-    }
-
-    .navbutton {
-      display: inline-block;
-      margin: 10px;
-      padding: 15px 30px;
-      border-radius: 15px;
-      font-size: 24px;
-      font-weight: bold;
-      color: white;
-      text-decoration: none;
-      transition: 0.2s;
-      box-shadow: 0 0 15px cyan;
-    }
-
-    .navbutton:hover {
-      transform: scale(1.1);
-    }
-
-    .blue {
-      background: linear-gradient(to bottom, #66ccff, #0066ff);
-    }
-
-    .green {
-      background: linear-gradient(to bottom, #66ff99, #00aa44);
-    }
-
-    .purple {
-      background: linear-gradient(to bottom, #ff99ff, #aa00aa);
-    }
-
-    .red {
-      background: linear-gradient(to bottom, #ff8888, #cc0000);
-    }
-
-    .section {
-      width: 80%;
-      margin: auto;
-      margin-top: 40px;
-      background: linear-gradient(to bottom, #eeeeee, #bbbbbb);
-      color: black;
-      padding: 30px;
-      border-radius: 25px;
-      border: 4px solid white;
-      box-shadow: 0 0 30px cyan;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .footer {
-      text-align: center;
-      color: gray;
-      margin-top: 50px;
-      margin-bottom: 20px;
-    }
-  </style>
-</head>
-
-<body>
-
-  <!-- TOP IMAGE -->
-  <img src="banner.png" class="banner">
-
-  <!-- NAVIGATION -->
-  <div class="navbar">
-
-    <a href="#videos" class="navbutton blue">
-      VIDEOS
+    <a class="navbutton videos" href="#videos">
+    VIDEOS
     </a>
 
-    <a href="#photos" class="navbutton green">
-      PHOTOS
+    <a class="navbutton photos" href="#photos">
+    PHOTOS
     </a>
 
-    <a href="#downloads" class="navbutton purple">
-      DOWNLOADS
+    <a class="navbutton downloads" href="#downloads">
+    DOWNLOADS
     </a>
 
-    <a href="#store" class="navbutton red">
-      LIAM STORE
+    <a class="navbutton store" href="#store">
+    LIAM STORE
     </a>
 
-  </div>
+</div>
 
-  <!-- VIDEOS -->
-  <div class="section" id="videos">
+<!-- VIDEOS -->
+
+<div class="section" id="videos">
 
     <h1>VIDEOS</h1>
 
     <p>
-      Blender animations, portal experiments, VFX tests,
-      Geometry Dash projects, and random chaos.
+    Blender animations, portal experiments,
+    VFX tests, Geometry Dash projects,
+    and random chaos.
     </p>
 
-  </div>
+</div>
 
-  <!-- PHOTOS -->
-  <div class="section" id="photos">
+<!-- PHOTOS -->
+
+<div class="section" id="photos">
 
     <h1>PHOTOS</h1>
 
     <p>
-      Screenshots, renders, art, wallpapers,
-      and weird internet stuff.
+    Screenshots, renders, wallpapers,
+    art, and weird internet stuff.
     </p>
 
-  </div>
+</div>
 
-  <!-- DOWNLOADS -->
-  <div class="section" id="downloads">
+<!-- DOWNLOADS -->
+
+<div class="section" id="downloads">
 
     <h1>DOWNLOADS</h1>
 
     <p>
-      Mods, files, wallpapers, projects,
-      and random downloadable things.
+    Free assets, Blender files,
+    wallpapers, textures, and projects.
     </p>
 
-  </div>
+</div>
 
-  <!-- STORE -->
-  <div class="section" id="store">
+<!-- STORE -->
+
+<div class="section" id="store">
 
     <h1>LIAM STORE</h1>
 
     <p>
-      Digital products and cool downloadable content.
+    Premium digital downloads,
+    VFX packs, Blender resources,
+    and cool experimental stuff.
     </p>
 
-  </div>
+</div>
 
-  <div class="footer">
-    © 2008 iLiam Corporation
-  </div>
+<!-- FOOTER -->
+
+<div class="footer">
+
+    © 2008 Liam Corporation
+
+</div>
 
 </body>
-
 </html>
