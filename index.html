@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <title>iLiam 2008</title>
+  <title>iLiam</title>
 
   <style>
     body {
@@ -10,57 +10,43 @@
       background: linear-gradient(to bottom, #001133, #000000);
       font-family: Verdana;
       color: white;
-      text-align: center;
       overflow-x: hidden;
     }
 
-    .topbar {
-      background: linear-gradient(to bottom, #66ccff, #0066ff);
+    .banner {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      border-bottom: 5px solid cyan;
+      box-shadow: 0 0 30px cyan;
+    }
+
+    .navbar {
+      text-align: center;
       padding: 20px;
-      font-size: 50px;
-      font-weight: bold;
-      text-shadow: 0 0 10px white;
-      border-bottom: 5px solid white;
+      background: rgba(0,0,0,0.6);
+      border-bottom: 2px solid cyan;
     }
 
-    .subtitle {
-      font-size: 20px;
-      color: cyan;
-      margin-top: 10px;
-    }
-
-    .window {
-      width: 800px;
-      margin: auto;
-      margin-top: 40px;
-      background: linear-gradient(to bottom, #eeeeee, #bbbbbb);
-      border-radius: 25px;
-      border: 5px solid white;
-      padding: 25px;
-      color: black;
-      box-shadow: 0 0 40px cyan;
-    }
-
-    .button {
+    .navbutton {
       display: inline-block;
-      margin: 15px;
-      padding: 20px;
-      width: 180px;
-      border-radius: 20px;
-      font-size: 28px;
+      margin: 10px;
+      padding: 15px 30px;
+      border-radius: 15px;
+      font-size: 24px;
       font-weight: bold;
       color: white;
-      cursor: pointer;
+      text-decoration: none;
       transition: 0.2s;
-      user-select: none;
+      box-shadow: 0 0 15px cyan;
     }
 
-    .button:hover {
-      transform: scale(1.08);
+    .navbutton:hover {
+      transform: scale(1.1);
     }
 
     .blue {
-      background: linear-gradient(to bottom, #66ccff, #0055ff);
+      background: linear-gradient(to bottom, #66ccff, #0066ff);
     }
 
     .green {
@@ -75,103 +61,101 @@
       background: linear-gradient(to bottom, #ff8888, #cc0000);
     }
 
-    .player {
-      margin-top: 30px;
-      background: #222;
-      padding: 20px;
-      border-radius: 20px;
-      color: white;
-      box-shadow: 0 0 20px cyan;
+    .section {
+      width: 80%;
+      margin: auto;
+      margin-top: 40px;
+      background: linear-gradient(to bottom, #eeeeee, #bbbbbb);
+      color: black;
+      padding: 30px;
+      border-radius: 25px;
+      border: 4px solid white;
+      box-shadow: 0 0 30px cyan;
     }
 
-    .bar {
-      width: 100%;
-      height: 25px;
-      background: #555;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 10px;
-    }
-
-    .fill {
-      width: 45%;
-      height: 100%;
-      background: linear-gradient(to right, cyan, white);
-      animation: move 3s infinite alternate;
-    }
-
-    @keyframes move {
-      from {
-        width: 20%;
-      }
-
-      to {
-        width: 90%;
-      }
-    }
-
-    .counter {
-      margin-top: 25px;
-      color: lime;
-      font-size: 22px;
+    h1 {
+      text-align: center;
     }
 
     .footer {
-      margin-top: 40px;
+      text-align: center;
       color: gray;
-      font-size: 14px;
-      margin-bottom: 30px;
+      margin-top: 50px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="topbar">
-    iLiam
+  <!-- TOP IMAGE -->
+  <img src="banner.png" class="banner">
+
+  <!-- NAVIGATION -->
+  <div class="navbar">
+
+    <a href="#videos" class="navbutton blue">
+      VIDEOS
+    </a>
+
+    <a href="#photos" class="navbutton green">
+      PHOTOS
+    </a>
+
+    <a href="#downloads" class="navbutton purple">
+      DOWNLOADS
+    </a>
+
+    <a href="#store" class="navbutton red">
+      LIAM STORE
+    </a>
+
   </div>
 
-  <div class="subtitle">
-    Cool projects, portals, videos, and random internet chaos
-  </div>
+  <!-- VIDEOS -->
+  <div class="section" id="videos">
 
-  <div class="window">
-
-    <h1>WELCOME TO MY WEBSITE</h1>
+    <h1>VIDEOS</h1>
 
     <p>
-      This is my weird 2008-style internet universe.
+      Blender animations, portal experiments, VFX tests,
+      Geometry Dash projects, and random chaos.
     </p>
 
-    <div class="button blue">
-      VIDEOS
-    </div>
+  </div>
 
-    <div class="button green">
-      PROJECTS
-    </div>
+  <!-- PHOTOS -->
+  <div class="section" id="photos">
 
-    <div class="button purple">
-      DOWNLOADS
-    </div>
+    <h1>PHOTOS</h1>
 
-    <div class="button red">
-      RANDOM STUFF
-    </div>
+    <p>
+      Screenshots, renders, art, wallpapers,
+      and weird internet stuff.
+    </p>
 
-    <div class="player">
+  </div>
 
-      <h2>NOW PLAYING</h2>
+  <!-- DOWNLOADS -->
+  <div class="section" id="downloads">
 
-      <div class="bar">
-        <div class="fill"></div>
-      </div>
+    <h1>DOWNLOADS</h1>
 
-    </div>
+    <p>
+      Mods, files, wallpapers, projects,
+      and random downloadable things.
+    </p>
 
-    <div class="counter">
-      Visitor #000420
-    </div>
+  </div>
+
+  <!-- STORE -->
+  <div class="section" id="store">
+
+    <h1>LIAM STORE</h1>
+
+    <p>
+      Digital products and cool downloadable content.
+    </p>
 
   </div>
 
