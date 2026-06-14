@@ -5,76 +5,39 @@
 <title>iLiam</title>
 
 <style>
-.visitor-counter{
-
-margin:40px auto;
-
-width:fit-content;
-
-padding:14px 28px;
-
-border:2px solid cyan;
-
-border-radius:14px;
-
-background:rgba(0,0,0,0.6);
-
-font-size:28px;
-
-font-weight:bold;
-
-color:white;
-
-box-shadow:0 0 20px cyan;
-
-font-family:Arial,sans-serif;
-
-text-shadow:0 0 10px cyan;
-
-}
-
-#visitorNumber{
-
-color:#00ff88;
-
-margin-left:10px;
-
-}
-
+ 
 .review-section{
   width:75%;
-  max-width:950px;
+  max-width:900px;
   margin:45px auto;
   padding:35px;
-  background:linear-gradient(to bottom,#ff9cff,#d100ff);
+  background:linear-gradient(to bottom,#ff8cff,#d000ff);
+  border:3px solid white;
   border-radius:24px;
-  border:4px solid white;
   box-shadow:0 0 25px #ff66ff,0 0 50px cyan;
-  color:white;
+  text-align:center;
 }
 
 .review-section h1{
+  color:white;
   font-size:42px;
   text-shadow:0 0 10px white,0 0 25px cyan;
 }
 
 .stars span{
-  font-size:38px;
+  font-size:36px;
   cursor:pointer;
-  color:#444;
-  text-shadow:0 0 10px black;
+  color:#333;
 }
 
 .stars span.active{
   color:gold;
-  text-shadow:0 0 10px yellow,0 0 25px orange;
+  text-shadow:0 0 10px yellow;
 }
 
-textarea{
+#reviewText{
   width:90%;
-  max-width:700px;
   height:120px;
-  margin-top:20px;
   border-radius:16px;
   border:3px solid white;
   padding:15px;
@@ -83,17 +46,14 @@ textarea{
 }
 
 .review-btn{
-  display:block;
-  margin:20px auto;
+  margin-top:18px;
   padding:14px 30px;
   border:none;
   border-radius:16px;
   background:linear-gradient(to bottom,#66ff99,#00aa44);
   color:white;
   font-weight:bold;
-  font-size:20px;
   box-shadow:0 0 15px lime,0 0 30px cyan;
-  cursor:pointer;
 }
 
 .review-card{
@@ -103,54 +63,8 @@ textarea{
   padding:18px;
   border-radius:16px;
   max-width:700px;
-  box-shadow:0 0 18px cyan;
   font-size:18px;
-}
-
-.visitor-counter{
-  width:75%;
-  max-width:950px;
-  margin:30px auto;
-  padding:15px;
-  border:2px solid cyan;
-  border-radius:12px;
-  color:lime;
-  background:black;
-  font-family:"Courier New",monospace;
-  box-shadow:0 0 18px cyan;
-}
-
-@media(max-width:700px){
-  .review-section{
-    width:88%;
-    padding:22px;
-  }
-
-  .review-section h1{
-    font-size:34px;
-  }
-
-  .stars span{
-    font-size:32px;
-  }
-
-  textarea{
-    width:92%;
-  }
-}
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  background: linear-gradient(to bottom, #001133, #000010);
-  font-family: Verdana, Arial, sans-serif;
-  color: white;
-  overflow-x: hidden;
-  text-align: center;
-}
-
+} 
 /* TOP BANNER */
 
 .topbanner {
@@ -369,6 +283,12 @@ body {
     shiny graphics, retro web energy, and way too much cyan.
   </p>
 </div>
+
+<div class="footer">
+  © 2026 iLiam Corporation
+</div>
+<script>
+let selectedStars = 0;
 <div class="review-section">
   <h1>REVIEWS</h1>
 
@@ -382,17 +302,10 @@ body {
 
   <textarea id="reviewText" placeholder="Write your review..."></textarea>
 
-  <button onclick="addReview()" class="review-btn">POST REVIEW</button>
+  <button class="review-btn" onclick="addReview()">POST REVIEW</button>
 
   <div id="reviews"></div>
 </div>
-
-</div>
-<div class="footer">
-  © 2026 iLiam Corporation
-</div>
-<script>
-let selectedStars = 0;
 
 document.querySelectorAll("#stars span").forEach(star => {
   star.addEventListener("click", function(){
