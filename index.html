@@ -428,16 +428,46 @@ function addReview(){
   });
 }
 <script>
-fetch("https://api.counterapi.dev/v2/liam-salamats-team/first-counter-4455/up", {
+fetch("https://api.counterapi.dev/v2/liam-salamats-team/homepage/up", {
   headers: {
-    "Authorization": "ut_dK5M7Wmi640P3Ul9vJpgmnMmCCEHQM2P4O11NKhL"
+    "Authorization": "Bearer ut_MDm9RRUsJJvhmOaYXmbk2cM63fioTTSyj3M4XoXZ"
   }
 })
 .then(response => response.json())
 .then(data => {
+  console.log(data);
+
   document.getElementById("visitorNumber").innerText =
-  String(data.data).padStart(3,"0");
+  String(data.data.up_count || data.data.count || data.data).padStart(3,"0");
+})
+.catch(error => {
+  console.error("Counter error:", error);
 });
-</script>
-</body>
+</script>"
+  }
+})
+.then(response => response.json())
+.then(data => {
+  console.log(data);
+
+  document.getElementById("visitorNumber").innerText =
+  String(data.data.up_count || data.data.count || data.data).padStart(3,"0");
+})
+.catch(error => {
+  console.error("Counter error:", error);
+});
+</script>"
+  }
+})
+.then(response => response.json())
+.then(data => {
+  console.log(data);
+
+  document.getElementById("visitorNumber").innerText =
+  String(data.data.up_count || data.data.count || data.data).padStart(3,"0");
+})
+.catch(error => {
+  console.error("Counter error:", error);
+});
+</script></body>
 </html>
