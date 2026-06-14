@@ -428,18 +428,16 @@ function addReview(){
   });
 }
 <script>
-
-fetch("https://api.countapi.xyz/hit/liam-salamats-team/homepage")
-
+fetch("https://api.counterapi.dev/v2/liam-salamats-team/first-counter-4455/up", {
+  headers: {
+    "Authorization": "ut_dK5M7Wmi640P3Ul9vJpgmnMmCCEHQM2P4O11NKhL"
+  }
+})
 .then(response => response.json())
-
 .then(data => {
-
-document.getElementById("visitorNumber").innerText =
-data.value;
-
+  document.getElementById("visitorNumber").innerText =
+  String(data.data).padStart(3,"0");
 });
-
 </script>
 </body>
 </html>
