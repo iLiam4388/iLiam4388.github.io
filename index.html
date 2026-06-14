@@ -5,6 +5,42 @@
 <title>iLiam</title>
 
 <style>
+.visitor-counter{
+
+margin:40px auto;
+
+width:fit-content;
+
+padding:14px 28px;
+
+border:2px solid cyan;
+
+border-radius:14px;
+
+background:rgba(0,0,0,0.6);
+
+font-size:28px;
+
+font-weight:bold;
+
+color:white;
+
+box-shadow:0 0 20px cyan;
+
+font-family:Arial,sans-serif;
+
+text-shadow:0 0 10px cyan;
+
+}
+
+#visitorNumber{
+
+color:#00ff88;
+
+margin-left:10px;
+
+}
+
 .review-section{
   width:75%;
   max-width:950px;
@@ -391,20 +427,19 @@ function addReview(){
     s.classList.remove("active");
   });
 }
+<script>
 
-let visitors = Math.floor(Math.random() * 40) + 15;
+fetch("https://api.countapi.xyz/hit/liam-salamats-team/homepage")
 
-function animateVisitors(){
-  visitors += Math.floor(Math.random() * 3) - 1;
+.then(response => response.json())
 
-  if(visitors < 5) visitors = 5;
+.then(data => {
 
-  document.getElementById("visitorNumber").textContent =
-    String(visitors).padStart(3,"0");
-}
+document.getElementById("visitorNumber").innerText =
+data.value;
 
-setInterval(animateVisitors, 1200);
-animateVisitors();
+});
+
 </script>
 </body>
 </html>
