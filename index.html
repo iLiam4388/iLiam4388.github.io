@@ -5,6 +5,103 @@
 <title>iLiam</title>
 
 <style>
+.review-section{
+  width:75%;
+  max-width:950px;
+  margin:45px auto;
+  padding:35px;
+  background:linear-gradient(to bottom,#ff9cff,#d100ff);
+  border-radius:24px;
+  border:4px solid white;
+  box-shadow:0 0 25px #ff66ff,0 0 50px cyan;
+  color:white;
+}
+
+.review-section h1{
+  font-size:42px;
+  text-shadow:0 0 10px white,0 0 25px cyan;
+}
+
+.stars span{
+  font-size:38px;
+  cursor:pointer;
+  color:#444;
+  text-shadow:0 0 10px black;
+}
+
+.stars span.active{
+  color:gold;
+  text-shadow:0 0 10px yellow,0 0 25px orange;
+}
+
+textarea{
+  width:90%;
+  max-width:700px;
+  height:120px;
+  margin-top:20px;
+  border-radius:16px;
+  border:3px solid white;
+  padding:15px;
+  font-size:18px;
+  resize:none;
+}
+
+.review-btn{
+  display:block;
+  margin:20px auto;
+  padding:14px 30px;
+  border:none;
+  border-radius:16px;
+  background:linear-gradient(to bottom,#66ff99,#00aa44);
+  color:white;
+  font-weight:bold;
+  font-size:20px;
+  box-shadow:0 0 15px lime,0 0 30px cyan;
+  cursor:pointer;
+}
+
+.review-card{
+  background:white;
+  color:black;
+  margin:20px auto;
+  padding:18px;
+  border-radius:16px;
+  max-width:700px;
+  box-shadow:0 0 18px cyan;
+  font-size:18px;
+}
+
+.visitor-counter{
+  width:75%;
+  max-width:950px;
+  margin:30px auto;
+  padding:15px;
+  border:2px solid cyan;
+  border-radius:12px;
+  color:lime;
+  background:black;
+  font-family:"Courier New",monospace;
+  box-shadow:0 0 18px cyan;
+}
+
+@media(max-width:700px){
+  .review-section{
+    width:88%;
+    padding:22px;
+  }
+
+  .review-section h1{
+    font-size:34px;
+  }
+
+  .stars span{
+    font-size:32px;
+  }
+
+  textarea{
+    width:92%;
+  }
+}
 html {
   scroll-behavior: smooth;
 }
@@ -236,10 +333,78 @@ body {
     shiny graphics, retro web energy, and way too much cyan.
   </p>
 </div>
+<div class="review-section">
+  <h1>REVIEWS</h1>
 
+  <div class="stars" id="stars">
+    <span data-star="1">★</span>
+    <span data-star="2">★</span>
+    <span data-star="3">★</span>
+    <span data-star="4">★</span>
+    <span data-star="5">★</span>
+  </div>
+
+  <textarea id="reviewText" placeholder="Write your review..."></textarea>
+
+  <button onclick="addReview()" class="review-btn">POST REVIEW</button>
+
+  <div id="reviews"></div>
+</div>
+
+<div class="visitor-counter">
+  LIVE VISITORS: <span id="visitorNumber">000</span>
+</div>
 <div class="footer">
   © 2026 iLiam Corporation
 </div>
+<script>
+let selectedStars = 0;
 
+document.querySelectorAll("#stars span").forEach(star => {
+  star.addEventListener("click", function(){
+    selectedStars = Number(this.dataset.star);
+
+    document.querySelectorAll("#stars span").forEach(s => {
+      s.classList.toggle("active", Number(s.dataset.star) <= selectedStars);
+    });
+  });
+});
+
+function addReview(){
+  const text = document.getElementById("reviewText").value.trim();
+
+  if(text === "" || selectedStars === 0){
+    alert("Add a review and star rating first.");
+    return;
+  }
+
+  const review = document.createElement("div");
+  review.className = "review-card";
+  review.innerHTML = "★".repeat(selectedStars) + "<br><br>" + text;
+
+  document.getElementById("reviews").prepend(review);
+
+  document.getElementById("reviewText").value = "";
+  selectedStars = 0;
+
+  document.querySelectorAll("#stars span").forEach(s => {
+    s.classList.remove("active");
+  });
+}
+
+let visitors = Math.floor(Math.random() * 40) + 15;
+
+function animateVisitors(){
+  visitors += Math.floor(Math.random() * 3) - 1;
+
+  if(visitors < 5) visitors = 5;
+
+  document.getElementById("visitorNumber").textContent =
+    String(visitors).padStart(3,"0");
+}
+
+setInterval(animateVisitors, 1200);
+animateVisitors();
+</script>
 </body>
 </html>
