@@ -216,94 +216,21 @@ body{
 
 <script src="https://giscus.app/client.js"
         data-repo="iliam4388/iliam4388.github.io"
-        data-repo-id="R_kgDOS5zTmw"
-        data-category="[ENTER CATEGORY NAME HERE]"
-        data-category-id="[ENTER CATEGORY ID HERE]"
+        data-repo-id="YOUR_REPO_ID"
+        data-category="General"
+        data-category-id="YOUR_CATEGORY_ID"
         data-mapping="pathname"
         data-strict="0"
         data-reactions-enabled="1"
         data-emit-metadata="0"
-        data-input-position="bottom"
-        data-theme="preferred_color_scheme"
+        data-input-position="top"
+        data-theme="transparent_dark"
         data-lang="en"
         crossorigin="anonymous"
         async>
 </script>
+ loadReviews();
 
-  <div class="stars" id="stars">
-    <span data-star="1">★</span>
-    <span data-star="2">★</span>
-    <span data-star="3">★</span>
-    <span data-star="4">★</span>
-    <span data-star="5">★</span>
-  </div>
-
-  <textarea id="reviewText" placeholder="Write your review..."></textarea>
-
-  <button class="review-btn" onclick="addReview()">POST REVIEW</button>
-
-  <div id="reviews"></div>
-</div>
-
-<div class="footer">
-  © 2026 iLiam Corporation
-</div>
-
-<script>
-let selectedStars = 0;
-
-document.querySelectorAll("#stars span").forEach(star => {
-  star.addEventListener("click", function(){
-    selectedStars = Number(this.dataset.star);
-
-    document.querySelectorAll("#stars span").forEach(s => {
-      s.classList.toggle("active", Number(s.dataset.star) <= selectedStars);
-    });
-  });
-});
-
-function addReview(){
-  const text = document.getElementById("reviewText").value.trim();
-
-  if(text === "" || selectedStars === 0){
-    alert("Add stars and a review first.");
-    return;
-  }
-
-  const reviews = JSON.parse(localStorage.getItem("iliamReviews") || "[]");
-
-  reviews.unshift({
-    stars: selectedStars,
-    text: text
-  });
-
-  localStorage.setItem("iliamReviews", JSON.stringify(reviews));
-
-  document.getElementById("reviewText").value = "";
-  selectedStars = 0;
-
-  document.querySelectorAll("#stars span").forEach(s => {
-    s.classList.remove("active");
-  });
-
-  loadReviews();
-}
-
-function loadReviews(){
-  const reviews = JSON.parse(localStorage.getItem("iliamReviews") || "[]");
-  const box = document.getElementById("reviews");
-
-  box.innerHTML = "";
-
-  reviews.forEach(review => {
-    const card = document.createElement("div");
-    card.className = "review-card";
-    card.innerHTML = "★".repeat(review.stars) + "<br><br>" + review.text;
-    box.appendChild(card);
-  });
-}
-
-loadReviews();
 </script>
 
 </body>
