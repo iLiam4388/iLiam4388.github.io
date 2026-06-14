@@ -389,6 +389,24 @@ body {
 
 <div class="visitor-counter">
   LIVE VISITORS: <span id="visitorNumber">000</span>
+
+<script>
+fetch("https://api.counterapi.dev/v2/liam-salamats-team/homepage-iliam/up", {
+  headers: {
+    "Authorization": "Bearer ut_UAwctNFYjzVO8y3HxrXXiCwzpNoEf2GLO7ZDf14S"
+  }
+})
+.then(response => response.json())
+.then(data => {
+  console.log(data);
+
+  document.getElementById("visitorNumber").innerText =
+    String(data.data.up_count || data.data.count || data.data).padStart(3, "0");
+})
+.catch(error => {
+  console.error("Counter error:", error);
+});
+</script>
 </div>
 <div class="footer">
   © 2026 iLiam Corporation
@@ -427,47 +445,5 @@ function addReview(){
     s.classList.remove("active");
   });
 }
-<script>
-fetch("https://api.counterapi.dev/v2/liam-salamats-team/homepage-iliam/up", {
-  headers: {
-    "Authorization": "Bearer ut_MDm9RRUsJJvhmOaYXmbk2cM63fioTTSyj3M4XoXZ"
-  }
-})
-.then(response => response.json())
-.then(data => {
-  console.log(data);
-
-  document.getElementById("visitorNumber").innerText =
-  String(data.data.up_count || data.data.count || data.data).padStart(3,"0");
-})
-.catch(error => {
-  console.error("Counter error:", error);
-});
-</script>"
-  }
-})
-.then(response => response.json())
-.then(data => {
-  console.log(data);
-
-  document.getElementById("visitorNumber").innerText =
-  String(data.data.up_count || data.data.count || data.data).padStart(3,"0");
-})
-.catch(error => {
-  console.error("Counter error:", error);
-});
-</script>"
-  }
-})
-.then(response => response.json())
-.then(data => {
-  console.log(data);
-
-  document.getElementById("visitorNumber").innerText =
-  String(data.data.up_count || data.data.count || data.data).padStart(3,"0");
-})
-.catch(error => {
-  console.error("Counter error:", error);
-});
-</script></body>
+</body>
 </html>
