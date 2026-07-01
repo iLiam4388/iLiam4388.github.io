@@ -165,19 +165,12 @@ body{
   .content-card h1{
     font-size:28px;
   }
-}
 
 .giscus-wrapper {
-    width: 100%;
-    max-width: 850px;
-    height: 240px;      /* Change this to the height you want */
-    margin: 0 auto;
-    overflow-y: auto;   /* Scroll inside the wrapper */
-    overflow-x: hidden;
-}
-
-.giscus-frame {
-    height: 100% !important;
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto;
+  overflow: visible;
 }
 
 </style>
@@ -238,7 +231,7 @@ body{
         data-strict="0"
         data-reactions-enabled="1"
         data-emit-metadata="0"
-        data-input-position="bottom"
+        data-input-position="top"
         data-theme="noborder_light"
         data-lang="en"
         crossorigin="anonymous"
