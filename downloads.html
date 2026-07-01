@@ -1,196 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>iLiam | Downloads</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #ff4fd8, #6a00ff);
-            color: white;
-            min-height: 100vh;
-        }
-
-        header {
-            text-align: center;
-            padding: 30px 20px;
-        }
-
-        .logo {
-            font-size: 48px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            text-shadow: 0 0 20px rgba(255,255,255,0.4);
-        }
-
-        nav {
-            margin-top: 20px;
-        }
-
-        nav a {
-            color: white;
-            text-decoration: none;
-            margin: 8px;
-            padding: 10px 18px;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.18);
-            display: inline-block;
-            font-weight: bold;
-            transition: 0.2s;
-        }
-
-        nav a:hover {
-            background: white;
-            color: #d600ff;
-            transform: scale(1.05);
-        }
-
-        .page-title {
-            text-align: center;
-            font-size: 42px;
-            font-weight: 900;
-            margin: 30px 0 20px;
-            text-shadow: 0 0 18px rgba(255,255,255,0.35);
-        }
-
-        .downloads-grid {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
-        }
-
-        .download-card {
-            background: rgba(255,255,255,0.18);
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 26px;
-            padding: 18px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
-            backdrop-filter: blur(12px);
-            transition: 0.25s;
-        }
-
-        .download-card:hover {
-            transform: translateY(-6px) scale(1.02);
-            box-shadow: 0 20px 45px rgba(0,0,0,0.35);
-        }
-
-        .thumbnail {
-            width: 100%;
-            height: 170px;
-            object-fit: cover;
-            border-radius: 20px;
-            margin-bottom: 15px;
-            background: rgba(255,255,255,0.25);
-        }
-
-        .download-card h2 {
-            font-size: 22px;
-            margin-bottom: 10px;
-        }
-
-        .download-card p {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 16px;
-            line-height: 1.4;
-        }
-
-        .download-btn {
-            display: inline-block;
-            text-decoration: none;
-            color: #d600ff;
-            background: white;
-            padding: 11px 22px;
-            border-radius: 999px;
-            font-weight: 900;
-            transition: 0.2s;
-        }
-
-        .download-btn:hover {
-            transform: scale(1.08);
-            box-shadow: 0 0 18px rgba(255,255,255,0.7);
-        }
-
-        .footer {
-            text-align: center;
-            padding: 20px;
-            margin-top: 30px;
-            color: rgba(255,255,255,0.85);
-            font-size: 14px;
-            font-weight: 500;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.25);
-        }
-    </style>
+<title>Downloads - iLiam</title>
+<style>
+body{margin:0;background:linear-gradient(to bottom,#001133,#000011);font-family:Verdana,Arial;color:white;text-align:center}
+.page-title{font-size:64px;font-weight:900;letter-spacing:2px;margin-top:40px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}
+.back-btn{display:inline-block;margin:15px 0 35px;padding:14px 34px;border-radius:18px;background:linear-gradient(to bottom,#59d7ff,#0077ff);color:white;text-decoration:none;font-weight:bold;font-size:20px;box-shadow:0 0 10px cyan,0 0 25px #00aaff}
+.divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}
+.grid{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;padding:45px}
+.card{width:280px;background:linear-gradient(to bottom,#ff9cff,#d100ff);border-radius:24px;padding:20px;border:3px solid white;box-shadow:0 0 25px #ff66ff,0 0 50px #00ffff55}
+.card img{width:100%;border-radius:16px;box-shadow:0 0 18px black}
+.file-name{font-size:26px;font-weight:900;margin:18px 0;color:white;text-shadow:0 0 8px white,0 0 18px #ffb3ff}
+.download-btn{display:inline-block;padding:14px 28px;border-radius:16px;background:linear-gradient(to bottom,#66ff99,#00aa44);color:white;text-decoration:none;font-weight:bold;box-shadow:0 0 15px lime,0 0 30px cyan}
+.footer{padding:22px;color:cyan}
+</style>
 </head>
-
 <body>
 
-<header>
-    <div class="logo">iLiam</div>
-
-    <nav>
-        <a href="index.html">Home</a>
-        <a href="photos.html">Photos</a>
-        <a href="videos.html">Videos</a>
-        <a href="downloads.html">Downloads</a>
-        <a href="store.html">Liam Store</a>
-    </nav>
-</header>
-
 <h1 class="page-title">DOWNLOADS</h1>
+<a class="back-btn" href="index.html">← BACK HOME</a>
+<div class="divider"></div>
 
-<section class="downloads-grid">
+<div class="grid">
 
-    <div class="download-card">
-        <img class="thumbnail" src="images/geometry-dash-portals.png" alt="Geometry Dash Portals thumbnail">
+<div class="card">
+<img src="images/tpu.png">
+<div class="file-name">TPU Model File</div>
+<a class="download-btn" href="downloads/tpu-model.zip" download>DOWNLOAD</a>
+</div>
 
-        <h2>Geometry Dash Portals</h2>
-        <p>A downloadable Geometry Dash portal project pack.</p>
+<div class="card">
+<img src="images/mat.png">
+<div class="file-name">Material Pack</div>
+<a class="download-btn" href="downloads/material-pack.zip" download>DOWNLOAD</a>
+</div>
 
-        <a class="download-btn" href="downloads/geometry-dash-portals.zip" download>
-            Download
-        </a>
-    </div>
+<div class="card">
+<img src="images/uda.png">
+<div class="file-name">UFO Dragonfruit Apple</div>
+<a class="download-btn" href="downloads/ufo-dragonfruit-apple.zip" download>DOWNLOAD</a>
+</div>
 
-    <div class="download-card">
-        <img class="thumbnail" src="images/tpu-squishy.png" alt="TPU Squishy thumbnail">
+<div class="card">
+<img src="images/sbt.png">
+<div class="file-name">Solar BlueBerry Tangerene</div>
+<a class="download-btn" href="downloads/solar-blueberry-tangerene.zip" download>DOWNLOAD</a>
+</div>
 
-        <h2>TPU Squishy</h2>
-        <p>A cool 3D printable TPU squishy file.</p>
+<div class="card">
+<img src="images/sc.png">
+<div class="file-name">CGI Coke File</div>
+<a class="download-btn" href="downloads/cgi-coke.zip" download>DOWNLOAD</a>
+</div>
 
-        <a class="download-btn" href="downloads/tpu-squishy.zip" download>
-            Download
-        </a>
-    </div>
+</div>
 
-    <div class="download-card">
-        <img class="thumbnail" src="images/polycode-chaos.png" alt="Polycode Chaos thumbnail">
-
-        <h2>Polycode Chaos</h2>
-        <p>A weird experimental HTML project.</p>
-
-        <a class="download-btn" href="downloads/polycode-chaos.zip" download>
-            Download
-        </a>
-    </div>
-
-</section>
-
-<footer class="footer">
-    © 2026 iLiam. All rights reserved.
-</footer>
+<div class="divider"></div>
+<div class="footer">© 2026 iLiam</div>
 
 </body>
 </html>
