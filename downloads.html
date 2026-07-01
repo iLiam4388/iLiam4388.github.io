@@ -1,229 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Downloads - iLiam</title>
+    <meta charset="UTF-8">
+    <title>iLiam | Downloads</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-body{
-    margin:0;
-    font-family:Arial;
-    background:linear-gradient(to bottom,#001133,#000011);
-    color:white;
-}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-/* TOP TITLE */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ff4fd8, #6a00ff);
+            color: white;
+            min-height: 100vh;
+        }
 
-.page-title{
-    text-align:center;
-    font-size:52px;
-    font-weight:bold;
-    margin-top:40px;
+        header {
+            text-align: center;
+            padding: 30px 20px;
+        }
 
-    color:white;
+        .logo {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.4);
+        }
 
-    text-shadow:
-        0 0 10px cyan,
-        0 0 20px cyan,
-        0 0 40px cyan;
-}
+        nav {
+            margin-top: 20px;
+        }
 
-/* GO BACK BUTTON */
-.top-button{
-    text-align:center;
-    margin-top:20px;
-    margin-bottom:35px;
-}
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 8px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.18);
+            display: inline-block;
+            font-weight: bold;
+            transition: 0.2s;
+        }
 
-.back-btn{
+        nav a:hover {
+            background: white;
+            color: #d600ff;
+            transform: scale(1.05);
+        }
 
-    text-decoration:none;
+        .page-title {
+            text-align: center;
+            font-size: 42px;
+            font-weight: 900;
+            margin: 30px 0 20px;
+            text-shadow: 0 0 18px rgba(255,255,255,0.35);
+        }
 
-    padding:14px 34px;
+        .downloads-grid {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+        }
 
-    border-radius:18px;
+        .download-card {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 26px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+            backdrop-filter: blur(12px);
+            transition: 0.25s;
+        }
 
-    background:
-    linear-gradient(
-        to bottom,
-        #59d7ff,
-        #0077ff
-    );
+        .download-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 20px 45px rgba(0,0,0,0.35);
+        }
 
-    color:white;
+        .thumbnail {
+            width: 100%;
+            height: 170px;
+            object-fit: cover;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            background: rgba(255,255,255,0.25);
+        }
 
-    font-weight:bold;
+        .download-card h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
 
-    font-size:20px;
+        .download-card p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
 
-    box-shadow:
-        0 0 10px cyan,
-        0 0 20px #00aaff;
+        .download-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: #d600ff;
+            background: white;
+            padding: 11px 22px;
+            border-radius: 999px;
+            font-weight: 900;
+            transition: 0.2s;
+        }
 
-    transition:0.2s;
-}
+        .download-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 18px rgba(255,255,255,0.7);
+        }
 
-.back-btn:hover{
-    transform:scale(1.05);
-}
-/* CYAN DIVIDER */
-
-.divider{
-    height:4px;
-
-    background:cyan;
-
-    box-shadow:
-        0 0 10px cyan,
-        0 0 20px cyan;
-}
-
-/* DOWNLOAD GRID */
-
-.download-grid{
-    display:flex;
-    justify-content:center;
-    gap:40px;
-    flex-wrap:wrap;
-
-    padding:45px;
-}
-
-/* MAGENTA CARD */
-
-.download-card{
-
-    width:260px;
-
-    background:
-    linear-gradient(
-        to bottom,
-        #ff8ffb,
-        #ff53ff,
-        #cc00ff
-    );
-
-    border-radius:22px;
-
-    padding:25px;
-
-    text-align:center;
-
-    border:3px solid white;
-
-    box-shadow:
-        0 0 18px #ff66ff,
-        0 0 40px #ff00ff;
-}
-
-/* FILE NAME */
-.file-name{
-
-    font-size:30px;
-
-    font-weight:900;
-
-    line-height:1.1;
-
-    letter-spacing:1px;
-
-    color:white;
-
-    margin-top:10px;
-    margin-bottom:25px;
-
-    text-shadow:
-        0 0 8px cyan,
-        0 0 18px #ffb3ff;
-
-    font-family:Arial;
-}
-/* DOWNLOAD BUTTON */
-
-.download-btn{
-
-    display:inline-block;
-
-    padding:14px 30px;
-
-    border-radius:18px;
-
-    text-decoration:none;
-
-    background:
-    linear-gradient(
-        to bottom,
-        #5dff84,
-        #00c93a
-    );
-
-    color:white;
-
-    font-weight:bold;
-
-    box-shadow:
-        0 0 10px #00ff66,
-        0 0 25px #00ff66;
-
-    transition:0.2s;
-}
-
-.download-btn:hover{
-    transform:scale(1.06);
-}
-
-/* FOOTER */
-.footer {
-    text-align: center;
-    padding: 20px;
-    margin-top: 30px;
-
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 14px;
-    font-weight: 500;
-
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-
-</style>
-
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            color: rgba(255,255,255,0.85);
+            font-size: 14px;
+            font-weight: 500;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
+    </style>
 </head>
 
 <body>
 
+<header>
+    <div class="logo">iLiam</div>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="photos.html">Photos</a>
+        <a href="videos.html">Videos</a>
+        <a href="downloads.html">Downloads</a>
+        <a href="store.html">Liam Store</a>
+    </nav>
+</header>
+
 <h1 class="page-title">DOWNLOADS</h1>
 
-<div class="top-button">
-<div class="top-button">
-    <a href="index.html" class="back-btn">
-        ← BACK HOME
-    </a>
-</div>
-<div class="divider"></div>
-
-<div class="download-grid">
-
-    <!-- ITEM 1 -->
+<section class="downloads-grid">
 
     <div class="download-card">
+        <img class="thumbnail" src="images/geometry-dash-portals.png" alt="Geometry Dash Portals thumbnail">
 
-        <div class="file-name">
-            iLiam Logo 
-        </div>
+        <h2>Geometry Dash Portals</h2>
+        <p>A downloadable Geometry Dash portal project pack.</p>
 
-        <a class="download-btn"
-        href="files/iliam.blend"
-        download>
-
-        DOWNLOAD
-
+        <a class="download-btn" href="downloads/geometry-dash-portals.zip" download>
+            Download
         </a>
-
     </div>
 
-</div>
+    <div class="download-card">
+        <img class="thumbnail" src="images/tpu-squishy.png" alt="TPU Squishy thumbnail">
 
-<div class="divider"></div>
-<div class="footer">© 2026 iLiam</div>
+        <h2>TPU Squishy</h2>
+        <p>A cool 3D printable TPU squishy file.</p>
+
+        <a class="download-btn" href="downloads/tpu-squishy.zip" download>
+            Download
+        </a>
+    </div>
+
+    <div class="download-card">
+        <img class="thumbnail" src="images/polycode-chaos.png" alt="Polycode Chaos thumbnail">
+
+        <h2>Polycode Chaos</h2>
+        <p>A weird experimental HTML project.</p>
+
+        <a class="download-btn" href="downloads/polycode-chaos.zip" download>
+            Download
+        </a>
+    </div>
+
+</section>
+
+<footer class="footer">
+    © 2026 iLiam. All rights reserved.
+</footer>
 
 </body>
 </html>
