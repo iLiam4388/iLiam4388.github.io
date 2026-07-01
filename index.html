@@ -81,7 +81,7 @@ body{
 
 .review-section{
   width:70%;
-  max-width:850px;
+  max-width:240px;
   margin:45px auto;
   padding:35px;
   background:linear-gradient(to bottom,#ff8cff,#d000ff);
@@ -166,6 +166,16 @@ body{
     font-size:28px;
   }
 }
+
+.giscus-wrapper {
+    height: 450px;      /* Choose any height you like */
+    overflow: auto;     /* Scroll inside the reviews box */
+}
+
+.giscus-frame {
+    height: 100% !important;
+}
+
 </style>
 </head>
 
@@ -214,6 +224,7 @@ body{
 <div class="review-section">
   <h1>REVIEWS</h1>
 
+<div class="giscus-wrapper"
 <script src="https://giscus.app/client.js"
         data-repo="iliam4388/iliam4388.github.io"
         data-repo-id="R_kgDOS5zTmw"
@@ -229,5 +240,6 @@ body{
         crossorigin="anonymous"
         async>
 </script>
+</div>
 </body>
 </html>
