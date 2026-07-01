@@ -81,7 +81,7 @@ body{
 
 .review-section{
   width:70%;
-  max-width:240px;
+  max-width:850px;
   margin:45px auto;
   padding:35px;
   background:linear-gradient(to bottom,#ff8cff,#d000ff);
@@ -168,8 +168,12 @@ body{
 }
 
 .giscus-wrapper {
-    height: 450px;      /* Choose any height you like */
-    overflow: auto;     /* Scroll inside the reviews box */
+    width: 100%;
+    max-width: 850px;
+    height: 240px;      /* Change this to the height you want */
+    margin: 0 auto;
+    overflow-y: auto;   /* Scroll inside the wrapper */
+    overflow-x: hidden;
 }
 
 .giscus-frame {
