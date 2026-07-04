@@ -62,5 +62,50 @@ textarea{width:100%;height:90px;border-radius:16px;border:3px solid white;paddin
 <div class="divider"></div>
 <div class="footer">© 2026 iLiam</div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const supabaseUrl = "https://fkiacOLNhtETcZGZ.supabase.co";
+const supabaseKey = "sb_publishable_6Xkm6aoXNkQJcFN6ukWVcg_KAE644mL";
+
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function loginWithGoogle(){
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: "https://iliam4388.github.io/community.html"
+    }
+  });
+
+  if(error){
+    alert(error.message);
+  }
+}
+
+async function logout(){
+  await supabaseClient.auth.signOut();
+  location.reload();
+}
+
+async function checkUser(){
+  const { data } = await supabaseClient.auth.getUser();
+
+  const loginArea = document.getElementById("loginArea");
+
+  if(data.user){
+    loginArea.innerHTML = `
+      <p>Logged in as <b>${data.user.email}</b></p>
+      <button class="post-btn" onclick="logout()">LOG OUT</button>
+    `;
+  }else{
+    loginArea.innerHTML = `
+      <button class="post-btn" onclick="loginWithGoogle()">SIGN IN WITH GOOGLE</button>
+    `;
+  }
+}
+
+checkUser();
+</script>
 </body>
 </html>
