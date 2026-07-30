@@ -1,115 +1,540 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Community - iLiam</title>
-<style>
-body{margin:0;background:linear-gradient(to bottom,#001133,#000011);font-family:Verdana,Arial;color:white;text-align:center}
-.page-title{font-size:64px;font-weight:900;letter-spacing:2px;margin-top:40px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}
-.back-btn{display:inline-block;margin:15px 0 35px;padding:14px 34px;border-radius:18px;background:linear-gradient(to bottom,#59d7ff,#0077ff);color:white;text-decoration:none;font-weight:bold;font-size:20px;box-shadow:0 0 10px cyan,0 0 25px #00aaff}
-.divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}
-.community{max-width:950px;margin:40px auto;padding:0 20px}
-.post-box,.post{background:linear-gradient(to bottom,#ff9cff,#d100ff);border-radius:24px;padding:22px;margin-bottom:28px;border:3px solid white;box-shadow:0 0 25px #ff66ff,0 0 50px #00ffff55;text-align:left}
-.post-box h2{margin-top:0;text-shadow:0 0 10px white}
-textarea{width:100%;height:90px;border-radius:16px;border:3px solid white;padding:15px;font-size:18px;box-sizing:border-box;resize:none;font-family:Verdana,Arial}
-.post-btn{margin-top:14px;padding:14px 30px;border:0;border-radius:16px;background:linear-gradient(to bottom,#66ff99,#00aa44);color:white;font-weight:bold;font-size:18px;box-shadow:0 0 15px lime,0 0 30px cyan;cursor:pointer}
-.user{font-size:18px;font-weight:bold;color:#eaffff;text-shadow:0 0 8px cyan}
-.time{font-size:13px;color:#dff;margin-left:8px}
-.post-title{font-size:28px;font-weight:900;margin:14px 0;text-shadow:0 0 8px white,0 0 18px #ffb3ff}
-.post-text{font-size:17px;line-height:1.5}
-.actions{margin-top:18px;display:flex;gap:15px;flex-wrap:wrap}
-.action{background:rgba(0,0,0,.25);border:2px solid white;border-radius:14px;padding:10px 16px;color:white;font-weight:bold}
-.footer{padding:22px;color:cyan}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Community - iLiam</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #001133, #000011);
+            font-family: Verdana, Arial, sans-serif;
+            color: white;
+            text-align: center;
+        }
+
+        .page-title {
+            margin: 40px 15px 10px;
+            font-size: clamp(42px, 8vw, 64px);
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow:
+                    0 0 10px cyan,
+                    0 0 25px cyan,
+                    0 0 50px cyan;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin: 15px 0 35px;
+            padding: 14px 34px;
+            border-radius: 18px;
+            background: linear-gradient(to bottom, #59d7ff, #0077ff);
+            color: white;
+            text-decoration: none;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow:
+                    0 0 10px cyan,
+                    0 0 25px #00aaff;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.12);
+        }
+
+        .divider {
+            height: 4px;
+            background: cyan;
+            box-shadow: 0 0 15px cyan;
+        }
+
+        .community {
+            width: min(950px, calc(100% - 30px));
+            margin: 40px auto;
+        }
+
+        .post-box,
+        .post {
+            margin-bottom: 28px;
+            padding: 22px;
+            background: linear-gradient(to bottom, #ff9cff, #d100ff);
+            border: 3px solid white;
+            border-radius: 24px;
+            box-shadow:
+                    0 0 25px #ff66ff,
+                    0 0 50px #00ffff55;
+            text-align: left;
+        }
+
+        .post-box h2 {
+            margin-top: 0;
+            text-shadow: 0 0 10px white;
+        }
+
+        textarea {
+            width: 100%;
+            height: 90px;
+            padding: 15px;
+            border: 3px solid white;
+            border-radius: 16px;
+            font-family: Verdana, Arial, sans-serif;
+            font-size: 18px;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus {
+            box-shadow: 0 0 15px cyan;
+        }
+
+        .post-btn {
+            margin-top: 14px;
+            padding: 14px 30px;
+            border: 0;
+            border-radius: 16px;
+            background: linear-gradient(to bottom, #66ff99, #00aa44);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow:
+                    0 0 15px lime,
+                    0 0 30px cyan;
+            cursor: pointer;
+        }
+
+        .post-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.12);
+        }
+
+        .user {
+            color: #eaffff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 8px cyan;
+        }
+
+        .time {
+            margin-left: 8px;
+            color: #ddffff;
+            font-size: 13px;
+        }
+
+        .post-title {
+            margin: 14px 0;
+            font-size: 28px;
+            font-weight: 900;
+            text-shadow:
+                    0 0 8px white,
+                    0 0 18px #ffb3ff;
+        }
+
+        .post-text {
+            font-size: 17px;
+            line-height: 1.5;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 18px;
+        }
+
+        .action {
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 2px solid white;
+            border-radius: 14px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .login-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 95px;
+            text-align: center;
+        }
+
+        .google-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            min-width: 240px;
+            padding: 13px 22px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 10px;
+            color: #202124;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+            cursor: pointer;
+        }
+
+        .google-btn:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42);
+        }
+
+        .google-btn:disabled {
+            opacity: 0.65;
+            cursor: wait;
+            transform: none;
+        }
+
+        .google-icon {
+            width: 22px;
+            height: 22px;
+        }
+
+        .login-message {
+            margin: 0;
+            font-size: 17px;
+        }
+
+        .login-error {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 12px;
+            background: rgba(80, 0, 0, 0.45);
+            border: 2px solid #ffaaaa;
+            border-radius: 12px;
+            color: white;
+            overflow-wrap: anywhere;
+        }
+
+        .footer {
+            padding: 22px;
+            color: cyan;
+        }
+
+        @media (max-width: 600px) {
+            .post-box,
+            .post {
+                padding: 17px;
+                border-radius: 18px;
+            }
+
+            .post-title {
+                font-size: 22px;
+            }
+
+            .actions {
+                gap: 8px;
+            }
+
+            .action {
+                padding: 8px 11px;
+                font-size: 13px;
+            }
+        }
+    </style>
 </head>
+
 <body>
 
 <h1 class="page-title">COMMUNITY</h1>
-<a class="back-btn" href="index.html">← BACK HOME</a>
-<div class="divider"></div>
 
-<div class="community">
-
-<div class="post-box">
-<h2>Post Something</h2>
-<textarea placeholder="What's happening on iLiam?"></textarea>
-<button class="post-btn">POST</button>
-</div>
-
-<div class="post">
-<div><span class="user">Liam</span><span class="time">• 2 minutes ago</span></div>
-<div class="post-title">New Blender material uploaded!</div>
-<div class="post-text">I just added a new download. Try it and tell me if it looks cool.</div>
-<div class="actions">
-<div class="action">⬆ Upvote 12</div>
-<div class="action">💬 Comments 4</div>
-<div class="action">⭐ Save</div>
-</div>
-</div>
-
-<div class="post">
-<div><span class="user">Guest</span><span class="time">• 15 minutes ago</span></div>
-<div class="post-title">Add more Geometry Dash stuff</div>
-<div class="post-text">The downloads section should have effects, portals, templates, and icons.</div>
-<div class="actions">
-<div class="action">⬆ Upvote 8</div>
-<div class="action">💬 Comments 2</div>
-<div class="action">⭐ Save</div>
-</div>
-</div>
-
-</div>
-
-<div class="post-box" id="loginArea">
-  Loading login...
-</div>
+<a class="back-btn" href="index.html">
+    ← BACK HOME
+</a>
 
 <div class="divider"></div>
-<div class="footer">© 2026 iLiam</div>
+
+<main class="community">
+
+    <section class="post-box">
+        <h2>Post Something</h2>
+
+        <textarea
+                id="postText"
+                placeholder="What's happening on iLiam?"
+        ></textarea>
+
+        <button class="post-btn" type="button">
+            POST
+        </button>
+    </section>
+
+    <article class="post">
+        <div>
+            <span class="user">Liam</span>
+            <span class="time">• 2 minutes ago</span>
+        </div>
+
+        <div class="post-title">
+            New Blender material uploaded!
+        </div>
+
+        <div class="post-text">
+            I just added a new download. Try it and tell me if it looks cool.
+        </div>
+
+        <div class="actions">
+            <div class="action">⬆ Upvote 12</div>
+            <div class="action">💬 Comments 4</div>
+            <div class="action">⭐ Save</div>
+        </div>
+    </article>
+
+    <article class="post">
+        <div>
+            <span class="user">Guest</span>
+            <span class="time">• 15 minutes ago</span>
+        </div>
+
+        <div class="post-title">
+            Add more Geometry Dash stuff
+        </div>
+
+        <div class="post-text">
+            The downloads section should have effects, portals, templates, and icons.
+        </div>
+
+        <div class="actions">
+            <div class="action">⬆ Upvote 8</div>
+            <div class="action">💬 Comments 2</div>
+            <div class="action">⭐ Save</div>
+        </div>
+    </article>
+
+    <section class="post-box login-box" id="loginArea">
+        <p class="login-message">Checking login...</p>
+    </section>
+
+</main>
+
+<div class="divider"></div>
+
+<footer class="footer">
+    © 2026 iLiam
+</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-const supabaseUrl = "https://fkiacOLNhtETcZGZ.supabase.co";
-const supabaseKey = "sb_publishable_6Xkm6aoXNkQJcFN6ukWVcg_KAE644mL";
+    /*
+      IMPORTANT:
 
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+      Your old Supabase URL appears to be invalid.
 
-async function loginWithGoogle(){
-  const { error } = await supabaseClient.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: "https://iliam4388.github.io/community.html"
+      Go to:
+      Supabase Dashboard → Connect
+
+      Copy the exact project URL and replace
+      PASTE_YOUR_REAL_SUPABASE_URL_HERE below.
+    */
+
+    const supabaseUrl =
+        "https://xsvrvdecedisqspllyew.supabase.co";
+
+    const supabaseKey =
+        "sb_publishable_6Xkm6aoXNkQJcFN6ukWVcg_KAE644mL";
+
+    const websiteUrl =
+        "https://iliam4388.github.io/community.html";
+
+    const loginArea =
+        document.getElementById("loginArea");
+
+    let supabaseClient = null;
+
+    function showConfigurationError() {
+        loginArea.innerHTML = `
+        <div class="login-error">
+          <strong>Supabase is not configured yet.</strong>
+          <br><br>
+          Open your Supabase project, press
+          <strong>Connect</strong>, copy the exact Project URL,
+          and paste it into <code>supabaseUrl</code>.
+        </div>
+      `;
     }
-  });
 
-  if(error){
-    alert(error.message);
-  }
-}
+    function supabaseUrlLooksValid() {
+        try {
+            const url = new URL(supabaseUrl);
 
-async function logout(){
-  await supabaseClient.auth.signOut();
-  location.reload();
-}
+            return (
+                url.protocol === "https:" &&
+                url.hostname.endsWith(".supabase.co") &&
+                !supabaseUrl.includes("PASTE_")
+            );
+        } catch {
+            return false;
+        }
+    }
 
-async function checkUser(){
-  const { data } = await supabaseClient.auth.getUser();
+    async function loginWithGoogle() {
+        if (!supabaseClient) {
+            showConfigurationError();
+            return;
+        }
 
-  const loginArea = document.getElementById("loginArea");
+        const button =
+            document.getElementById("googleLoginButton");
 
-  if(data.user){
-    loginArea.innerHTML = `
-      <p>Logged in as <b>${data.user.email}</b></p>
-      <button class="post-btn" onclick="logout()">LOG OUT</button>
+        if (button) {
+            button.disabled = true;
+            button.textContent = "OPENING GOOGLE...";
+        }
+
+        const { error } =
+            await supabaseClient.auth.signInWithOAuth({
+                provider: "google",
+
+                options: {
+                    redirectTo: websiteUrl
+                }
+            });
+
+        if (error) {
+            alert("Google sign-in failed: " + error.message);
+
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = `
+            ${googleIcon}
+            Continue with Google
+          `;
+            }
+        }
+    }
+
+    async function logout() {
+        if (!supabaseClient) {
+            return;
+        }
+
+        const { error } =
+            await supabaseClient.auth.signOut();
+
+        if (error) {
+            alert("Logout failed: " + error.message);
+            return;
+        }
+
+        window.location.reload();
+    }
+
+    const googleIcon = `
+      <svg
+        class="google-icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          fill="#4285F4"
+          d="M21.35 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h5.23a4.47 4.47 0 0 1-1.94 2.93v2.79h3.14c1.84-1.69 2.92-4.19 2.92-7.75z"
+        ></path>
+
+        <path
+          fill="#34A853"
+          d="M12 21.75c2.63 0 4.83-.87 6.44-2.36l-3.14-2.44c-.87.58-1.98.93-3.3.93-2.54 0-4.69-1.72-5.46-4.03H3.3v2.5A9.74 9.74 0 0 0 12 21.75z"
+        ></path>
+
+        <path
+          fill="#FBBC05"
+          d="M6.54 13.85A5.86 5.86 0 0 1 6.23 12c0-.64.11-1.27.31-1.85v-2.5H3.3A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.06 1.05 4.35l3.24-2.5z"
+        ></path>
+
+        <path
+          fill="#EA4335"
+          d="M12 6.12c1.43 0 2.71.49 3.72 1.45l2.79-2.79C16.82 3.21 14.63 2.25 12 2.25a9.74 9.74 0 0 0-8.7 5.4l3.24 2.5C7.31 7.84 9.46 6.12 12 6.12z"
+        ></path>
+      </svg>
     `;
-  }else{
-    loginArea.innerHTML = `
-      <button class="post-btn" onclick="loginWithGoogle()">SIGN IN WITH GOOGLE</button>
-    `;
-  }
-}
 
-checkUser(); 
+    async function checkUser() {
+        if (!supabaseUrlLooksValid()) {
+            showConfigurationError();
+            return;
+        }
+
+        try {
+            supabaseClient =
+                supabase.createClient(
+                    supabaseUrl,
+                    supabaseKey
+                );
+
+            const { data, error } =
+                await supabaseClient.auth.getUser();
+
+            if (error) {
+                throw error;
+            }
+
+            if (data.user) {
+                const email =
+                    data.user.email || "Google user";
+
+                loginArea.innerHTML = `
+            <div>
+              <p class="login-message">
+                Logged in as
+                <strong>${escapeHtml(email)}</strong>
+              </p>
+
+              <button
+                class="post-btn"
+                type="button"
+                onclick="logout()"
+              >
+                LOG OUT
+              </button>
+            </div>
+          `;
+            } else {
+                loginArea.innerHTML = `
+            <button
+              class="google-btn"
+              id="googleLoginButton"
+              type="button"
+              onclick="loginWithGoogle()"
+            >
+              ${googleIcon}
+              Continue with Google
+            </button>
+          `;
+            }
+        } catch (error) {
+            loginArea.innerHTML = `
+          <div class="login-error">
+            <strong>Could not connect to Supabase.</strong>
+            <br><br>
+            ${escapeHtml(error.message)}
+          </div>
+        `;
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    checkUser();
 </script>
+
 </body>
 </html>
