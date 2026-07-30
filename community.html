@@ -5,22 +5,36 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Community - iLiam</title>
 <style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(#001133,#000011);font-family:Verdana,Arial;color:#fff;text-align:center}button,input,textarea{font:inherit}.page-title{margin:40px 15px 10px;font-size:clamp(42px,8vw,64px);font-weight:900;letter-spacing:2px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}.back-btn{display:inline-block;margin:15px 0 35px;padding:14px 34px;border-radius:18px;background:linear-gradient(#59d7ff,#0077ff);color:#fff;text-decoration:none;font-size:20px;font-weight:bold;box-shadow:0 0 10px cyan,0 0 25px #00aaff}.divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}.community{width:min(950px,calc(100% - 30px));margin:40px auto}.status{margin-bottom:22px;padding:14px 18px;border:2px solid cyan;border-radius:16px;background:#001432cc;box-shadow:0 0 18px #00ffff66;text-align:left}.post-box,.post{margin-bottom:28px;padding:22px;background:linear-gradient(#ff9cff,#d100ff);border:3px solid #fff;border-radius:24px;box-shadow:0 0 25px #ff66ff,0 0 50px #00ffff55;text-align:left}.post-box h2{margin-top:0;text-shadow:0 0 10px #fff}input,textarea{width:100%;padding:14px;border:3px solid #fff;border-radius:14px;outline:none;background:#fff;color:#111}textarea{height:100px;resize:vertical}input:focus,textarea:focus{box-shadow:0 0 15px cyan}.post-btn,.small-btn{margin-top:14px;padding:13px 26px;border:0;border-radius:15px;background:linear-gradient(#66ff99,#00aa44);color:#fff;font-weight:bold;box-shadow:0 0 15px lime,0 0 25px cyan;cursor:pointer}.small-btn{margin:0;padding:9px 14px;background:#0004;border:2px solid #fff;box-shadow:none}button:hover{filter:brightness(1.12);transform:translateY(-1px)}button:disabled{opacity:.55;cursor:wait;transform:none}.user{font-size:18px;font-weight:bold;color:#eaffff;text-shadow:0 0 8px cyan}.username{margin-left:7px;font-size:12px;opacity:.8}.time{margin-left:8px;font-size:13px;color:#dff}.post-text{margin-top:14px;font-size:17px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.empty{padding:28px;border:2px dashed cyan;border-radius:18px;color:#cfffff}.error{background:#7f1838;border-color:#ffb2ca}.modal{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:20px;background:#000014db;backdrop-filter:blur(8px)}.modal.show{display:grid}.modal-card{width:min(520px,100%);padding:26px;border:3px solid #fff;border-radius:24px;background:linear-gradient(#ff9cff,#b800e8);box-shadow:0 0 30px #ff66ff,0 0 60px cyan;text-align:left}.modal-card label{display:block;margin:15px 0 7px;font-weight:bold}.hint{font-size:13px;opacity:.9;line-height:1.45}.footer{padding:22px;color:cyan}@media(max-width:600px){.post-box,.post{padding:17px;border-radius:18px}.small-btn{padding:8px 10px;font-size:13px}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(#001133,#000011);font-family:Verdana,Arial;color:#fff;text-align:center}button,input,textarea{font:inherit}.page-title{margin:40px 15px 10px;font-size:clamp(42px,8vw,64px);font-weight:900;letter-spacing:2px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}.back-btn{display:inline-block;margin:15px 0 35px;padding:14px 34px;border-radius:18px;background:linear-gradient(#59d7ff,#0077ff);color:#fff;text-decoration:none;font-size:20px;font-weight:bold;box-shadow:0 0 10px cyan,0 0 25px #00aaff}.divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}.community{width:min(950px,calc(100% - 30px));margin:40px auto}.status{margin-bottom:22px;padding:14px 18px;border:2px solid cyan;border-radius:16px;background:#001432cc;box-shadow:0 0 18px #00ffff66;text-align:left}.post-box,.post{margin-bottom:28px;padding:22px;background:linear-gradient(#ff9cff,#d100ff);border:3px solid #fff;border-radius:24px;box-shadow:0 0 25px #ff66ff,0 0 50px #00ffff55;text-align:left}.post.featured{border-color:#fff700;box-shadow:0 0 25px #fff700,0 0 55px #ff66ff}.featured-label{display:inline-block;margin-bottom:10px;padding:6px 11px;border-radius:999px;background:#ffe600;color:#251800;font-weight:900}.post-box h2{margin-top:0;text-shadow:0 0 10px #fff}input,textarea{width:100%;padding:14px;border:3px solid #fff;border-radius:14px;outline:none;background:#fff;color:#111}textarea{height:105px;resize:vertical}input:focus,textarea:focus{box-shadow:0 0 15px cyan}.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.tool-btn,.post-btn,.small-btn{padding:10px 14px;border:2px solid #fff;border-radius:12px;background:#0004;color:#fff;font-weight:bold;cursor:pointer}.post-btn{margin-top:14px;padding:13px 26px;border:0;border-radius:15px;background:linear-gradient(#66ff99,#00aa44);box-shadow:0 0 15px lime,0 0 25px cyan}.small-btn{padding:8px 12px}.danger{background:#8d1236}.admin-btn{background:#5c28a8}.feature-btn{background:#8a7200}button:hover{filter:brightness(1.12);transform:translateY(-1px)}button:disabled{opacity:.55;cursor:wait;transform:none}.media-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.user{font-size:18px;font-weight:bold;color:#eaffff;text-shadow:0 0 8px cyan}.admin-badge{margin-left:7px;padding:3px 7px;border-radius:999px;background:#ffe600;color:#201500;font-size:11px;font-weight:900}.username{margin-left:7px;font-size:12px;opacity:.8}.time{margin-left:8px;font-size:13px;color:#dff}.post-text,.comment-text{margin-top:14px;font-size:17px;line-height:1.55;overflow-wrap:anywhere}.post-text code,.comment-text code{padding:2px 5px;border-radius:5px;background:#0007}.post-text a,.comment-text a{color:#d8ffff}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.post-image{display:block;max-width:100%;max-height:540px;margin:16px auto 0;border:3px solid #fff;border-radius:16px}.video-wrap{position:relative;width:100%;padding-top:56.25%;margin-top:16px;border:3px solid #fff;border-radius:16px;overflow:hidden;background:#000}.video-wrap iframe,.video-wrap video{position:absolute;inset:0;width:100%;height:100%;border:0}.comments{margin-top:18px;padding-top:16px;border-top:2px solid #fff8}.comment{margin-top:10px;padding:12px;border-radius:12px;background:#0003;border:1px solid #fff9}.comment-head{font-size:13px}.comment-form{display:flex;gap:8px;margin-top:12px}.comment-form input{flex:1}.comment-form button{white-space:nowrap}.empty{padding:28px;border:2px dashed cyan;border-radius:18px;color:#cfffff}.error{background:#7f1838;border-color:#ffb2ca}.modal{position:fixed;inset:0;z-index:20;display:none;place-items:center;padding:20px;background:#000014db;backdrop-filter:blur(8px)}.modal.show{display:grid}.modal-card{width:min(520px,100%);padding:26px;border:3px solid #fff;border-radius:24px;background:linear-gradient(#ff9cff,#b800e8);box-shadow:0 0 30px #ff66ff,0 0 60px cyan;text-align:left}.modal-card label{display:block;margin:15px 0 7px;font-weight:bold}.hint{font-size:13px;opacity:.9;line-height:1.45}.footer{padding:22px;color:cyan}@media(max-width:650px){.post-box,.post{padding:17px;border-radius:18px}.media-fields{grid-template-columns:1fr}.comment-form{flex-direction:column}.small-btn{font-size:13px}}
 </style>
 </head>
 <body>
 <h1 class="page-title">COMMUNITY</h1>
 <a class="back-btn" href="index.html">← BACK HOME</a>
 <div class="divider"></div>
+
 <main class="community">
 <div class="status" id="status">Connecting to Firebase…</div>
+
 <section class="post-box">
 <h2>Post Something</h2>
-<textarea id="postText" maxlength="500" placeholder="What's happening on iLiam?"></textarea>
+<div class="toolbar">
+<button class="tool-btn" type="button" data-wrap="**">B</button>
+<button class="tool-btn" type="button" data-wrap="*"><i>I</i></button>
+<button class="tool-btn" type="button" data-wrap="__"><u>U</u></button>
+<button class="tool-btn" type="button" id="linkButton">🔗 Link</button>
+</div>
+<textarea id="postText" maxlength="2000" placeholder="Write something. Use **bold**, *italic*, __underline__, or add links."></textarea>
+<div class="media-fields">
+<input id="imageUrl" type="url" placeholder="Optional image URL">
+<input id="videoUrl" type="url" placeholder="Optional YouTube or direct video URL">
+</div>
 <button class="post-btn" id="postButton" type="button" disabled>POST</button>
 </section>
+
 <section id="posts"><div class="empty">Loading posts…</div></section>
 </main>
+
 <div class="divider"></div>
 <footer class="footer">© 2026 iLiam</footer>
 
@@ -40,7 +54,7 @@
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import{getFirestore,doc,getDoc,addDoc,collection,query,orderBy,limit,onSnapshot,serverTimestamp,runTransaction}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import{getFirestore,doc,getDoc,addDoc,deleteDoc,updateDoc,collection,query,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 const firebaseConfig={
  apiKey:"AIzaSyD7QF6z6e2psZzQwkmO7LLkc4twcNrZWEg",
@@ -54,22 +68,57 @@ const firebaseConfig={
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id);
-const statusBox=$("status"),postText=$("postText"),postButton=$("postButton"),postsElement=$("posts"),profileModal=$("profileModal"),usernameInput=$("usernameInput"),nicknameInput=$("nicknameInput"),saveProfileButton=$("saveProfileButton"),profileError=$("profileError");
-let currentUser=null,currentProfile=null,stopPostsListener=null;
+const statusBox=$("status"),postText=$("postText"),postButton=$("postButton"),postsElement=$("posts"),profileModal=$("profileModal"),usernameInput=$("usernameInput"),nicknameInput=$("nicknameInput"),saveProfileButton=$("saveProfileButton"),profileError=$("profileError"),imageUrl=$("imageUrl"),videoUrl=$("videoUrl");
+let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null;
 
 const cleanUsername=v=>v.trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
 const escapeHtml=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 function formatTime(t){if(!t?.toDate)return"just now";return t.toDate().toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}
 function setStatus(m,e=false){statusBox.textContent=m;statusBox.classList.toggle("error",e)}
+function safeUrl(value){try{const u=new URL(value);return["http:","https:"].includes(u.protocol)?u.href:""}catch{return""}}
+
+function richText(value){
+ let s=escapeHtml(value);
+ s=s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+ s=s.replace(/\*\*([\s\S]+?)\*\*/g,"<strong>$1</strong>");
+ s=s.replace(/__([\s\S]+?)__/g,"<u>$1</u>");
+ s=s.replace(/\*([^*\n]+)\*/g,"<em>$1</em>");
+ return s.replace(/\n/g,"<br>");
+}
+
+function videoMarkup(url){
+ const safe=safeUrl(url); if(!safe)return"";
+ try{
+  const u=new URL(safe);
+  let id="";
+  if(u.hostname.includes("youtu.be"))id=u.pathname.slice(1);
+  if(u.hostname.includes("youtube.com"))id=u.searchParams.get("v")||"";
+  if(id)return`<div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(id)}" allowfullscreen loading="lazy"></iframe></div>`;
+  if(/\.(mp4|webm|ogg)(\?|$)/i.test(u.pathname+u.search))return`<div class="video-wrap"><video controls preload="metadata" src="${escapeHtml(safe)}"></video></div>`;
+ }catch{}
+ return`<p><a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">Open video</a></p>`;
+}
+
+document.querySelectorAll("[data-wrap]").forEach(button=>button.addEventListener("click",()=>{
+ const wrap=button.dataset.wrap,start=postText.selectionStart,end=postText.selectionEnd,selected=postText.value.slice(start,end)||"text";
+ postText.setRangeText(wrap+selected+wrap,start,end,"select");postText.focus();
+}));
+$("linkButton").addEventListener("click",()=>{
+ const url=prompt("Paste the link URL:");if(!url)return;
+ const label=prompt("Link text:","link")||"link";
+ const start=postText.selectionStart,end=postText.selectionEnd;
+ postText.setRangeText(`[${label}](${url})`,start,end,"end");postText.focus();
+});
 
 onAuthStateChanged(auth,async user=>{
  try{
   if(!user){await signInAnonymously(auth);return}
   currentUser=user;
+  isAdmin=(await getDoc(doc(db,"admins",user.uid))).exists();
   const snap=await getDoc(doc(db,"profiles",user.uid));
   if(!snap.exists()){profileModal.classList.add("show");setStatus("Create a username and nickname to join.");return}
   currentProfile=snap.data();profileModal.classList.remove("show");postButton.disabled=false;
-  setStatus(`Signed in as ${currentProfile.nickname} · @${currentProfile.username}`);
+  setStatus(`Signed in as ${currentProfile.nickname} · @${currentProfile.username}${isAdmin?" · ADMIN":""} · UID: ${user.uid}`);
   listenForPosts();
  }catch(error){setStatus("Firebase error: "+error.message,true)}
 });
@@ -88,20 +137,19 @@ saveProfileButton.addEventListener("click",async()=>{
    tx.set(usernameRef,{uid:currentUser.uid,createdAt:serverTimestamp()});
    tx.set(profileRef,{username,nickname,createdAt:serverTimestamp()});
   });
-  currentProfile={username,nickname};
-  profileModal.classList.remove("show");postButton.disabled=false;
-  setStatus(`Signed in as ${nickname} · @${username}`);listenForPosts();
+  currentProfile={username,nickname};profileModal.classList.remove("show");postButton.disabled=false;
+  setStatus(`Signed in as ${nickname} · @${username}${isAdmin?" · ADMIN":""} · UID: ${currentUser.uid}`);listenForPosts();
  }catch(error){profileError.textContent=error.message}
  finally{saveProfileButton.disabled=false}
 });
 
 postButton.addEventListener("click",async()=>{
- const text=postText.value.trim();
- if(!text)return alert("Write something first.");
+ const text=postText.value.trim(),img=safeUrl(imageUrl.value.trim()),vid=safeUrl(videoUrl.value.trim());
+ if(!text&&!img&&!vid)return alert("Add text, an image, or a video.");
  postButton.disabled=true;postButton.textContent="POSTING…";
  try{
-  await addDoc(collection(db,"posts"),{uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,text:text.slice(0,500),upvotes:0,createdAt:serverTimestamp()});
-  postText.value="";
+  await addDoc(collection(db,"posts"),{uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,text:text.slice(0,2000),imageUrl:img,videoUrl:vid,upvotes:0,featured:false,createdAt:serverTimestamp()});
+  postText.value="";imageUrl.value="";videoUrl.value="";
  }catch(error){alert("Could not post: "+error.message)}
  finally{postButton.disabled=false;postButton.textContent="POST"}
 });
@@ -110,17 +158,79 @@ function listenForPosts(){
  if(stopPostsListener)stopPostsListener();
  const q=query(collection(db,"posts"),orderBy("createdAt","desc"),limit(50));
  stopPostsListener=onSnapshot(q,snap=>{
-  if(snap.empty){postsElement.innerHTML='<div class="empty">No posts yet. Be the first!</div>';return}
+  const posts=[];snap.forEach(s=>posts.push({id:s.id,...s.data()}));
+  posts.sort((a,b)=>Number(Boolean(b.featured))-Number(Boolean(a.featured)));
+  if(!posts.length){postsElement.innerHTML='<div class="empty">No posts yet. Be the first!</div>';return}
   postsElement.innerHTML="";
-  snap.forEach(s=>{
-   const p=s.data(),article=document.createElement("article");article.className="post";
-   const saved=JSON.parse(localStorage.getItem("iliam_saved_posts")||"[]"),isSaved=saved.includes(s.id);
-   article.innerHTML=`<div><span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span><span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span></div><div class="post-text">${escapeHtml(p.text)}</div><div class="actions"><button class="small-btn upvote-btn" type="button">⬆ Upvote ${Number(p.upvotes||0)}</button><button class="small-btn save-btn" type="button">${isSaved?"★ Saved":"☆ Save"}</button></div>`;
-   article.querySelector(".upvote-btn").onclick=()=>upvotePost(s.id);
-   article.querySelector(".save-btn").onclick=e=>toggleSavedPost(s.id,e.currentTarget);
-   postsElement.appendChild(article);
-  });
+  posts.forEach(renderPost);
  },error=>setStatus("Could not load posts: "+error.message,true));
+}
+
+function renderPost(p){
+ const article=document.createElement("article");article.className="post"+(p.featured?" featured":"");
+ const saved=JSON.parse(localStorage.getItem("iliam_saved_posts")||"[]"),isSaved=saved.includes(p.id);
+ const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
+ article.innerHTML=`
+ ${p.featured?'<span class="featured-label">⭐ FEATURED</span>':""}
+ <div><span class="user">${escapeHtml(p.nickname)}</span>${p.uid&&p.uid===currentUser.uid&&isAdmin?'<span class="admin-badge">ADMIN</span>':""}<span class="username">@${escapeHtml(p.username)}</span><span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span></div>
+ <div class="post-text">${richText(p.text||"")}</div>${image}${videoMarkup(p.videoUrl||"")}
+ <div class="actions">
+ <button class="small-btn upvote-btn" type="button">⬆ Upvote ${Number(p.upvotes||0)}</button>
+ <button class="small-btn save-btn" type="button">${isSaved?"★ Saved":"☆ Save"}</button>
+ <button class="small-btn comments-btn" type="button">💬 Comments</button>
+ ${isAdmin?`<button class="small-btn feature-btn" type="button">${p.featured?"Unfeature":"Feature"}</button><button class="small-btn danger delete-btn" type="button">Delete</button>`:""}
+ </div>
+ <div class="comments" hidden>
+   <div class="comment-list"><div class="hint">Loading comments…</div></div>
+   <div class="comment-form"><input maxlength="500" placeholder="Write a comment"><button class="small-btn" type="button">SEND</button></div>
+ </div>`;
+ article.querySelector(".upvote-btn").onclick=()=>upvotePost(p.id);
+ article.querySelector(".save-btn").onclick=e=>toggleSavedPost(p.id,e.currentTarget);
+ const comments=article.querySelector(".comments"),commentList=article.querySelector(".comment-list"),commentInput=article.querySelector(".comment-form input");
+ let stopComments=null;
+ article.querySelector(".comments-btn").onclick=()=>{
+  comments.hidden=!comments.hidden;
+  if(!comments.hidden&&!stopComments)stopComments=listenForComments(p.id,commentList);
+ };
+ article.querySelector(".comment-form button").onclick=()=>addComment(p.id,commentInput);
+ if(isAdmin){
+  article.querySelector(".feature-btn").onclick=()=>updateDoc(doc(db,"posts",p.id),{featured:!Boolean(p.featured)});
+  article.querySelector(".delete-btn").onclick=()=>deletePost(p.id);
+ }
+ postsElement.appendChild(article);
+}
+
+function listenForComments(postId,container){
+ const q=query(collection(db,"posts",postId,"comments"),orderBy("createdAt","asc"),limit(100));
+ return onSnapshot(q,snap=>{
+  container.innerHTML="";
+  if(snap.empty){container.innerHTML='<div class="hint">No comments yet.</div>';return}
+  snap.forEach(s=>{
+   const c=s.data(),el=document.createElement("div");el.className="comment";
+   el.innerHTML=`<div class="comment-head"><strong>${escapeHtml(c.nickname)}</strong> @${escapeHtml(c.username)} · ${escapeHtml(formatTime(c.createdAt))}${isAdmin?` <button class="small-btn danger delete-comment" type="button">Delete</button>`:""}</div><div class="comment-text">${richText(c.text||"")}</div>`;
+   if(isAdmin)el.querySelector(".delete-comment").onclick=()=>deleteDoc(doc(db,"posts",postId,"comments",s.id));
+   container.appendChild(el);
+  });
+ },error=>container.innerHTML=`<div class="hint">${escapeHtml(error.message)}</div>`);
+}
+
+async function addComment(postId,input){
+ const text=input.value.trim();if(!text)return;
+ input.disabled=true;
+ try{
+  await addDoc(collection(db,"posts",postId,"comments"),{uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,text:text.slice(0,500),createdAt:serverTimestamp()});
+  input.value="";
+ }catch(error){alert("Could not comment: "+error.message)}
+ finally{input.disabled=false}
+}
+
+async function deletePost(postId){
+ if(!confirm("Delete this post and its visible comments?"))return;
+ try{
+  const comments=await getDocs(collection(db,"posts",postId,"comments"));
+  await Promise.all(comments.docs.map(c=>deleteDoc(c.ref)));
+  await deleteDoc(doc(db,"posts",postId));
+ }catch(error){alert("Could not delete: "+error.message)}
 }
 
 async function upvotePost(postId){
@@ -135,7 +245,6 @@ async function upvotePost(postId){
   });
  }catch(error){alert(error.message)}
 }
-
 function toggleSavedPost(id,button){
  const saved=new Set(JSON.parse(localStorage.getItem("iliam_saved_posts")||"[]"));
  if(saved.has(id)){saved.delete(id);button.textContent="☆ Save"}else{saved.add(id);button.textContent="★ Saved"}
