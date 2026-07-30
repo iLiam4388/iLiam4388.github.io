@@ -166,53 +166,157 @@ function listenForPosts(){
  },error=>setStatus("Could not load posts: "+error.message,true));
 }
 
-function renderPost(p){
- const article=document.createElement("article");article.className="post"+(p.featured?" featured":"");
- const saved=JSON.parse(localStorage.getItem("iliam_saved_posts")||"[]"),isSaved=saved.includes(p.id);
- const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
- article.innerHTML=`
- ${p.featured?'<span class="featured-label">⭐ FEATURED</span>':""}
- <div><span class="user">${escapeHtml(p.nickname)}</span>${p.uid&&p.uid===currentUser.uid&&isAdmin?'<span class="admin-badge">ADMIN</span>':""}<span class="username">@${escapeHtml(p.username)}</span><span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span></div>
- <div class="post-text">${richText(p.text||"")}</div>${image}${videoMarkup(p.videoUrl||"")}
- <div class="actions">
- <button class="small-btn upvote-btn" type="button">⬆ Upvote ${Number(p.upvotes||0)}</button>
- <button class="small-btn save-btn" type="button">${isSaved?"★ Saved":"☆ Save"}</button>
- <button class="small-btn comments-btn" type="button">💬 Comments</button>
- ${isAdmin?`<button class="small-btn feature-btn" type="button">${p.featured?"Unfeature":"Feature"}</button><button class="small-btn danger delete-btn" type="button">Delete</button>`:""}
- </div>
- <div class="comments" hidden>
-  <div class="comment-list">
-    <div class="hint">Loading comments…</div>
-  </div>
-  <div class="comment-form">
-    <input maxlength="500" placeholder="Write a comment">
-    <button class="small-btn" type="button">SEND</button>
-  </div>
-</div>
+function renderPost(p) {
+  const article = document.createElement("article");
+  article.className = "post" + (p.featured ? " featured" : "");
 
-<div class="post-text">${richText(p.text||"")}</div>
-${image}
-${videoMarkup(p.videoUrl||"")}
+  const saved = JSON.parse(
+    localStorage.getItem("iliam_saved_posts") || "[]"
+  );
 
-<div class="actions">
-  ...
-</div>
- article.querySelector(".upvote-btn").onclick=()=>upvotePost(p.id);
- article.querySelector(".save-btn").onclick=e=>toggleSavedPost(p.id,e.currentTarget);
- const comments=article.querySelector(".comments"),commentList=article.querySelector(".comment-list"),commentInput=article.querySelector(".comment-form input");
- let stopComments=null;
- article.querySelector(".comments-btn").onclick=()=>{
-  comments.hidden=!comments.hidden;
-  if(!comments.hidden&&!stopComments)stopComments=listenForComments(p.id,commentList);
- };
- article.querySelector(".comment-form button").onclick=()=>addComment(p.id,commentInput);
- if(isAdmin){
-  article.querySelector(".feature-btn").onclick=()=>updateDoc(doc(db,"posts",p.id),{featured:!Boolean(p.featured)});
-  article.querySelector(".delete-btn").onclick=()=>deletePost(p.id);
- }
- postsElement.appendChild(article);
+  const isSaved = saved.includes(p.id);
+
+  const image = safeUrl(p.imageUrl)
+    ? `<img class="post-image"
+         src="${escapeHtml(safeUrl(p.imageUrl))}"
+         alt="Post image"
+         loading="lazy">`
+    : "";
+
+  article.innerHTML = `
+    ${p.featured
+      ? '<span class="featured-label">⭐ FEATURED</span>'
+      : ""
+    }
+
+    <div>
+      <span class="user">${escapeHtml(p.nickname)}</span>
+
+      ${
+        p.uid &&
+        p.uid === currentUser.uid &&
+        isAdmin
+          ? '<span class="admin-badge">ADMIN</span>'
+          : ""
+      }
+
+      <span class="username">
+        @${escapeHtml(p.username)}
+      </span>
+
+      <span class="time">
+        • ${escapeHtml(formatTime(p.createdAt))}
+      </span>
+    </div>
+
+    <div class="comments" hidden>
+      <div class="comment-list">
+        <div class="hint">Loading comments…</div>
+      </div>
+
+      <div class="comment-form">
+        <input
+          maxlength="500"
+          placeholder="Write a comment"
+        >
+
+        <button class="small-btn" type="button">
+          SEND
+        </button>
+      </div>
+    </div>
+
+    <div class="post-text">
+      ${richText(p.text || "")}
+    </div>
+
+    ${image}
+    ${videoMarkup(p.videoUrl || "")}
+
+    <div class="actions">
+      <button
+        class="small-btn upvote-btn"
+        type="button"
+      >
+        ⬆ Upvote ${Number(p.upvotes || 0)}
+      </button>
+
+      <button
+        class="small-btn save-btn"
+        type="button"
+      >
+        ${isSaved ? "★ Saved" : "☆ Save"}
+      </button>
+
+      <button
+        class="small-btn comments-btn"
+        type="button"
+      >
+        💬 Comments
+      </button>
+
+      ${
+        isAdmin
+          ? `
+            <button
+              class="small-btn feature-btn"
+              type="button"
+            >
+              ${p.featured ? "Unfeature" : "Feature"}
+            </button>
+
+            <button
+              class="small-btn danger delete-btn"
+              type="button"
+            >
+              Delete
+            </button>
+          `
+          : ""
+      }
+    </div>
+  `;
+
+  article.querySelector(".upvote-btn").onclick = () =>
+    upvotePost(p.id);
+
+  article.querySelector(".save-btn").onclick = event =>
+    toggleSavedPost(p.id, event.currentTarget);
+
+  const comments = article.querySelector(".comments");
+  const commentList = article.querySelector(".comment-list");
+  const commentInput = article.querySelector(
+    ".comment-form input"
+  );
+
+  let stopComments = null;
+
+  article.querySelector(".comments-btn").onclick = () => {
+    comments.hidden = !comments.hidden;
+
+    if (!comments.hidden && !stopComments) {
+      stopComments = listenForComments(
+        p.id,
+        commentList
+      );
+    }
+  };
+
+  article.querySelector(".comment-form button").onclick = () =>
+    addComment(p.id, commentInput);
+
+  if (isAdmin) {
+    article.querySelector(".feature-btn").onclick = () =>
+      updateDoc(doc(db, "posts", p.id), {
+        featured: !Boolean(p.featured)
+      });
+
+    article.querySelector(".delete-btn").onclick = () =>
+      deletePost(p.id);
+  }
+
+  postsElement.appendChild(article);
 }
-
 function listenForComments(postId,container){
  const q=query(collection(db,"posts",postId,"comments"),orderBy("createdAt","asc"),limit(100));
  return onSnapshot(q,snap=>{
