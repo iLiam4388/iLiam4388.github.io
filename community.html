@@ -184,21 +184,27 @@ function renderPost(p) {
     : "";
 
   article.innerHTML = `
-    ${p.featured
-      ? '<span class="featured-label">⭐ FEATURED</span>'
-      : ""
-    }
+    <div class="post-text">
+  ${richText(p.text || "")}
+</div>
 
-    <div>
-      <span class="user">${escapeHtml(p.nickname)}</span>
+${image}
+${videoMarkup(p.videoUrl || "")}
 
-      ${
-        p.uid &&
-        p.uid === currentUser.uid &&
-        isAdmin
-          ? '<span class="admin-badge">ADMIN</span>'
-          : ""
-      }
+<div class="actions">
+  ...
+</div>
+
+<div class="comments" hidden>
+  <div class="comment-form">
+    <input maxlength="500" placeholder="Write a comment">
+    <button class="small-btn" type="button">SEND</button>
+  </div>
+
+  <div class="comment-list">
+    <div class="hint">Loading comments…</div>
+  </div>
+</div>
 
       <span class="username">
         @${escapeHtml(p.username)}
