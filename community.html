@@ -181,9 +181,22 @@ function renderPost(p){
  ${isAdmin?`<button class="small-btn feature-btn" type="button">${p.featured?"Unfeature":"Feature"}</button><button class="small-btn danger delete-btn" type="button">Delete</button>`:""}
  </div>
  <div class="comments" hidden>
-   <div class="comment-list"><div class="hint">Loading comments…</div></div>
-   <div class="comment-form"><input maxlength="500" placeholder="Write a comment"><button class="small-btn" type="button">SEND</button></div>
- </div>`;
+  <div class="comment-list">
+    <div class="hint">Loading comments…</div>
+  </div>
+  <div class="comment-form">
+    <input maxlength="500" placeholder="Write a comment">
+    <button class="small-btn" type="button">SEND</button>
+  </div>
+</div>
+
+<div class="post-text">${richText(p.text||"")}</div>
+${image}
+${videoMarkup(p.videoUrl||"")}
+
+<div class="actions">
+  ...
+</div>
  article.querySelector(".upvote-btn").onclick=()=>upvotePost(p.id);
  article.querySelector(".save-btn").onclick=e=>toggleSavedPost(p.id,e.currentTarget);
  const comments=article.querySelector(".comments"),commentList=article.querySelector(".comment-list"),commentInput=article.querySelector(".comment-form input");
