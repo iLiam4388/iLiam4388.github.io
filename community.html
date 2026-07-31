@@ -10,9 +10,10 @@ body{margin:0;min-height:100vh;background:linear-gradient(#001133,#000011);font-
 button,input,textarea{font:inherit}
 .page-title{margin:40px 15px 10px;font-size:clamp(42px,8vw,64px);font-weight:900;letter-spacing:2px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}
 .top-buttons{display:flex;justify-content:center;flex-wrap:wrap;gap:14px;margin:15px 12px 35px}
-.back-btn,.saved-posts-btn{display:inline-block;padding:14px 26px;border:0;border-radius:18px;color:#fff;text-decoration:none;font-size:20px;font-weight:bold;cursor:pointer}
+.back-btn,.saved-posts-btn,.profile-btn{display:inline-block;padding:14px 26px;border:0;border-radius:18px;color:#fff;text-decoration:none;font-size:20px;font-weight:bold;cursor:pointer}
 .back-btn{background:linear-gradient(#59d7ff,#0077ff);box-shadow:0 0 10px cyan,0 0 25px #00aaff}
 .saved-posts-btn{background:linear-gradient(#ff9cff,#a500dc);box-shadow:0 0 10px #ff8cff,0 0 25px #d900ff}
+.profile-btn{background:linear-gradient(#8effd0,#008e78);box-shadow:0 0 10px #5fffd0,0 0 25px #00bfa5}
 .divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}
 .community{width:min(950px,calc(100% - 30px));margin:40px auto}
 .status{margin-bottom:22px;padding:14px 18px;border:2px solid cyan;border-radius:16px;background:#001432cc;box-shadow:0 0 18px #00ffff66;text-align:left}
@@ -35,7 +36,7 @@ input:focus,textarea:focus{box-shadow:0 0 15px cyan}
 button:hover{filter:brightness(1.12);transform:translateY(-1px)}
 button:disabled{opacity:.55;cursor:wait;transform:none}
 .media-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-.user{font-size:18px;font-weight:bold;color:#eaffff;text-shadow:0 0 8px cyan}
+.avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #fff;vertical-align:middle;margin-right:9px;background:#142b52}.profile-link{display:inline-flex;align-items:center;cursor:pointer;border-radius:12px;padding:3px 6px 3px 3px}.profile-link:hover{background:#0003;box-shadow:0 0 12px cyan}.profile-link:focus-visible{outline:3px solid cyan}.user{font-size:18px;font-weight:bold;color:#eaffff;text-shadow:0 0 8px cyan}
 .admin-badge{margin-left:7px;padding:3px 7px;border-radius:999px;background:#ffe600;color:#201500;font-size:11px;font-weight:900}
 .username{margin-left:7px;font-size:12px;opacity:.8}
 .time{margin-left:8px;font-size:13px;color:#dff}
@@ -72,8 +73,8 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 .close-modal{font-size:22px;line-height:1;padding:8px 12px}
 .saved-list{display:grid;gap:14px;margin-top:16px}
 .saved-card{padding:16px;border:2px solid #fff;border-radius:16px;background:#0004}
-.saved-card .post-text{max-height:150px;overflow:auto}
-.hint{font-size:13px;opacity:.9;line-height:1.45}
+.saved-card .post-text{max-height:150px;overflow:auto}.public-profile-posts{display:grid;gap:14px;margin-top:18px}.public-profile-post{padding:16px;border:2px solid #fff;border-radius:16px;background:#0004}.public-profile-post .post-image{max-height:320px}.public-profile-post .video-wrap{max-width:560px}.public-profile-loading{text-align:center;padding:24px}
+.profile-summary{display:flex;align-items:center;gap:15px;padding:14px;border-radius:16px;background:#0003;margin:10px 0 18px}.profile-summary .avatar{width:72px;height:72px}.profile-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:7px}.follow-btn{background:#126f91}.following{background:#444}.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.hint{font-size:13px;opacity:.9;line-height:1.45}
 .footer{padding:22px;color:cyan}
 @media(max-width:650px){
  .post-box,.post{padding:17px;border-radius:18px}
@@ -91,6 +92,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <div class="top-buttons">
   <a class="back-btn" href="index.html">← BACK HOME</a>
   <button class="saved-posts-btn" id="savedPostsButton" type="button">★ SAVED POSTS</button>
+  <button class="profile-btn" id="profileButton" type="button">👤 PROFILE</button>
 </div>
 
 <div class="divider"></div>
@@ -122,14 +124,22 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <div class="modal" id="profileModal">
 <div class="modal-card">
-<h2>Create your iLiam profile</h2>
-<p class="hint">No email or password is needed. This account stays connected to this browser. Clearing browser data may reset it.</p>
-<label for="usernameInput">Private username</label>
+<div class="modal-head"><h2 id="profileModalTitle">Create your iLiam profile</h2><button class="small-btn close-modal" id="closeProfileButton" type="button" aria-label="Close">✕</button></div>
+<div class="profile-summary" id="profileSummary" hidden></div>
+<p class="hint">Usernames are unique and permanent after account creation. Nicknames can be changed later. A profile picture is optional—leave it blank to use an automatic initial avatar.</p>
+<label for="usernameInput">Unique username <span class="hint" id="usernameLockHint"></span></label>
 <input id="usernameInput" maxlength="20" autocomplete="off" placeholder="Example: geometryking">
 <label for="nicknameInput">Public nickname</label>
 <input id="nicknameInput" maxlength="24" autocomplete="off" placeholder="Example: Liam">
-<button class="post-btn" id="saveProfileButton" type="button">CREATE PROFILE</button>
+<label for="profilePictureInput">Profile picture URL <span class="hint">(optional)</span></label>
+<input id="profilePictureInput" type="url" placeholder="Leave blank for an automatic avatar">
+<p class="hint">To remove your current picture, clear this box and save your profile.</p>
+<button class="post-btn" id="saveProfileButton" type="button">SAVE PROFILE</button>
 <p class="hint" id="profileError"></p>
+<div class="account-actions" id="accountActions" hidden>
+<button class="small-btn" id="signOutButton" type="button">Sign Out</button>
+<button class="small-btn danger" id="deleteAccountButton" type="button">Delete Account</button>
+</div>
 </div>
 </div>
 
@@ -145,10 +155,23 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 </div>
 </div>
 
+<div class="modal" id="publicProfileModal">
+<div class="modal-card">
+  <div class="modal-head">
+    <h2 id="publicProfileTitle">User Profile</h2>
+    <button class="small-btn close-modal" id="closePublicProfileButton" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="profile-summary" id="publicProfileSummary"></div>
+  <div class="actions" id="publicProfileActions"></div>
+  <h3 id="publicProfilePostsTitle">Posts</h3>
+  <div class="public-profile-posts" id="publicProfilePosts"><div class="public-profile-loading">Loading profile…</div></div>
+</div>
+</div>
+
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import{getFirestore,doc,getDoc,addDoc,deleteDoc,updateDoc,collection,query,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import{getAuth,onAuthStateChanged,signInAnonymously,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import{getFirestore,doc,getDoc,addDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 const firebaseConfig={
  apiKey:"AIzaSyD7QF6z6e2psZzQwkmO7LLkc4twcNrZWEg",
@@ -167,9 +190,10 @@ const statusBox=$("status"),postText=$("postText"),postButton=$("postButton"),po
 profileModal=$("profileModal"),usernameInput=$("usernameInput"),nicknameInput=$("nicknameInput"),
 saveProfileButton=$("saveProfileButton"),profileError=$("profileError"),imageUrl=$("imageUrl"),
 videoUrl=$("videoUrl"),savedPostsButton=$("savedPostsButton"),savedPostsModal=$("savedPostsModal"),
-savedPostsList=$("savedPostsList"),closeSavedPostsButton=$("closeSavedPostsButton");
+savedPostsList=$("savedPostsList"),closeSavedPostsButton=$("closeSavedPostsButton"),profileButton=$("profileButton"),closeProfileButton=$("closeProfileButton"),profilePictureInput=$("profilePictureInput"),profileSummary=$("profileSummary"),profileModalTitle=$("profileModalTitle"),accountActions=$("accountActions"),signOutButton=$("signOutButton"),deleteAccountButton=$("deleteAccountButton"),publicProfileModal=$("publicProfileModal"),closePublicProfileButton=$("closePublicProfileButton"),publicProfileTitle=$("publicProfileTitle"),publicProfileSummary=$("publicProfileSummary"),publicProfileActions=$("publicProfileActions"),publicProfilePostsTitle=$("publicProfilePostsTitle"),publicProfilePosts=$("publicProfilePosts");
+const usernameLockHint=$("usernameLockHint");
 
-let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null;
+let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set();
 const postCache=new Map();
 
 const cleanUsername=v=>v.trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
@@ -177,6 +201,69 @@ const escapeHtml=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;")
 function formatTime(t){if(!t?.toDate)return"just now";return t.toDate().toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}
 function setStatus(m,e=false){statusBox.textContent=m;statusBox.classList.toggle("error",e)}
 function safeUrl(value){try{const u=new URL(value);return["http:","https:"].includes(u.protocol)?u.href:""}catch{return""}}
+
+function avatarUrl(profile){return safeUrl(profile?.photoURL||"")||"https://api.dicebear.com/9.x/initials/svg?seed="+encodeURIComponent(profile?.nickname||profile?.username||"User")}
+function openProfileModal(){
+ profileModalTitle.textContent=currentProfile?"Edit your profile":"Create your iLiam profile";
+ usernameInput.readOnly=Boolean(currentProfile);usernameLockHint.textContent=currentProfile?"(permanent)":"";
+ closeProfileButton.hidden=!currentProfile;accountActions.hidden=!currentProfile;profileSummary.hidden=!currentProfile;
+ if(currentProfile){usernameInput.value=currentProfile.username||"";usernameInput.readOnly=true;usernameInput.setAttribute("aria-readonly","true");usernameLockHint.textContent="(permanent)";nicknameInput.value=currentProfile.nickname||"";profilePictureInput.value=currentProfile.photoURL||"";
+ profileSummary.innerHTML=`<img class="avatar" src="${escapeHtml(avatarUrl(currentProfile))}" alt="Profile picture"><div><strong>${escapeHtml(currentProfile.nickname)}</strong><div>@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
+ onSnapshot(collection(db,"profiles",currentUser.uid,"followers"),x=>{const e=$("ownFollowers");if(e)e.textContent=`Followers: ${x.size}`});
+ onSnapshot(collection(db,"profiles",currentUser.uid,"following"),x=>{const e=$("ownFollowing");if(e)e.textContent=`Following: ${x.size}`});}
+ profileModal.classList.add("show");
+}
+
+async function openPublicProfile(uid,fallback={}){
+ if(!uid||!currentUser)return;
+ publicProfileModal.classList.add("show");
+ publicProfileTitle.textContent="User Profile";
+ publicProfileSummary.innerHTML='<div class="public-profile-loading">Loading profile…</div>';
+ publicProfileActions.innerHTML="";
+ publicProfilePostsTitle.textContent="Posts";
+ publicProfilePosts.innerHTML='<div class="public-profile-loading">Loading posts…</div>';
+ try{
+  const profileSnap=await getDoc(doc(db,"profiles",uid));
+  const profile=profileSnap.exists()?{uid,...profileSnap.data()}:{uid,...fallback};
+  const followersSnap=await getDocs(collection(db,"profiles",uid,"followers"));
+  const followingSnap=await getDocs(collection(db,"profiles",uid,"following"));
+  publicProfileTitle.textContent=profile.nickname||"User Profile";
+  publicProfileSummary.innerHTML=`<img class="avatar" src="${escapeHtml(avatarUrl(profile))}" alt="${escapeHtml(profile.nickname||"User")} profile picture"><div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
+  if(uid===currentUser.uid){
+   publicProfileActions.innerHTML='<button class="small-btn" type="button" id="editFromPublicProfile">Edit Profile</button>';
+   $("editFromPublicProfile").onclick=()=>{publicProfileModal.classList.remove("show");openProfileModal()};
+  }else{
+   const following=followedUids.has(uid);
+   publicProfileActions.innerHTML=`<button class="small-btn follow-btn ${following?"following":""}" id="publicFollowButton" type="button">${following?"Following":"Follow"}</button>`;
+   $("publicFollowButton").onclick=async()=>{await toggleFollow(uid);openPublicProfile(uid,profile)};
+  }
+  const postSnap=await getDocs(query(collection(db,"posts"),where("uid","==",uid)));
+  const userPosts=postSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  publicProfilePostsTitle.textContent=`Posts (${userPosts.length})`;
+  publicProfilePosts.innerHTML="";
+  if(!userPosts.length){publicProfilePosts.innerHTML='<div class="empty">This user has not posted anything yet.</div>';return}
+  for(const p of userPosts){
+   const card=document.createElement("article");
+   card.className="public-profile-post";
+   const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
+   card.innerHTML=`<div class="time">${escapeHtml(formatTime(p.createdAt))}</div><div class="post-text">${richText(p.text||"")}</div>${image}${videoMarkup(p.videoUrl||"")}<div class="actions"><button class="small-btn view-profile-post" type="button">View in Feed</button><span>⬆ ${Number(p.upvotes||0)}</span></div>`;
+   card.querySelector(".view-profile-post").onclick=()=>{
+    publicProfileModal.classList.remove("show");
+    const target=document.querySelector(`[data-post-id="${CSS.escape(p.id)}"]`);
+    if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.animate([{transform:"scale(1)"},{transform:"scale(1.02)"},{transform:"scale(1)"}],{duration:700})}
+    else alert("That post is older than the posts currently loaded in the main feed.");
+   };
+   publicProfilePosts.appendChild(card);
+  }
+ }catch(error){
+  publicProfileSummary.innerHTML=`<div class="empty error">Could not load this profile: ${escapeHtml(error.message)}</div>`;
+  publicProfilePosts.innerHTML="";
+ }
+}
+
+closePublicProfileButton.addEventListener("click",()=>publicProfileModal.classList.remove("show"));
+publicProfileModal.addEventListener("click",event=>{if(event.target===publicProfileModal)publicProfileModal.classList.remove("show")});
+
 function normalizeUrl(value){
  let v=value.trim();
  if(!v)return"";
@@ -235,9 +322,11 @@ onAuthStateChanged(auth,async user=>{
   currentUser=user;
   isAdmin=(await getDoc(doc(db,"admins",user.uid))).exists();
   const snap=await getDoc(doc(db,"profiles",user.uid));
-  if(!snap.exists()){profileModal.classList.add("show");setStatus("Create a username and nickname to join.");return}
+  if(!snap.exists()){currentProfile=null;openProfileModal();setStatus("Create a username and nickname to join.");return}
   currentProfile=snap.data();
   profileModal.classList.remove("show");
+  followedUids=new Set();
+  onSnapshot(collection(db,"profiles",user.uid,"following"),fs=>{followedUids=new Set(fs.docs.map(d=>d.id));if(postCache.size)listenForPosts()});
   postButton.disabled=false;
   setStatus(`Signed in as ${currentProfile.nickname} · @${currentProfile.username}${isAdmin?" · ADMIN":""} · UID: ${user.uid}`);
   listenForPosts();
@@ -247,24 +336,42 @@ onAuthStateChanged(auth,async user=>{
 saveProfileButton.addEventListener("click",async()=>{
  profileError.textContent="";
  const username=cleanUsername(usernameInput.value),nickname=nicknameInput.value.trim();
+ const rawPhotoURL=profilePictureInput.value.trim(),photoURL=normalizeUrl(rawPhotoURL);
  if(username.length<3){profileError.textContent="Username must be at least 3 characters.";return}
  if(!nickname){profileError.textContent="Enter a nickname.";return}
+ if(rawPhotoURL&&!photoURL){profileError.textContent="Enter a valid http or https image URL, or leave it blank.";return}
  saveProfileButton.disabled=true;
  try{
-  const usernameRef=doc(db,"usernames",username),profileRef=doc(db,"profiles",currentUser.uid);
+  const lockedUsername=currentProfile?.username||username,usernameRef=doc(db,"usernames",lockedUsername),profileRef=doc(db,"profiles",currentUser.uid);
+  if(currentProfile&&username!==currentProfile.username)throw new Error("Usernames cannot be changed after profile creation.");
   await runTransaction(db,async tx=>{
-   const taken=await tx.get(usernameRef);
-   if(taken.exists())throw new Error("That username is already taken.");
-   tx.set(usernameRef,{uid:currentUser.uid,createdAt:serverTimestamp()});
-   tx.set(profileRef,{username,nickname,createdAt:serverTimestamp()});
+   if(!currentProfile){
+    const taken=await tx.get(usernameRef);
+    if(taken.exists())throw new Error("That username is already taken.");
+    tx.set(usernameRef,{uid:currentUser.uid,createdAt:serverTimestamp()});
+   }
+   tx.set(profileRef,{username:lockedUsername,nickname,photoURL,createdAt:currentProfile?.createdAt||serverTimestamp()},{merge:true});
   });
-  currentProfile={username,nickname};
-  profileModal.classList.remove("show");
-  postButton.disabled=false;
-  setStatus(`Signed in as ${nickname} · @${username}${isAdmin?" · ADMIN":""} · UID: ${currentUser.uid}`);
-  listenForPosts();
- }catch(error){profileError.textContent=error.message}
- finally{saveProfileButton.disabled=false}
+  currentProfile={...(currentProfile||{}),username:lockedUsername,nickname,photoURL};profileModal.classList.remove("show");postButton.disabled=false;
+  setStatus(`Signed in as ${nickname} · @${lockedUsername}${isAdmin?" · ADMIN":""} · UID: ${currentUser.uid}`);listenForPosts();
+ }catch(error){profileError.textContent=error.message}finally{saveProfileButton.disabled=false}
+});
+
+profileButton.addEventListener("click",openProfileModal);
+closeProfileButton.addEventListener("click",()=>profileModal.classList.remove("show"));
+profileModal.addEventListener("click",e=>{if(e.target===profileModal&&currentProfile)profileModal.classList.remove("show")});
+signOutButton.addEventListener("click",async()=>{if(confirm("Sign out of this browser account?")){profileModal.classList.remove("show");await signOut(auth)}});
+deleteAccountButton.addEventListener("click",async()=>{
+ if(!confirm("Permanently delete your profile and account? Your posts will also be removed."))return;
+ try{
+  const mine=await getDocs(query(collection(db,"posts")));
+  for(const p of mine.docs)if(p.data().uid===currentUser.uid)await deletePost(p.id,false);
+  const following=await getDocs(collection(db,"profiles",currentUser.uid,"following"));
+  for(const f of following.docs){await deleteDoc(doc(db,"profiles",f.id,"followers",currentUser.uid));await deleteDoc(f.ref)}
+  const followers=await getDocs(collection(db,"profiles",currentUser.uid,"followers"));
+  for(const f of followers.docs){await deleteDoc(doc(db,"profiles",f.id,"following",currentUser.uid));await deleteDoc(f.ref)}
+  await deleteDoc(doc(db,"usernames",currentProfile.username));await deleteDoc(doc(db,"profiles",currentUser.uid));await deleteUser(currentUser);
+ }catch(error){alert("Could not delete account: "+error.message)}
 });
 
 postButton.addEventListener("click",async()=>{
@@ -273,7 +380,7 @@ postButton.addEventListener("click",async()=>{
  postButton.disabled=true;postButton.textContent="POSTING…";
  try{
   await addDoc(collection(db,"posts"),{
-   uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,
+   uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,photoURL:currentProfile.photoURL||"",
    text:text.slice(0,2000),imageUrl:img,videoUrl:vid,upvotes:0,featured:false,createdAt:serverTimestamp()
   });
   postText.value="";imageUrl.value="";videoUrl.value="";
@@ -291,7 +398,7 @@ function listenForPosts(){
    const post={id:s.id,...s.data()};
    posts.push(post);postCache.set(post.id,post);
   });
-  posts.sort((a,b)=>Number(Boolean(b.featured))-Number(Boolean(a.featured)));
+  posts.sort((a,b)=>{const featured=Number(Boolean(b.featured))-Number(Boolean(a.featured));if(featured)return featured;const followed=Number(followedUids.has(b.uid))-Number(followedUids.has(a.uid));if(followed)return followed;return (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)});
   if(!posts.length){postsElement.innerHTML='<div class="empty">No posts yet. Be the first!</div>';return}
   postsElement.innerHTML="";
   posts.forEach(renderPost);
@@ -309,9 +416,8 @@ function renderPost(p){
  article.innerHTML=`
  ${p.featured?'<span class="featured-label">⭐ FEATURED</span>':""}
  <div>
-   <span class="user">${escapeHtml(p.nickname)}</span>
+   <span class="profile-link" role="button" tabindex="0" aria-label="Open ${escapeHtml(p.nickname)} profile"><img class="avatar" src="${escapeHtml(avatarUrl(p))}" alt="${escapeHtml(p.nickname)} profile picture"><span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span>
    ${p.uid===currentUser.uid&&isAdmin?'<span class="admin-badge">ADMIN</span>':""}
-   <span class="username">@${escapeHtml(p.username)}</span>
    <span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span>
  </div>
  <div class="post-text">${richText(p.text||"")}</div>
@@ -321,6 +427,8 @@ function renderPost(p){
    <button class="small-btn upvote-btn" type="button">⬆ Upvote ${Number(p.upvotes||0)}</button>
    <button class="small-btn save-btn" type="button">${isSaved?"★ Saved":"☆ Save"}</button>
    <button class="small-btn comments-btn" type="button">💬 Comments</button>
+   ${p.uid!==currentUser.uid?`<button class="small-btn follow-btn ${followedUids.has(p.uid)?"following":""}" type="button">${followedUids.has(p.uid)?"Following":"Follow"}</button>`:""}
+   <span class="follower-count" data-user="${escapeHtml(p.uid)}">Followers: …</span>
    ${isAdmin?`<button class="small-btn feature-btn" type="button">${p.featured?"Unfeature":"Feature"}</button>`:""}
    ${isAdmin||p.uid===currentUser.uid?'<button class="small-btn danger delete-btn" type="button">Delete Post</button>':""}
  </div>
@@ -342,6 +450,9 @@ function renderPost(p){
 
  article.querySelector(".upvote-btn").onclick=()=>upvotePost(p.id);
  article.querySelector(".save-btn").onclick=e=>toggleSavedPost(p.id,e.currentTarget);
+ const profileLink=article.querySelector(".profile-link");profileLink.onclick=()=>openPublicProfile(p.uid,p);profileLink.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openPublicProfile(p.uid,p)}};
+ const followButton=article.querySelector(".follow-btn");if(followButton)followButton.onclick=()=>toggleFollow(p.uid);
+ onSnapshot(collection(db,"profiles",p.uid,"followers"),x=>{const e=article.querySelector(".follower-count");if(e)e.textContent=`Followers: ${x.size}`});
 
  const comments=article.querySelector(".comments");
  const commentList=article.querySelector(".comment-list");
@@ -436,8 +547,7 @@ function buildCommentElement(post,c,isReply){
 
  el.innerHTML=`
  <div class="comment-head">
-   <strong>${escapeHtml(c.nickname)}</strong>
-   @${escapeHtml(c.username)} · ${escapeHtml(formatTime(c.createdAt))}
+   <span class="profile-link comment-profile-link" role="button" tabindex="0"><strong>${escapeHtml(c.nickname)}</strong>&nbsp;@${escapeHtml(c.username)}</span> · ${escapeHtml(formatTime(c.createdAt))}
  </div>
  <div class="comment-text">${richText(c.text||"")}</div>
  <div class="comment-actions">
@@ -451,6 +561,7 @@ function buildCommentElement(post,c,isReply){
  </div>`;
 
  el.querySelector(".like-comment-btn").onclick=()=>likeComment(post.id,c.id);
+ const commentProfileLink=el.querySelector(".comment-profile-link");commentProfileLink.onclick=()=>openPublicProfile(c.uid,c);commentProfileLink.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openPublicProfile(c.uid,c)}};
 
  const replyForm=el.querySelector(".reply-form");
  const replyInput=replyForm.querySelector("input");
@@ -498,8 +609,8 @@ async function likeComment(postId,commentId){
  }catch(error){alert(error.message)}
 }
 
-async function deletePost(postId){
- if(!confirm("Delete this post and its visible comments?"))return;
+async function deletePost(postId,ask=true){
+ if(ask&&!confirm("Delete this post and its visible comments?"))return;
  try{
   const comments=await getDocs(collection(db,"posts",postId,"comments"));
   await Promise.all(comments.docs.map(c=>deleteDoc(c.ref)));
@@ -518,6 +629,12 @@ async function upvotePost(postId){
    tx.update(postRef,{upvotes:Number(post.data().upvotes||0)+1});
   });
  }catch(error){alert(error.message)}
+}
+
+async function toggleFollow(targetUid){
+ if(targetUid===currentUser.uid)return;
+ const followingRef=doc(db,"profiles",currentUser.uid,"following",targetUid),followerRef=doc(db,"profiles",targetUid,"followers",currentUser.uid);
+ try{await runTransaction(db,async tx=>{const existing=await tx.get(followingRef);if(existing.exists()){tx.delete(followingRef);tx.delete(followerRef)}else{const data={createdAt:serverTimestamp()};tx.set(followingRef,data);tx.set(followerRef,data)}})}catch(error){alert("Could not update follow: "+error.message)}
 }
 
 function getSavedPostIds(){
@@ -571,12 +688,13 @@ async function renderSavedPosts(){
   const card=document.createElement("div");
   card.className="saved-card";
   card.innerHTML=`
-    <div><span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></div>
+    <div><span class="profile-link saved-profile-link" role="button" tabindex="0"><img class="avatar" src="${escapeHtml(avatarUrl(p))}" alt="${escapeHtml(p.nickname)} profile picture"><span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span></div>
     <div class="post-text">${richText(p.text||"(Media post)")}</div>
     <div class="actions">
       <button class="small-btn view-saved" type="button">View Post</button>
       <button class="small-btn danger remove-saved" type="button">Remove</button>
     </div>`;
+  const savedProfileLink=card.querySelector(".saved-profile-link");savedProfileLink.onclick=()=>openPublicProfile(p.uid,p);savedProfileLink.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openPublicProfile(p.uid,p)}};
   card.querySelector(".view-saved").onclick=()=>{
    savedPostsModal.classList.remove("show");
    const target=document.querySelector(`[data-post-id="${CSS.escape(p.id)}"]`);
