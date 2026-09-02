@@ -1,74 +1,120 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function admin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
-    function ownsPost(postId) { return signedIn() && get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid; }
-
-    match /admins/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    match /profiles/{uid} {
-      allow read: if signedIn();
-      allow create, update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.username is string
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function admin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function ownsPost(postId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/posts/$(postId)).data.uid
+          == request.auth.uid;
+    }
+
+    function validProfile() {
+      return request.resource.data.username is string
         && request.resource.data.nickname is string
         && request.resource.data.username.size() >= 3
         && request.resource.data.username.size() <= 20
         && request.resource.data.nickname.size() >= 1
         && request.resource.data.nickname.size() <= 24
-        && (!('photoURL' in request.resource.data) || request.resource.data.photoURL is string);
-      allow delete: if signedIn() && (request.auth.uid == uid || admin());
+        && (!('photoURL' in request.resource.data)
+          || request.resource.data.photoURL is string);
+    }
+
+    function validNewPost() {
+      return request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.upvotes == 0
+        && request.resource.data.featured == false;
+    }
+
+    function validNewComment() {
+      return request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.likes == 0
+        && (request.resource.data.parentId == null
+          || request.resource.data.parentId is string);
+    }
+
+    function validUserMarker() {
+      return request.resource.data.uid == request.auth.uid;
+    }
+
+    match /admins/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /profiles/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid) && validProfile();
+      allow delete: if isSelf(uid) || admin();
 
       match /following/{targetUid} {
         allow read: if signedIn();
-        allow create, delete: if signedIn() && request.auth.uid == uid && targetUid != uid;
+        allow create, delete: if isSelf(uid) && targetUid != uid;
         allow update: if false;
       }
+
       match /followers/{followerUid} {
         allow read: if signedIn();
-        allow create, delete: if signedIn() && request.auth.uid == followerUid && followerUid != uid;
+        allow create, delete: if isSelf(followerUid) && followerUid != uid;
         allow update: if false;
       }
     }
 
     match /usernames/{username} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && validUserMarker();
       allow update: if false;
-      allow delete: if signedIn() && (resource.data.uid == request.auth.uid || admin());
+      allow delete: if signedIn()
+        && (resource.data.uid == request.auth.uid || admin());
     }
 
     match /posts/{postId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
-        && request.resource.data.text is string && request.resource.data.text.size() <= 2000
-        && request.resource.data.upvotes == 0 && request.resource.data.featured == false;
-      allow update: if admin() || (signedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes'])
-        && request.resource.data.upvotes == resource.data.upvotes + 1);
-      allow delete: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && validNewPost();
+      allow update: if admin()
+        || (signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes'])
+          && request.resource.data.upvotes == resource.data.upvotes + 1);
+      allow delete: if admin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
 
       match /votes/{uid} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == request.auth.uid;
+        allow create: if isSelf(uid) && validUserMarker();
         allow update, delete: if false;
       }
+
       match /comments/{commentId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.uid == request.auth.uid
-          && request.resource.data.text is string && request.resource.data.text.size() >= 1
-          && request.resource.data.text.size() <= 500 && request.resource.data.likes == 0
-          && (request.resource.data.parentId == null || request.resource.data.parentId is string);
+        allow create: if signedIn() && validNewComment();
         allow update: if signedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
-          && request.resource.data.likes == (resource.data.likes is int ? resource.data.likes : 0) + 1;
-        allow delete: if admin() || ownsPost(postId) || (signedIn() && resource.data.uid == request.auth.uid);
+          && request.resource.data.likes
+            == (resource.data.likes is int ? resource.data.likes : 0) + 1;
+        allow delete: if admin()
+          || ownsPost(postId)
+          || (signedIn() && resource.data.uid == request.auth.uid);
+
         match /likes/{uid} {
           allow read: if signedIn();
-          allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == request.auth.uid;
+          allow create: if isSelf(uid) && validUserMarker();
           allow update, delete: if false;
         }
       }
