@@ -1,0 +1,177 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function admin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function ownsPost(postId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/posts/$(postId))
+        && get(/databases/$(database)/documents/posts/$(postId)).data.uid
+          == request.auth.uid;
+    }
+
+    function validProfile() {
+      return request.resource.data.username is string
+        && request.resource.data.nickname is string
+        && request.resource.data.username.size() >= 3
+        && request.resource.data.username.size() <= 20
+        && request.resource.data.nickname.size() >= 1
+        && request.resource.data.nickname.size() <= 24
+        && (!('photoURL' in request.resource.data)
+          || request.resource.data.photoURL is string);
+    }
+
+    function validNewPost() {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.upvotes is int
+        && request.resource.data.upvotes == 0
+        && request.resource.data.featured is bool
+        && request.resource.data.featured == false;
+    }
+
+    function validNewComment() {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.likes is int
+        && request.resource.data.likes == 0
+        && (!('parentId' in request.resource.data)
+          || request.resource.data.parentId == null
+          || request.resource.data.parentId is string);
+    }
+
+    function validUserMarker() {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid;
+    }
+
+    match /admins/{uid} {
+      // The site only checks its own admin marker.
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /profiles/{uid} {
+      allow read: if signedIn();
+
+      allow create: if isSelf(uid) && validProfile();
+
+      // Usernames are permanent after profile creation.
+      allow update: if isSelf(uid)
+        && validProfile()
+        && request.resource.data.username == resource.data.username;
+
+      allow delete: if isSelf(uid) || admin();
+
+      match /following/{targetUid} {
+        allow read: if signedIn();
+
+        // A user may follow another user from their own profile.
+        allow create: if isSelf(uid) && targetUid != uid;
+
+        // Either side may remove the relationship. This also lets
+        // account deletion clean up references safely.
+        allow delete: if (isSelf(uid) || isSelf(targetUid))
+          && targetUid != uid;
+
+        allow update: if false;
+      }
+
+      match /followers/{followerUid} {
+        allow read: if signedIn();
+
+        // The follower creates their marker under the target profile.
+        allow create: if isSelf(followerUid) && followerUid != uid;
+
+        // Either side may remove the relationship. This also lets
+        // account deletion clean up references safely.
+        allow delete: if (isSelf(uid) || isSelf(followerUid))
+          && followerUid != uid;
+
+        allow update: if false;
+      }
+    }
+
+    match /usernames/{username} {
+      allow read: if signedIn();
+
+      allow create: if validUserMarker();
+      allow update: if false;
+
+      allow delete: if signedIn()
+        && (resource.data.uid == request.auth.uid || admin());
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if validNewPost();
+
+      // Admins may feature/unfeature posts. Normal users may only
+      // increment the upvote counter by exactly one.
+      allow update: if admin()
+        || (signedIn()
+          && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['upvotes'])
+          && resource.data.upvotes is int
+          && request.resource.data.upvotes is int
+          && request.resource.data.upvotes == resource.data.upvotes + 1);
+
+      allow delete: if admin()
+        || (signedIn() && resource.data.uid == request.auth.uid);
+
+      match /votes/{uid} {
+        allow read: if signedIn();
+        allow create: if isSelf(uid) && validUserMarker();
+        allow update, delete: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if validNewComment();
+
+        // Firestore Rules do not support JavaScript's ?: operator.
+        // Map.get(key, default) safely handles old comments that do
+        // not have a likes field yet.
+        allow update: if signedIn()
+          && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['likes'])
+          && request.resource.data.likes is int
+          && request.resource.data.likes
+            == resource.data.get('likes', 0) + 1;
+
+        allow delete: if admin()
+          || ownsPost(postId)
+          || (signedIn() && resource.data.uid == request.auth.uid);
+
+        match /likes/{uid} {
+          allow read: if signedIn();
+          allow create: if isSelf(uid) && validUserMarker();
+          allow update, delete: if false;
+        }
+      }
+    }
+
+    match /games/{gameId} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+    }
+  }
+}
