@@ -19,7 +19,7 @@ header{position:sticky;top:0;z-index:10;background:#02050bcc;border-bottom:3px s
 .hero p{margin:0;color:#c7faff;font-size:16px}
 .status{width:min(1500px,calc(100% - 28px));margin:0 auto 14px;color:#9ffcff}
 .games-grid{width:min(1500px,calc(100% - 28px));margin:0 auto 50px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));grid-auto-flow:dense;grid-auto-rows:170px;gap:16px}
-.game-card{position:relative;overflow:hidden;border-radius:22px;background:#08101b;border:2px solid #00eaff;box-shadow:0 0 14px #00eaff66;cursor:pointer;text-decoration:none;color:white;transition:.18s ease;min-height:0}
+.game-card{appearance:none;width:100%;padding:0;text-align:left;font:inherit;position:relative;overflow:hidden;border-radius:22px;background:#08101b;border:2px solid #00eaff;box-shadow:0 0 14px #00eaff66;cursor:pointer;text-decoration:none;color:white;transition:.18s ease;min-height:0}
 .game-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 0 18px cyan,0 0 36px #00ffff77}
 .game-card.featured{grid-column:span 2;grid-row:span 2;border:3px solid #ffe600;box-shadow:0 0 18px #ffe600,0 0 42px #ffbf00aa}
 .game-card img{width:100%;height:100%;object-fit:cover;display:block;background:#07111f}
@@ -32,6 +32,16 @@ header{position:sticky;top:0;z-index:10;background:#02050bcc;border-bottom:3px s
 footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;background:#000}
 @media(max-width:760px){.games-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:150px;gap:12px}.game-card.featured{grid-column:span 2;grid-row:span 2}.home-btn{margin-left:0}.search{order:3;max-width:none;width:100%}}
 @media(max-width:430px){.games-grid{grid-auto-rows:135px}.game-name{font-size:14px}.game-desc{display:none}}
+
+.player-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,5,12,.94);display:none;align-items:center;justify-content:center;padding:18px}
+.player-overlay.open{display:flex}
+.player-shell{width:min(1500px,100%);height:min(900px,95vh);display:flex;flex-direction:column;background:#000;border:2px solid cyan;border-radius:18px;overflow:hidden;box-shadow:0 0 22px cyan,0 0 60px #00ffff55}
+.player-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#03111e;border-bottom:2px solid #00ffff99}
+.player-title{font-weight:900;color:white;text-shadow:0 0 8px cyan;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.player-btn{border:2px solid cyan;background:#001b2d;color:#fff;padding:9px 13px;border-radius:10px;font-weight:900;cursor:pointer;box-shadow:0 0 10px #00ffff55}
+.player-btn:hover{box-shadow:0 0 16px cyan}
+.player-frame{width:100%;height:100%;border:0;background:#000;flex:1}
+@media(max-width:600px){.player-overlay{padding:0}.player-shell{height:100vh;border-radius:0;border-left:0;border-right:0}.player-bar{flex-wrap:wrap}.player-title{width:100%;flex-basis:100%}}
 </style>
 </head>
 <body>
@@ -50,6 +60,19 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
 <div class="status" id="status">Connecting to Firebase…</div>
 <main class="games-grid" id="gamesGrid"></main>
 <footer>© 2026 iLiam</footer>
+
+
+<div class="player-overlay" id="playerOverlay" aria-hidden="true">
+  <div class="player-shell" id="playerShell">
+    <div class="player-bar">
+      <div class="player-title" id="playerTitle">Game</div>
+      <button class="player-btn" id="reloadGame" type="button">↻ Reload</button>
+      <button class="player-btn" id="fullscreenGame" type="button">⛶ Full Screen</button>
+      <button class="player-btn" id="closeGame" type="button">✕ Close</button>
+    </div>
+    <iframe id="gameFrame" class="player-frame" title="Game player" allow="autoplay; fullscreen; gamepad" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </div>
+</div>
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -70,6 +93,14 @@ const db=getFirestore(app);
 const grid=document.getElementById('gamesGrid');
 const status=document.getElementById('status');
 const search=document.getElementById('search');
+const playerOverlay=document.getElementById('playerOverlay');
+const playerShell=document.getElementById('playerShell');
+const playerTitle=document.getElementById('playerTitle');
+const gameFrame=document.getElementById('gameFrame');
+const closeGame=document.getElementById('closeGame');
+const fullscreenGame=document.getElementById('fullscreenGame');
+const reloadGame=document.getElementById('reloadGame');
+let currentGameUrl='';
 let games=[];
 
 function safeUrl(value){
@@ -78,6 +109,35 @@ function safeUrl(value){
     return ['http:','https:'].includes(u.protocol)?u.href:null;
   }catch{return null}
 }
+
+
+function openGame(game){
+  currentGameUrl=game.url;
+  playerTitle.textContent=game.name;
+  gameFrame.src=game.url;
+  playerOverlay.classList.add('open');
+  playerOverlay.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+}
+
+function closePlayer(){
+  playerOverlay.classList.remove('open');
+  playerOverlay.setAttribute('aria-hidden','true');
+  gameFrame.src='about:blank';
+  currentGameUrl='';
+  document.body.style.overflow='';
+}
+
+closeGame.addEventListener('click',closePlayer);
+playerOverlay.addEventListener('click',e=>{if(e.target===playerOverlay)closePlayer()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&playerOverlay.classList.contains('open'))closePlayer()});
+reloadGame.addEventListener('click',()=>{if(currentGameUrl){gameFrame.src='about:blank';requestAnimationFrame(()=>gameFrame.src=currentGameUrl)}});
+fullscreenGame.addEventListener('click',async()=>{
+  try{
+    if(!document.fullscreenElement)await playerShell.requestFullscreen();
+    else await document.exitFullscreen();
+  }catch(err){console.error('Fullscreen failed',err)}
+});
 
 function render(){
   const term=search.value.trim().toLowerCase();
@@ -90,11 +150,10 @@ function render(){
     grid.append(empty);return;
   }
   for(const g of filtered){
-    const a=document.createElement('a');
+    const a=document.createElement('button');
+    a.type='button';
     a.className='game-card'+(g.featured?' featured':'');
-    a.href=g.url;
-    a.target='_blank';
-    a.rel='noopener noreferrer';
+    a.addEventListener('click',()=>openGame(g));
 
     const img=document.createElement('img');
     img.src=g.image||'images/favicon.png';
