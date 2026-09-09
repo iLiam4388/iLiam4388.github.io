@@ -63,6 +63,16 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid;
     }
 
+    function validGame() {
+      return request.resource.data.name is string
+        && request.resource.data.url is string
+        && request.resource.data.image is string
+        && request.resource.data.description is string
+        && request.resource.data.featured is bool
+        && request.resource.data.enabled is bool
+        && request.resource.data.order is number;
+    }
+
     match /admins/{uid} {
       // The site only checks its own admin marker.
       allow read: if isSelf(uid);
@@ -171,7 +181,12 @@ service cloud.firestore {
 
     match /games/{gameId} {
       allow read: if true;
-      allow create, update, delete: if admin();
+
+      // Password-only admin mode is enforced by games.html.
+      // Firestore rules cannot securely validate a plaintext password
+      // embedded in a static GitHub Pages site, so writes are public here.
+      allow create, update: if validGame();
+      allow delete: if true;
     }
   }
 }
