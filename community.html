@@ -241,13 +241,47 @@ function formatTime(t){if(!t?.toDate)return"just now";return t.toDate().toLocale
 function setStatus(m,e=false){statusBox.textContent=m;statusBox.classList.toggle("error",e)}
 function safeUrl(value){try{const u=new URL(value);return["http:","https:"].includes(u.protocol)?u.href:""}catch{return""}}
 
-function avatarUrl(profile){return safeUrl(profile?.photoURL||"")||"https://api.dicebear.com/9.x/initials/svg?seed="+encodeURIComponent(profile?.nickname||profile?.username||"User")}
+// Read each author's current profile once per session and keep visible avatars in sync.
+const avatarProfiles=new Map(),avatarListeners=new Map();
+function fallbackAvatar(profile){
+ const initial=Array.from(profile?.nickname||profile?.username||"User")[0].toUpperCase();
+ return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#142b52"/><text x="40" y="52" text-anchor="middle" font-family="sans-serif" font-size="38" fill="white">${escapeHtml(initial)}</text></svg>`);
+}
+function avatarUrl(profile){return safeUrl(profile?.photoURL||"")||fallbackAvatar(profile)}
+function watchAvatar(uid){
+ if(!uid||!currentUser||avatarListeners.has(uid))return;
+ const stop=onSnapshot(doc(db,"profiles",uid),snap=>{
+  const profile=snap.exists()?snap.data():null;
+  avatarProfiles.set(uid,profile);
+  if(currentUser?.uid===uid&&profile)currentProfile=profile;
+  document.querySelectorAll("img[data-avatar-uid]").forEach(img=>{
+   if(img.dataset.avatarUid!==uid)return;
+   const latest=profile||{nickname:img.dataset.avatarName};
+   img.dataset.avatarFallback=fallbackAvatar(latest);
+   const src=avatarUrl(latest);if(img.getAttribute("src")!==src)img.src=src;
+  });
+ },error=>console.warn("Could not refresh profile picture:",error.code));
+ avatarListeners.set(uid,stop);
+}
+function avatarMarkup(uid,profile){
+ watchAvatar(uid);
+ const latest=avatarProfiles.has(uid)?avatarProfiles.get(uid)||profile:profile;
+ return `<img class="avatar" data-avatar-uid="${escapeHtml(uid||"")}" data-avatar-name="${escapeHtml(latest?.nickname||latest?.username||"User")}" data-avatar-fallback="${escapeHtml(fallbackAvatar(latest))}" src="${escapeHtml(avatarUrl(latest))}" referrerpolicy="no-referrer" alt="Profile picture">`;
+}
+// Capture image errors because they do not bubble; never retry a failed fallback.
+document.addEventListener("error",event=>{
+ const img=event.target;
+ if(img instanceof HTMLImageElement&&img.matches("img[data-avatar-uid]")&&img.getAttribute("src")!==img.dataset.avatarFallback)img.src=img.dataset.avatarFallback;
+},true);
+function clearAvatarListeners(){
+ avatarListeners.forEach(stop=>stop());avatarListeners.clear();avatarProfiles.clear();
+}
 function openProfileModal(){
  profileModalTitle.textContent="Edit your profile";
  usernameInput.readOnly=true;usernameLockHint.textContent="(permanent)";
  closeProfileButton.hidden=false;accountActions.hidden=false;profileSummary.hidden=false;
  if(currentProfile){usernameInput.value=currentProfile.username||"";usernameInput.readOnly=true;usernameInput.setAttribute("aria-readonly","true");usernameLockHint.textContent="(permanent)";nicknameInput.value=currentProfile.nickname||"";profilePictureInput.value=currentProfile.photoURL||"";
- profileSummary.innerHTML=`<img class="avatar" src="${escapeHtml(avatarUrl(currentProfile))}" alt="Profile picture"><div><strong>${escapeHtml(currentProfile.nickname)}</strong><div>@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
+ profileSummary.innerHTML=`${avatarMarkup(currentUser.uid,currentProfile)}<div><strong>${escapeHtml(currentProfile.nickname)}</strong><div>@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
  onSnapshot(collection(db,"profiles",currentUser.uid,"followers"),x=>{const e=$("ownFollowers");if(e)e.textContent=`Followers: ${x.size}`});
  onSnapshot(collection(db,"profiles",currentUser.uid,"following"),x=>{const e=$("ownFollowing");if(e)e.textContent=`Following: ${x.size}`});}
  profileModal.classList.add("show");
@@ -267,7 +301,7 @@ async function openPublicProfile(uid,fallback={}){
   const followersSnap=await getDocs(collection(db,"profiles",uid,"followers"));
   const followingSnap=await getDocs(collection(db,"profiles",uid,"following"));
   publicProfileTitle.textContent=profile.nickname||"User Profile";
-  publicProfileSummary.innerHTML=`<img class="avatar" src="${escapeHtml(avatarUrl(profile))}" alt="${escapeHtml(profile.nickname||"User")} profile picture"><div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
+  publicProfileSummary.innerHTML=`${avatarMarkup(uid,profile)}<div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
   if(uid===currentUser.uid){
    publicProfileActions.innerHTML='<button class="small-btn" type="button" id="editFromPublicProfile">Edit Profile</button>';
    $("editFromPublicProfile").onclick=()=>{publicProfileModal.classList.remove("show");openProfileModal()};
@@ -357,12 +391,14 @@ $("linkButton").addEventListener("click",()=>{
 
 
 async function initializeSignedInUser(user){
+ clearAvatarListeners();
  currentUser=user;
  isAdmin=(await getDoc(doc(db,"admins",user.uid))).exists();
  adminButton.hidden=!isAdmin;
  const snap=await getDoc(doc(db,"profiles",user.uid));
  if(!snap.exists())return false;
  currentProfile=snap.data();
+ watchAvatar(user.uid);
  authModal.classList.remove("show");profileModal.classList.remove("show");
  followedUids=new Set();
  onSnapshot(collection(db,"profiles",user.uid,"following"),fs=>{followedUids=new Set(fs.docs.map(d=>d.id));if(postCache.size)listenForPosts()});
@@ -418,6 +454,7 @@ authSubmitButton.addEventListener("click",async()=>{
 onAuthStateChanged(auth,async user=>{
  try{
   if(!user){
+   clearAvatarListeners();
    currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;adminButton.hidden=true;
    if(stopPostsListener){stopPostsListener();stopPostsListener=null}
    postsElement.innerHTML='<div class="empty">Log in or sign up to view the community.</div>';
@@ -571,7 +608,7 @@ function renderPost(p){
  article.innerHTML=`
  ${p.featured?'<span class="featured-label">⭐ FEATURED</span>':""}
  <div>
-   <span class="profile-link" role="button" tabindex="0" aria-label="Open ${escapeHtml(p.nickname)} profile"><img class="avatar" src="${escapeHtml(avatarUrl(p))}" alt="${escapeHtml(p.nickname)} profile picture"><span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span>
+   <span class="profile-link" role="button" tabindex="0" aria-label="Open ${escapeHtml(p.nickname)} profile">${avatarMarkup(p.uid,p)}<span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span>
    ${p.uid===currentUser.uid&&isAdmin?'<span class="admin-badge">ADMIN</span>':""}
    <span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span>
  </div>
@@ -840,7 +877,7 @@ async function renderSavedPosts(){
   const card=document.createElement("div");
   card.className="saved-card";
   card.innerHTML=`
-    <div><span class="profile-link saved-profile-link" role="button" tabindex="0"><img class="avatar" src="${escapeHtml(avatarUrl(p))}" alt="${escapeHtml(p.nickname)} profile picture"><span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span></div>
+    <div><span class="profile-link saved-profile-link" role="button" tabindex="0">${avatarMarkup(p.uid,p)}<span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span></div>
     <div class="post-text">${richText(p.text||"(Media post)")}</div>
     <div class="actions">
       <button class="small-btn view-saved" type="button">View Post</button>
