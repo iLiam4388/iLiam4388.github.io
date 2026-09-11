@@ -11,35 +11,51 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function admin() {
+    function isAdmin() {
       return signedIn()
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function hasProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid));
     }
 
     function ownsPost(postId) {
       return signedIn()
         && exists(/databases/$(database)/documents/posts/$(postId))
-        && get(/databases/$(database)/documents/posts/$(postId)).data.uid
-          == request.auth.uid;
+        && get(/databases/$(database)/documents/posts/$(postId)).data.uid == request.auth.uid;
     }
 
     function validProfile() {
-      return request.resource.data.username is string
+      return request.resource.data.keys().hasOnly([
+          'username', 'nickname', 'photoURL', 'createdAt'
+        ])
+        && request.resource.data.username is string
         && request.resource.data.nickname is string
+        && request.resource.data.photoURL is string
         && request.resource.data.username.size() >= 3
         && request.resource.data.username.size() <= 20
         && request.resource.data.nickname.size() >= 1
         && request.resource.data.nickname.size() <= 24
         && request.auth.token.email is string
-        && request.auth.token.email == request.resource.data.username + "@users.iliam.app"
-        && (!('photoURL' in request.resource.data)
-          || request.resource.data.photoURL is string);
+        && request.auth.token.email == request.resource.data.username + '@users.iliam.app';
     }
 
     function validNewPost() {
-      return signedIn()
+      return hasProfile()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'username', 'nickname', 'photoURL',
+          'text', 'imageUrl', 'videoUrl', 'upvotes',
+          'featured', 'createdAt'
+        ])
         && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username is string
+        && request.resource.data.nickname is string
+        && request.resource.data.photoURL is string
         && request.resource.data.text is string
+        && request.resource.data.imageUrl is string
+        && request.resource.data.videoUrl is string
         && request.resource.data.text.size() <= 2000
         && request.resource.data.upvotes is int
         && request.resource.data.upvotes == 0
@@ -48,25 +64,38 @@ service cloud.firestore {
     }
 
     function validNewComment() {
-      return signedIn()
+      return hasProfile()
+        && request.resource.data.keys().hasOnly([
+          'uid', 'username', 'nickname', 'text',
+          'parentId', 'likes', 'createdAt'
+        ])
         && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username is string
+        && request.resource.data.nickname is string
         && request.resource.data.text is string
         && request.resource.data.text.size() >= 1
         && request.resource.data.text.size() <= 500
         && request.resource.data.likes is int
         && request.resource.data.likes == 0
-        && (!('parentId' in request.resource.data)
-          || request.resource.data.parentId == null
+        && (request.resource.data.parentId == null
           || request.resource.data.parentId is string);
     }
 
-    function validUserMarker() {
-      return signedIn()
+    function validMarker() {
+      return request.resource.data.keys().hasOnly(['uid', 'createdAt'])
         && request.resource.data.uid == request.auth.uid;
     }
 
+    function validRelationship() {
+      return request.resource.data.keys().hasOnly(['createdAt']);
+    }
+
     function validGame() {
-      return request.resource.data.name is string
+      return request.resource.data.keys().hasOnly([
+          'name', 'url', 'image', 'description',
+          'featured', 'enabled', 'order'
+        ])
+        && request.resource.data.name is string
         && request.resource.data.url is string
         && request.resource.data.image is string
         && request.resource.data.description is string
@@ -76,7 +105,7 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      // The site only checks its own admin marker.
+      // Admin membership is assigned manually in Firebase.
       allow read: if isSelf(uid);
       allow write: if false;
     }
@@ -86,99 +115,113 @@ service cloud.firestore {
 
       allow create: if isSelf(uid) && validProfile();
 
-      // Usernames are permanent after profile creation.
+      // The username is tied to the Firebase Auth login and cannot change.
       allow update: if isSelf(uid)
         && validProfile()
-        && request.resource.data.username == resource.data.username;
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['nickname', 'photoURL']);
 
-      allow delete: if isSelf(uid) || admin();
+      allow delete: if isSelf(uid) || isAdmin();
 
       match /following/{targetUid} {
         allow read: if signedIn();
-
-        // A user may follow another user from their own profile.
-        allow create: if isSelf(uid) && targetUid != uid;
-
-        // Either side may remove the relationship. This also lets
-        // account deletion clean up references safely.
-        allow delete: if (isSelf(uid) || isSelf(targetUid))
-          && targetUid != uid;
-
+        allow create: if isSelf(uid)
+          && targetUid != uid
+          && validRelationship();
+        allow delete: if isAdmin()
+          || ((isSelf(uid) || isSelf(targetUid)) && targetUid != uid);
         allow update: if false;
       }
 
       match /followers/{followerUid} {
         allow read: if signedIn();
-
-        // The follower creates their marker under the target profile.
-        allow create: if isSelf(followerUid) && followerUid != uid;
-
-        // Either side may remove the relationship. This also lets
-        // account deletion clean up references safely.
-        allow delete: if (isSelf(uid) || isSelf(followerUid))
-          && followerUid != uid;
-
+        allow create: if isSelf(followerUid)
+          && followerUid != uid
+          && validRelationship();
+        allow delete: if isAdmin()
+          || ((isSelf(uid) || isSelf(followerUid)) && followerUid != uid);
         allow update: if false;
       }
     }
-
-
 
     match /posts/{postId} {
       allow read: if signedIn();
       allow create: if validNewPost();
 
-      // Admins may feature/unfeature posts. Normal users may only
-      // increment the upvote counter by exactly one.
-      allow update: if admin()
-        || (signedIn()
+      // Admins can only feature/unfeature. Users can only add one upvote,
+      // and that increment must be accompanied by their vote marker.
+      allow update: if (
+          isAdmin()
+          && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['featured'])
+          && request.resource.data.featured is bool
+        ) || (
+          hasProfile()
           && request.resource.data.diff(resource.data)
             .affectedKeys().hasOnly(['upvotes'])
           && resource.data.upvotes is int
           && request.resource.data.upvotes is int
-          && request.resource.data.upvotes == resource.data.upvotes + 1);
+          && request.resource.data.upvotes == resource.data.upvotes + 1
+          && !exists(/databases/$(database)/documents/posts/$(postId)/votes/$(request.auth.uid))
+          && existsAfter(/databases/$(database)/documents/posts/$(postId)/votes/$(request.auth.uid))
+        );
 
-      allow delete: if admin()
+      allow delete: if isAdmin()
         || (signedIn() && resource.data.uid == request.auth.uid);
 
       match /votes/{uid} {
         allow read: if signedIn();
-        allow create: if isSelf(uid) && validUserMarker();
-        allow update, delete: if false;
+        allow create: if isSelf(uid)
+          && hasProfile()
+          && validMarker()
+          && !exists(/databases/$(database)/documents/posts/$(postId)/votes/$(uid));
+        allow update: if false;
+        allow delete: if isAdmin();
       }
 
       match /comments/{commentId} {
         allow read: if signedIn();
         allow create: if validNewComment();
 
-        // Firestore Rules do not support JavaScript's ?: operator.
-        // Map.get(key, default) safely handles old comments that do
-        // not have a likes field yet.
-        allow update: if signedIn()
+        // A like increment must be paired with this user's new like marker.
+        allow update: if hasProfile()
           && request.resource.data.diff(resource.data)
             .affectedKeys().hasOnly(['likes'])
           && request.resource.data.likes is int
-          && request.resource.data.likes
-            == resource.data.get('likes', 0) + 1;
+          && request.resource.data.likes == resource.data.get('likes', 0) + 1
+          && !exists(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)/likes/$(request.auth.uid))
+          && existsAfter(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)/likes/$(request.auth.uid));
 
-        allow delete: if admin()
+        allow delete: if isAdmin()
           || ownsPost(postId)
           || (signedIn() && resource.data.uid == request.auth.uid);
 
         match /likes/{uid} {
           allow read: if signedIn();
-          allow create: if isSelf(uid) && validUserMarker();
-          allow update, delete: if false;
+          allow create: if isSelf(uid)
+            && hasProfile()
+            && validMarker()
+            && !exists(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)/likes/$(uid));
+          allow update: if false;
+          allow delete: if isAdmin();
         }
       }
+    }
+
+    // Old username-reservation documents are no longer used by the app.
+    // Admin read/delete exists only so Reset Community can clear leftovers.
+    match /usernames/{username} {
+      allow read, delete: if isAdmin();
+      allow create, update: if false;
     }
 
     match /games/{gameId} {
       allow read: if true;
 
-      // Password-only admin mode is enforced by games.html.
-      // Firestore rules cannot securely validate a plaintext password
-      // embedded in a static GitHub Pages site, so writes are public here.
+      // Kept compatible with the existing games page. A password embedded
+      // in a static page cannot be securely enforced by Firestore Rules.
       allow create, update: if validGame();
       allow delete: if true;
     }

@@ -175,6 +175,8 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <div class="modal-head"><h2>🛡 Community Admin</h2><button class="small-btn close-modal" id="closeAdminButton" type="button" aria-label="Close">✕</button></div>
 <p class="hint">These actions affect the whole community.</p>
 <button class="post-btn danger" id="deleteAllPostsButton" type="button">DELETE ALL POSTS</button>
+<button class="post-btn danger" id="resetCommunityButton" type="button">RESET COMMUNITY</button>
+<p class="hint">Reset Community deletes posts, comments, votes, likes, follows, and the old username-reservation records. It keeps real account profiles so existing Firebase Authentication logins do not break.</p>
 <p class="hint" id="adminError"></p>
 </div>
 </div>
@@ -226,7 +228,7 @@ const statusBox=$("status"),postText=$("postText"),postButton=$("postButton"),po
 profileModal=$("profileModal"),usernameInput=$("usernameInput"),nicknameInput=$("nicknameInput"),
 saveProfileButton=$("saveProfileButton"),profileError=$("profileError"),imageUrl=$("imageUrl"),
 videoUrl=$("videoUrl"),savedPostsButton=$("savedPostsButton"),savedPostsModal=$("savedPostsModal"),
-savedPostsList=$("savedPostsList"),closeSavedPostsButton=$("closeSavedPostsButton"),profileButton=$("profileButton"),closeProfileButton=$("closeProfileButton"),profilePictureInput=$("profilePictureInput"),profileSummary=$("profileSummary"),profileModalTitle=$("profileModalTitle"),accountActions=$("accountActions"),signOutButton=$("signOutButton"),deleteAccountButton=$("deleteAccountButton"),publicProfileModal=$("publicProfileModal"),closePublicProfileButton=$("closePublicProfileButton"),publicProfileTitle=$("publicProfileTitle"),publicProfileSummary=$("publicProfileSummary"),publicProfileActions=$("publicProfileActions"),publicProfilePostsTitle=$("publicProfilePostsTitle"),publicProfilePosts=$("publicProfilePosts"),authModal=$("authModal"),authTitle=$("authTitle"),loginTab=$("loginTab"),signupTab=$("signupTab"),authHint=$("authHint"),authUsernameInput=$("authUsernameInput"),authNicknameInput=$("authNicknameInput"),signupNicknameRow=$("signupNicknameRow"),authPasswordInput=$("authPasswordInput"),authConfirmPasswordInput=$("authConfirmPasswordInput"),confirmPasswordRow=$("confirmPasswordRow"),authSubmitButton=$("authSubmitButton"),authError=$("authError"),adminButton=$("adminButton"),adminModal=$("adminModal"),closeAdminButton=$("closeAdminButton"),deleteAllPostsButton=$("deleteAllPostsButton"),adminError=$("adminError");
+savedPostsList=$("savedPostsList"),closeSavedPostsButton=$("closeSavedPostsButton"),profileButton=$("profileButton"),closeProfileButton=$("closeProfileButton"),profilePictureInput=$("profilePictureInput"),profileSummary=$("profileSummary"),profileModalTitle=$("profileModalTitle"),accountActions=$("accountActions"),signOutButton=$("signOutButton"),deleteAccountButton=$("deleteAccountButton"),publicProfileModal=$("publicProfileModal"),closePublicProfileButton=$("closePublicProfileButton"),publicProfileTitle=$("publicProfileTitle"),publicProfileSummary=$("publicProfileSummary"),publicProfileActions=$("publicProfileActions"),publicProfilePostsTitle=$("publicProfilePostsTitle"),publicProfilePosts=$("publicProfilePosts"),authModal=$("authModal"),authTitle=$("authTitle"),loginTab=$("loginTab"),signupTab=$("signupTab"),authHint=$("authHint"),authUsernameInput=$("authUsernameInput"),authNicknameInput=$("authNicknameInput"),signupNicknameRow=$("signupNicknameRow"),authPasswordInput=$("authPasswordInput"),authConfirmPasswordInput=$("authConfirmPasswordInput"),confirmPasswordRow=$("confirmPasswordRow"),authSubmitButton=$("authSubmitButton"),authError=$("authError"),adminButton=$("adminButton"),adminModal=$("adminModal"),closeAdminButton=$("closeAdminButton"),deleteAllPostsButton=$("deleteAllPostsButton"),resetCommunityButton=$("resetCommunityButton"),adminError=$("adminError");
 const usernameLockHint=$("usernameLockHint");
 
 let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
@@ -465,17 +467,66 @@ deleteAccountButton.addEventListener("click",async()=>{
 adminButton.addEventListener("click",()=>{if(isAdmin){adminError.textContent="";adminModal.classList.add("show")}});
 closeAdminButton.addEventListener("click",()=>adminModal.classList.remove("show"));
 adminModal.addEventListener("click",e=>{if(e.target===adminModal)adminModal.classList.remove("show")});
+async function deletePostCompletely(postId){
+ const comments=await getDocs(collection(db,"posts",postId,"comments"));
+ for(const comment of comments.docs){
+  const likes=await getDocs(collection(db,"posts",postId,"comments",comment.id,"likes"));
+  await Promise.all(likes.docs.map(l=>deleteDoc(l.ref)));
+  await deleteDoc(comment.ref);
+ }
+ const votes=await getDocs(collection(db,"posts",postId,"votes"));
+ await Promise.all(votes.docs.map(v=>deleteDoc(v.ref)));
+ await deleteDoc(doc(db,"posts",postId));
+}
+
+async function clearAllPosts(){
+ const snap=await getDocs(collection(db,"posts"));
+ for(const p of snap.docs)await deletePostCompletely(p.id);
+ return snap.size;
+}
+
 deleteAllPostsButton.addEventListener("click",async()=>{
  if(!isAdmin)return;
- if(!confirm("Delete ALL community posts? This cannot be undone."))return;
+ if(!confirm("Delete ALL community posts, comments, votes, and likes? This cannot be undone."))return;
  if(!confirm("Final confirmation: permanently delete every post?"))return;
- deleteAllPostsButton.disabled=true;adminError.textContent="Deleting posts…";
+ deleteAllPostsButton.disabled=true;resetCommunityButton.disabled=true;adminError.textContent="Deleting posts…";
  try{
-  const snap=await getDocs(collection(db,"posts"));
-  for(const p of snap.docs)await deletePost(p.id,false);
-  adminError.textContent=`Deleted ${snap.size} post${snap.size===1?"":"s"}.`;
+  const count=await clearAllPosts();
+  adminError.textContent=`Deleted ${count} post${count===1?"":"s"} and their related data.`;
  }catch(error){adminError.textContent="Could not delete all posts: "+error.message}
- finally{deleteAllPostsButton.disabled=false}
+ finally{deleteAllPostsButton.disabled=false;resetCommunityButton.disabled=false}
+});
+
+resetCommunityButton.addEventListener("click",async()=>{
+ if(!isAdmin)return;
+ if(!confirm("RESET COMMUNITY? This deletes ALL posts, comments, votes, likes, follow relationships, and old username-reservation records. Account profiles and Firebase Authentication users are kept."))return;
+ const typed=prompt('Type RESET COMMUNITY exactly to continue:');
+ if(typed!=="RESET COMMUNITY")return;
+ if(!confirm("Final confirmation: reset the whole community now?"))return;
+ deleteAllPostsButton.disabled=true;resetCommunityButton.disabled=true;adminError.textContent="Resetting community…";
+ try{
+  const postCount=await clearAllPosts();
+  const profiles=await getDocs(collection(db,"profiles"));
+  let relationCount=0;
+  for(const profile of profiles.docs){
+   const following=await getDocs(collection(db,"profiles",profile.id,"following"));
+   const followers=await getDocs(collection(db,"profiles",profile.id,"followers"));
+   relationCount+=following.size+followers.size;
+   await Promise.all([...following.docs,...followers.docs].map(d=>deleteDoc(d.ref)));
+  }
+  let legacyUsernameCount=0;
+  try{
+   const legacy=await getDocs(collection(db,"usernames"));
+   legacyUsernameCount=legacy.size;
+   await Promise.all(legacy.docs.map(d=>deleteDoc(d.ref)));
+  }catch(error){
+   console.warn("Legacy usernames collection could not be cleared:",error);
+  }
+  localStorage.removeItem("iliam_saved_posts");
+  followedUids=new Set();
+  adminError.textContent=`Community reset complete: ${postCount} posts removed, ${relationCount} follow records cleared, ${legacyUsernameCount} old username records removed. Account profiles were preserved.`;
+ }catch(error){adminError.textContent="Could not reset community: "+error.message}
+ finally{deleteAllPostsButton.disabled=false;resetCommunityButton.disabled=false}
 });
 
 postButton.addEventListener("click",async()=>{
@@ -714,12 +765,9 @@ async function likeComment(postId,commentId){
 }
 
 async function deletePost(postId,ask=true){
- if(ask&&!confirm("Delete this post and its visible comments?"))return;
- try{
-  const comments=await getDocs(collection(db,"posts",postId,"comments"));
-  await Promise.all(comments.docs.map(c=>deleteDoc(c.ref)));
-  await deleteDoc(doc(db,"posts",postId));
- }catch(error){alert("Could not delete: "+error.message)}
+ if(ask&&!confirm("Delete this post and all of its comments, votes, and likes?"))return;
+ try{await deletePostCompletely(postId)}
+ catch(error){alert("Could not delete: "+error.message)}
 }
 
 async function upvotePost(postId){
