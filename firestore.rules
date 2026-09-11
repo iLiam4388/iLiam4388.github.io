@@ -30,6 +30,8 @@ service cloud.firestore {
         && request.resource.data.username.size() <= 20
         && request.resource.data.nickname.size() >= 1
         && request.resource.data.nickname.size() <= 24
+        && request.auth.token.email is string
+        && request.auth.token.email == request.resource.data.username + "@users.iliam.app"
         && (!('photoURL' in request.resource.data)
           || request.resource.data.photoURL is string);
     }
@@ -120,15 +122,7 @@ service cloud.firestore {
       }
     }
 
-    match /usernames/{username} {
-      allow read: if signedIn();
 
-      allow create: if validUserMarker();
-      allow update: if false;
-
-      allow delete: if signedIn()
-        && (resource.data.uid == request.auth.uid || admin());
-    }
 
     match /posts/{postId} {
       allow read: if signedIn();

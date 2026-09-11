@@ -12,10 +12,11 @@ body{margin:0;min-height:100vh;background:linear-gradient(#001133,#000011);font-
 button,input,textarea{font:inherit}
 .page-title{margin:40px 15px 10px;font-size:clamp(42px,8vw,64px);font-weight:900;letter-spacing:2px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}
 .top-buttons{display:flex;justify-content:center;flex-wrap:wrap;gap:14px;margin:15px 12px 35px}
-.back-btn,.saved-posts-btn,.profile-btn{display:inline-block;padding:14px 26px;border:0;border-radius:18px;color:#fff;text-decoration:none;font-size:20px;font-weight:bold;cursor:pointer}
+.back-btn,.saved-posts-btn,.profile-btn,.admin-panel-btn{display:inline-block;padding:14px 26px;border:0;border-radius:18px;color:#fff;text-decoration:none;font-size:20px;font-weight:bold;cursor:pointer}
 .back-btn{background:linear-gradient(#59d7ff,#0077ff);box-shadow:0 0 10px cyan,0 0 25px #00aaff}
 .saved-posts-btn{background:linear-gradient(#ff9cff,#a500dc);box-shadow:0 0 10px #ff8cff,0 0 25px #d900ff}
 .profile-btn{background:linear-gradient(#8effd0,#008e78);box-shadow:0 0 10px #5fffd0,0 0 25px #00bfa5}
+.admin-panel-btn{background:linear-gradient(#ffcf66,#c06b00);box-shadow:0 0 10px #ffd86b,0 0 25px #ff9a00}
 .divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}
 .community{width:min(950px,calc(100% - 30px));margin:40px auto}
 .status{margin-bottom:22px;padding:14px 18px;border:2px solid cyan;border-radius:16px;background:#001432cc;box-shadow:0 0 18px #00ffff66;text-align:left}
@@ -76,7 +77,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 .saved-list{display:grid;gap:14px;margin-top:16px}
 .saved-card{padding:16px;border:2px solid #fff;border-radius:16px;background:#0004}
 .saved-card .post-text{max-height:150px;overflow:auto}.public-profile-posts{display:grid;gap:14px;margin-top:18px}.public-profile-post{padding:16px;border:2px solid #fff;border-radius:16px;background:#0004}.public-profile-post .post-image{max-height:320px}.public-profile-post .video-wrap{max-width:560px}.public-profile-loading{text-align:center;padding:24px}
-.profile-summary{display:flex;align-items:center;gap:15px;padding:14px;border-radius:16px;background:#0003;margin:10px 0 18px}.profile-summary .avatar{width:72px;height:72px}.profile-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:7px}.follow-btn{background:#126f91}.following{background:#444}.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.hint{font-size:13px;opacity:.9;line-height:1.45}
+.profile-summary{display:flex;align-items:center;gap:15px;padding:14px;border-radius:16px;background:#0003;margin:10px 0 18px}.profile-summary .avatar{width:72px;height:72px}.profile-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:7px}.follow-btn{background:#126f91}.following{background:#444}.account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.auth-tabs{display:flex;gap:10px;margin:12px 0 18px}.auth-tab.active{background:#126f91;box-shadow:0 0 12px cyan}.auth-only[hidden]{display:none!important}.hint{font-size:13px;opacity:.9;line-height:1.45}
 .footer{padding:22px;color:cyan}
 @media(max-width:650px){
  .post-box,.post{padding:17px;border-radius:18px}
@@ -95,6 +96,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
   <a class="back-btn" href="index.html">← BACK HOME</a>
   <button class="saved-posts-btn" id="savedPostsButton" type="button">★ SAVED POSTS</button>
   <button class="profile-btn" id="profileButton" type="button">👤 PROFILE</button>
+  <button class="admin-panel-btn" id="adminButton" type="button" hidden>🛡 ADMIN</button>
 </div>
 
 <div class="divider"></div>
@@ -124,24 +126,56 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <div class="divider"></div>
 <footer class="footer">© 2026 iLiam</footer>
 
+<div class="modal" id="authModal">
+<div class="modal-card">
+<div class="modal-head"><h2 id="authTitle">Sign in to iLiam</h2></div>
+<div class="auth-tabs">
+<button class="small-btn auth-tab active" id="loginTab" type="button">LOG IN</button>
+<button class="small-btn auth-tab" id="signupTab" type="button">SIGN UP</button>
+</div>
+<p class="hint" id="authHint">Log in with your existing username and password.</p>
+<label for="authUsernameInput">Username</label>
+<input id="authUsernameInput" maxlength="20" autocomplete="username" placeholder="Example: geometryking">
+<div class="auth-only" id="signupNicknameRow" hidden>
+<label for="authNicknameInput">Public nickname</label>
+<input id="authNicknameInput" maxlength="24" autocomplete="nickname" placeholder="Example: Liam">
+</div>
+<label for="authPasswordInput">Password</label>
+<input id="authPasswordInput" type="password" minlength="6" maxlength="72" autocomplete="current-password" placeholder="Password">
+<div class="auth-only" id="confirmPasswordRow" hidden>
+<label for="authConfirmPasswordInput">Confirm password</label>
+<input id="authConfirmPasswordInput" type="password" minlength="6" maxlength="72" autocomplete="new-password" placeholder="Type the password again">
+</div>
+<button class="post-btn" id="authSubmitButton" type="button">LOG IN</button>
+<p class="hint" id="authError"></p>
+</div>
+</div>
+
 <div class="modal" id="profileModal">
 <div class="modal-card">
 <div class="modal-head"><h2 id="profileModalTitle">Create your iLiam profile</h2><button class="small-btn close-modal" id="closeProfileButton" type="button" aria-label="Close">✕</button></div>
 <div class="profile-summary" id="profileSummary" hidden></div>
-<p class="hint">Usernames are unique and permanent after account creation. Nicknames can be changed later. A profile picture is optional—leave it blank to use an automatic initial avatar.</p>
+<p class="hint">Your username is permanent. Your nickname can be changed later. Your profile picture setting is hidden here; if no image is stored in Firebase, an automatic avatar is used.</p>
 <label for="usernameInput">Unique username <span class="hint" id="usernameLockHint"></span></label>
 <input id="usernameInput" maxlength="20" autocomplete="off" placeholder="Example: geometryking">
 <label for="nicknameInput">Public nickname</label>
 <input id="nicknameInput" maxlength="24" autocomplete="off" placeholder="Example: Liam">
-<label for="profilePictureInput">Profile picture URL <span class="hint">(optional)</span></label>
-<input id="profilePictureInput" type="url" placeholder="Leave blank for an automatic avatar">
-<p class="hint">To remove your current picture, clear this box and save your profile.</p>
+<input id="profilePictureInput" type="hidden">
 <button class="post-btn" id="saveProfileButton" type="button">SAVE PROFILE</button>
 <p class="hint" id="profileError"></p>
 <div class="account-actions" id="accountActions" hidden>
 <button class="small-btn" id="signOutButton" type="button">Sign Out</button>
 <button class="small-btn danger" id="deleteAccountButton" type="button">Delete Account</button>
 </div>
+</div>
+</div>
+
+<div class="modal" id="adminModal">
+<div class="modal-card">
+<div class="modal-head"><h2>🛡 Community Admin</h2><button class="small-btn close-modal" id="closeAdminButton" type="button" aria-label="Close">✕</button></div>
+<p class="hint">These actions affect the whole community.</p>
+<button class="post-btn danger" id="deleteAllPostsButton" type="button">DELETE ALL POSTS</button>
+<p class="hint" id="adminError"></p>
 </div>
 </div>
 
@@ -172,7 +206,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import{getAuth,onAuthStateChanged,signInAnonymously,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import{getFirestore,doc,getDoc,addDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 const firebaseConfig={
@@ -192,13 +226,14 @@ const statusBox=$("status"),postText=$("postText"),postButton=$("postButton"),po
 profileModal=$("profileModal"),usernameInput=$("usernameInput"),nicknameInput=$("nicknameInput"),
 saveProfileButton=$("saveProfileButton"),profileError=$("profileError"),imageUrl=$("imageUrl"),
 videoUrl=$("videoUrl"),savedPostsButton=$("savedPostsButton"),savedPostsModal=$("savedPostsModal"),
-savedPostsList=$("savedPostsList"),closeSavedPostsButton=$("closeSavedPostsButton"),profileButton=$("profileButton"),closeProfileButton=$("closeProfileButton"),profilePictureInput=$("profilePictureInput"),profileSummary=$("profileSummary"),profileModalTitle=$("profileModalTitle"),accountActions=$("accountActions"),signOutButton=$("signOutButton"),deleteAccountButton=$("deleteAccountButton"),publicProfileModal=$("publicProfileModal"),closePublicProfileButton=$("closePublicProfileButton"),publicProfileTitle=$("publicProfileTitle"),publicProfileSummary=$("publicProfileSummary"),publicProfileActions=$("publicProfileActions"),publicProfilePostsTitle=$("publicProfilePostsTitle"),publicProfilePosts=$("publicProfilePosts");
+savedPostsList=$("savedPostsList"),closeSavedPostsButton=$("closeSavedPostsButton"),profileButton=$("profileButton"),closeProfileButton=$("closeProfileButton"),profilePictureInput=$("profilePictureInput"),profileSummary=$("profileSummary"),profileModalTitle=$("profileModalTitle"),accountActions=$("accountActions"),signOutButton=$("signOutButton"),deleteAccountButton=$("deleteAccountButton"),publicProfileModal=$("publicProfileModal"),closePublicProfileButton=$("closePublicProfileButton"),publicProfileTitle=$("publicProfileTitle"),publicProfileSummary=$("publicProfileSummary"),publicProfileActions=$("publicProfileActions"),publicProfilePostsTitle=$("publicProfilePostsTitle"),publicProfilePosts=$("publicProfilePosts"),authModal=$("authModal"),authTitle=$("authTitle"),loginTab=$("loginTab"),signupTab=$("signupTab"),authHint=$("authHint"),authUsernameInput=$("authUsernameInput"),authNicknameInput=$("authNicknameInput"),signupNicknameRow=$("signupNicknameRow"),authPasswordInput=$("authPasswordInput"),authConfirmPasswordInput=$("authConfirmPasswordInput"),confirmPasswordRow=$("confirmPasswordRow"),authSubmitButton=$("authSubmitButton"),authError=$("authError"),adminButton=$("adminButton"),adminModal=$("adminModal"),closeAdminButton=$("closeAdminButton"),deleteAllPostsButton=$("deleteAllPostsButton"),adminError=$("adminError");
 const usernameLockHint=$("usernameLockHint");
 
-let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set();
+let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
 const postCache=new Map();
 
 const cleanUsername=v=>v.trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
+const authEmailForUsername=username=>`${cleanUsername(username)}@users.iliam.app`;
 const escapeHtml=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 function formatTime(t){if(!t?.toDate)return"just now";return t.toDate().toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}
 function setStatus(m,e=false){statusBox.textContent=m;statusBox.classList.toggle("error",e)}
@@ -206,9 +241,9 @@ function safeUrl(value){try{const u=new URL(value);return["http:","https:"].incl
 
 function avatarUrl(profile){return safeUrl(profile?.photoURL||"")||"https://api.dicebear.com/9.x/initials/svg?seed="+encodeURIComponent(profile?.nickname||profile?.username||"User")}
 function openProfileModal(){
- profileModalTitle.textContent=currentProfile?"Edit your profile":"Create your iLiam profile";
- usernameInput.readOnly=Boolean(currentProfile);usernameLockHint.textContent=currentProfile?"(permanent)":"";
- closeProfileButton.hidden=!currentProfile;accountActions.hidden=!currentProfile;profileSummary.hidden=!currentProfile;
+ profileModalTitle.textContent="Edit your profile";
+ usernameInput.readOnly=true;usernameLockHint.textContent="(permanent)";
+ closeProfileButton.hidden=false;accountActions.hidden=false;profileSummary.hidden=false;
  if(currentProfile){usernameInput.value=currentProfile.username||"";usernameInput.readOnly=true;usernameInput.setAttribute("aria-readonly","true");usernameLockHint.textContent="(permanent)";nicknameInput.value=currentProfile.nickname||"";profilePictureInput.value=currentProfile.photoURL||"";
  profileSummary.innerHTML=`<img class="avatar" src="${escapeHtml(avatarUrl(currentProfile))}" alt="Profile picture"><div><strong>${escapeHtml(currentProfile.nickname)}</strong><div>@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
  onSnapshot(collection(db,"profiles",currentUser.uid,"followers"),x=>{const e=$("ownFollowers");if(e)e.textContent=`Followers: ${x.size}`});
@@ -318,48 +353,99 @@ $("linkButton").addEventListener("click",()=>{
  postText.focus();
 });
 
+
+async function initializeSignedInUser(user){
+ currentUser=user;
+ isAdmin=(await getDoc(doc(db,"admins",user.uid))).exists();
+ adminButton.hidden=!isAdmin;
+ const snap=await getDoc(doc(db,"profiles",user.uid));
+ if(!snap.exists())return false;
+ currentProfile=snap.data();
+ authModal.classList.remove("show");profileModal.classList.remove("show");
+ followedUids=new Set();
+ onSnapshot(collection(db,"profiles",user.uid,"following"),fs=>{followedUids=new Set(fs.docs.map(d=>d.id));if(postCache.size)listenForPosts()});
+ postButton.disabled=false;
+ setStatus(`Signed in as ${currentProfile.nickname} · @${currentProfile.username}${isAdmin?" · ADMIN":""}`);
+ listenForPosts();
+ return true;
+}
+
+function setAuthMode(mode){
+ authMode=mode;const signup=mode==="signup";
+ loginTab.classList.toggle("active",!signup);signupTab.classList.toggle("active",signup);
+ signupNicknameRow.hidden=!signup;confirmPasswordRow.hidden=!signup;
+ authTitle.textContent=signup?"Create your iLiam account":"Sign in to iLiam";
+ authHint.textContent=signup?"Choose a new username and password. If that username already has an account, use Log In instead.":"Log in with your existing username and password.";
+ authSubmitButton.textContent=signup?"SIGN UP":"LOG IN";
+ authPasswordInput.autocomplete=signup?"new-password":"current-password";authError.textContent="";
+}
+loginTab.addEventListener("click",()=>setAuthMode("login"));
+signupTab.addEventListener("click",()=>setAuthMode("signup"));
+authSubmitButton.addEventListener("click",async()=>{
+ authError.textContent="";
+ const username=cleanUsername(authUsernameInput.value),password=authPasswordInput.value,nickname=authNicknameInput.value.trim();
+ if(username.length<3){authError.textContent="Username must be at least 3 characters.";return}
+ if(password.length<6){authError.textContent="Password must be at least 6 characters.";return}
+ if(authMode==="signup"&&!nickname){authError.textContent="Enter a public nickname.";return}
+ if(authMode==="signup"&&password!==authConfirmPasswordInput.value){authError.textContent="The passwords do not match.";return}
+ authSubmitButton.disabled=true;
+ try{
+  const email=authEmailForUsername(username);
+  if(authMode==="signup"){
+   accountCreationInProgress=true;
+   const credential=await createUserWithEmailAndPassword(auth,email,password);
+   await runTransaction(db,async tx=>{
+    const profileRef=doc(db,"profiles",credential.user.uid);
+    tx.set(profileRef,{username,nickname,photoURL:"",createdAt:serverTimestamp()});
+   });
+   accountCreationInProgress=false;
+   await initializeSignedInUser(credential.user);
+  }else{
+   await signInWithEmailAndPassword(auth,email,password);
+  }
+  authPasswordInput.value="";authConfirmPasswordInput.value="";
+ }catch(error){
+  accountCreationInProgress=false;
+  const code=String(error.code||"");
+  if(code.includes("email-already-in-use"))authError.textContent="That username already has an account. Use Log In instead.";
+  else if(code.includes("invalid-credential")||code.includes("wrong-password")||code.includes("user-not-found"))authError.textContent="Incorrect username or password.";
+  else authError.textContent=error.message;
+ }finally{authSubmitButton.disabled=false}
+});
+
 onAuthStateChanged(auth,async user=>{
  try{
-  if(!user){await signInAnonymously(auth);return}
-  currentUser=user;
-  isAdmin=(await getDoc(doc(db,"admins",user.uid))).exists();
-  const snap=await getDoc(doc(db,"profiles",user.uid));
-  if(!snap.exists()){currentProfile=null;openProfileModal();setStatus("Create a username and nickname to join.");return}
-  currentProfile=snap.data();
-  profileModal.classList.remove("show");
-  followedUids=new Set();
-  onSnapshot(collection(db,"profiles",user.uid,"following"),fs=>{followedUids=new Set(fs.docs.map(d=>d.id));if(postCache.size)listenForPosts()});
-  postButton.disabled=false;
-  setStatus(`Signed in as ${currentProfile.nickname} · @${currentProfile.username}${isAdmin?" · ADMIN":""} · UID: ${user.uid}`);
-  listenForPosts();
+  if(!user){
+   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;adminButton.hidden=true;
+   if(stopPostsListener){stopPostsListener();stopPostsListener=null}
+   postsElement.innerHTML='<div class="empty">Log in or sign up to view the community.</div>';
+   setStatus("Log in or create an account to join the community.");
+   setAuthMode("login");authModal.classList.add("show");return;
+  }
+  if(accountCreationInProgress)return;
+  const ready=await initializeSignedInUser(user);
+  if(!ready){
+   await signOut(auth);
+   authError.textContent="This login exists but its profile is missing. Create a new account or restore the profile in Firebase.";
+  }
  }catch(error){setStatus("Firebase error: "+error.message,true)}
 });
 
 saveProfileButton.addEventListener("click",async()=>{
  profileError.textContent="";
- const username=cleanUsername(usernameInput.value),nickname=nicknameInput.value.trim();
- const rawPhotoURL=profilePictureInput.value.trim(),photoURL=normalizeUrl(rawPhotoURL);
- if(username.length<3){profileError.textContent="Username must be at least 3 characters.";return}
+ if(!currentUser||!currentProfile)return;
+ const username=currentProfile.username,nickname=nicknameInput.value.trim();
  if(!nickname){profileError.textContent="Enter a nickname.";return}
- if(rawPhotoURL&&!photoURL){profileError.textContent="Enter a valid http or https image URL, or leave it blank.";return}
  saveProfileButton.disabled=true;
  try{
-  const lockedUsername=currentProfile?.username||username,usernameRef=doc(db,"usernames",lockedUsername),profileRef=doc(db,"profiles",currentUser.uid);
-  if(currentProfile&&username!==currentProfile.username)throw new Error("Usernames cannot be changed after profile creation.");
-  await runTransaction(db,async tx=>{
-   if(!currentProfile){
-    const taken=await tx.get(usernameRef);
-    if(taken.exists())throw new Error("That username is already taken.");
-    tx.set(usernameRef,{uid:currentUser.uid,createdAt:serverTimestamp()});
-   }
-   tx.set(profileRef,{username:lockedUsername,nickname,photoURL,createdAt:currentProfile?.createdAt||serverTimestamp()},{merge:true});
-  });
-  currentProfile={...(currentProfile||{}),username:lockedUsername,nickname,photoURL};profileModal.classList.remove("show");postButton.disabled=false;
-  setStatus(`Signed in as ${nickname} · @${lockedUsername}${isAdmin?" · ADMIN":""} · UID: ${currentUser.uid}`);listenForPosts();
+  const profileRef=doc(db,"profiles",currentUser.uid);
+  await updateDoc(profileRef,{nickname});
+  currentProfile={...currentProfile,nickname};profileModal.classList.remove("show");
+  setStatus(`Signed in as ${nickname} · @${username}${isAdmin?" · ADMIN":""}`);listenForPosts();
  }catch(error){profileError.textContent=error.message}finally{saveProfileButton.disabled=false}
 });
 
-profileButton.addEventListener("click",openProfileModal);
+profileButton.addEventListener("click",()=>{if(currentUser&&currentProfile)openProfileModal();else authModal.classList.add("show")});
 closeProfileButton.addEventListener("click",()=>profileModal.classList.remove("show"));
 profileModal.addEventListener("click",e=>{if(e.target===profileModal&&currentProfile)profileModal.classList.remove("show")});
 signOutButton.addEventListener("click",async()=>{if(confirm("Sign out of this browser account?")){profileModal.classList.remove("show");await signOut(auth)}});
@@ -372,8 +458,24 @@ deleteAccountButton.addEventListener("click",async()=>{
   for(const f of following.docs){await deleteDoc(doc(db,"profiles",f.id,"followers",currentUser.uid));await deleteDoc(f.ref)}
   const followers=await getDocs(collection(db,"profiles",currentUser.uid,"followers"));
   for(const f of followers.docs){await deleteDoc(doc(db,"profiles",f.id,"following",currentUser.uid));await deleteDoc(f.ref)}
-  await deleteDoc(doc(db,"usernames",currentProfile.username));await deleteDoc(doc(db,"profiles",currentUser.uid));await deleteUser(currentUser);
+  await deleteDoc(doc(db,"profiles",currentUser.uid));await deleteUser(currentUser);
  }catch(error){alert("Could not delete account: "+error.message)}
+});
+
+adminButton.addEventListener("click",()=>{if(isAdmin){adminError.textContent="";adminModal.classList.add("show")}});
+closeAdminButton.addEventListener("click",()=>adminModal.classList.remove("show"));
+adminModal.addEventListener("click",e=>{if(e.target===adminModal)adminModal.classList.remove("show")});
+deleteAllPostsButton.addEventListener("click",async()=>{
+ if(!isAdmin)return;
+ if(!confirm("Delete ALL community posts? This cannot be undone."))return;
+ if(!confirm("Final confirmation: permanently delete every post?"))return;
+ deleteAllPostsButton.disabled=true;adminError.textContent="Deleting posts…";
+ try{
+  const snap=await getDocs(collection(db,"posts"));
+  for(const p of snap.docs)await deletePost(p.id,false);
+  adminError.textContent=`Deleted ${snap.size} post${snap.size===1?"":"s"}.`;
+ }catch(error){adminError.textContent="Could not delete all posts: "+error.message}
+ finally{deleteAllPostsButton.disabled=false}
 });
 
 postButton.addEventListener("click",async()=>{
