@@ -105,9 +105,23 @@ service cloud.firestore {
     }
 
     match /admins/{uid} {
-      // Admin membership is assigned manually in Firebase.
-      allow read: if isSelf(uid);
-      allow write: if false;
+      // Membership alone grants authority. Cosmetic profile badges never do.
+      // First admin is bootstrapped in Firebase Console, never by the client.
+      allow read: if signedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() && !isSelf(uid);
+    }
+
+    // Full community administration, including nested comments, reaction
+    // markers and follow records. Do not grant authority to unrelated data.
+    // admins is intentionally excluded so self-removal cannot bypass its rule.
+    match /{root}/{document=**} {
+      allow read, write: if isAdmin()
+        && root in ['profiles', 'posts', 'announcements', 'usernames'];
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
     }
 
     match /profiles/{uid} {
@@ -115,9 +129,13 @@ service cloud.firestore {
 
       allow create: if isSelf(uid) && validProfile();
 
-      // The username is tied to the Firebase Auth login and cannot change.
+      // Admins can change public identity/add metadata. Ordinary users may
+      // still edit nickname/photo without rewriting or gaining protected fields.
       allow update: if isSelf(uid)
-        && validProfile()
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() >= 1
+        && request.resource.data.nickname.size() <= 24
+        && request.resource.data.photoURL is string
         && request.resource.data.username == resource.data.username
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.diff(resource.data)
@@ -150,7 +168,7 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if validNewPost();
 
-      // Admins can only feature/unfeature. Users can only add one upvote,
+      // The scoped admin override above permits full editing. Users add one upvote,
       // and that increment must be accompanied by their vote marker.
       allow update: if (
           isAdmin()

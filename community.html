@@ -207,6 +207,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 </div>
 
 <script type="module">
+import {installAdmin} from './community-admin.js';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import{getFirestore,doc,getDoc,addDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -233,6 +234,11 @@ const usernameLockHint=$("usernameLockHint");
 
 let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
 const postCache=new Map();
+
+const adminControl=installAdmin({db,getUser:()=>currentUser,onRole:value=>{
+ isAdmin=value;adminButton.hidden=!value;
+ if(currentUser&&currentProfile)listenForPosts();
+},escapeHtml:value=>escapeHtml(value),richText:value=>richText(value)});
 
 const cleanUsername=v=>v.trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
 const authEmailForUsername=username=>`${cleanUsername(username)}@users.iliam.app`;
@@ -301,7 +307,9 @@ async function openPublicProfile(uid,fallback={}){
   const followersSnap=await getDocs(collection(db,"profiles",uid,"followers"));
   const followingSnap=await getDocs(collection(db,"profiles",uid,"following"));
   publicProfileTitle.textContent=profile.nickname||"User Profile";
-  publicProfileSummary.innerHTML=`${avatarMarkup(uid,profile)}<div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
+ publicProfileSummary.innerHTML=`${avatarMarkup(uid,profile)}<div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
+ const badge=document.createElement('span');badge.className='admin-badge';badge.dataset.communityBadge=uid;publicProfileSummary.append(badge);adminControl.badges();
+ if(profile.bio){const bio=document.createElement('p');bio.textContent=profile.bio;publicProfileSummary.append(bio);}
   if(uid===currentUser.uid){
    publicProfileActions.innerHTML='<button class="small-btn" type="button" id="editFromPublicProfile">Edit Profile</button>';
    $("editFromPublicProfile").onclick=()=>{publicProfileModal.classList.remove("show");openProfileModal()};
@@ -405,6 +413,7 @@ async function initializeSignedInUser(user){
  postButton.disabled=false;
  setStatus(`Signed in as ${currentProfile.nickname} · @${currentProfile.username}${isAdmin?" · ADMIN":""}`);
  listenForPosts();
+ adminControl.start(user.uid);
  return true;
 }
 
@@ -454,6 +463,7 @@ authSubmitButton.addEventListener("click",async()=>{
 onAuthStateChanged(auth,async user=>{
  try{
   if(!user){
+   adminControl.stop();
    clearAvatarListeners();
    currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;adminButton.hidden=true;
    if(stopPostsListener){stopPostsListener();stopPostsListener=null}
@@ -609,7 +619,7 @@ function renderPost(p){
  ${p.featured?'<span class="featured-label">⭐ FEATURED</span>':""}
  <div>
    <span class="profile-link" role="button" tabindex="0" aria-label="Open ${escapeHtml(p.nickname)} profile">${avatarMarkup(p.uid,p)}<span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span>
-   ${p.uid===currentUser.uid&&isAdmin?'<span class="admin-badge">ADMIN</span>':""}
+   <span class="admin-badge" data-community-badge="${escapeHtml(p.uid)}" hidden></span>
    <span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span>
  </div>
  <div class="post-text">${richText(p.text||"")}</div>
@@ -671,6 +681,7 @@ function renderPost(p){
  if(isAdmin||p.uid===currentUser.uid)article.querySelector(".delete-btn").onclick=()=>deletePost(p.id);
 
  postsElement.appendChild(article);
+ adminControl.decorate(article,'posts/'+p.id);adminControl.badges();
 }
 
 function listenForComments(post,container,countElement){
@@ -739,7 +750,7 @@ function buildCommentElement(post,c,isReply){
 
  el.innerHTML=`
  <div class="comment-head">
-   <span class="profile-link comment-profile-link" role="button" tabindex="0"><strong>${escapeHtml(c.nickname)}</strong>&nbsp;@${escapeHtml(c.username)}</span> · ${escapeHtml(formatTime(c.createdAt))}
+   <span class="profile-link comment-profile-link" role="button" tabindex="0"><strong>${escapeHtml(c.nickname)}</strong>&nbsp;@${escapeHtml(c.username)}</span><span class="admin-badge" data-community-badge="${escapeHtml(c.uid)}" hidden></span> · ${escapeHtml(formatTime(c.createdAt))}
  </div>
  <div class="comment-text">${richText(c.text||"")}</div>
  <div class="comment-actions">
@@ -770,6 +781,8 @@ function buildCommentElement(post,c,isReply){
    catch(error){alert("Could not delete comment: "+error.message)}
   };
  }
+ adminControl.decorate(el,'posts/'+post.id+'/comments/'+c.id);
+ queueMicrotask(()=>adminControl.badges());
  return el;
 }
 
