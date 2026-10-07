@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#15171c" />
     <meta
       name="description"
-      content="Build something in 3D. A browser modeling studio with editable shapes, materials, starter models, and project export."
+      content="Build, animate, and simulate in 3D. A responsive browser modeling studio with text, metaballs, physics, and project export."
     />
     <title>3D Rider · Modeling Studio</title>
     <link rel="icon" type="image/png" href="images/favicon.png" />
@@ -84,6 +84,29 @@
           aria-label="Controls and shortcuts"
         ></button>
       </div>
+      <details id="compactMenu" class="compact-menu">
+        <summary aria-label="Open project menu">Menu <span aria-hidden="true">⌄</span></summary>
+        <div class="compact-menu-body">
+          <div class="compact-menu-heading">Your project</div>
+          <button data-action="newBtn" data-icon="file">New project</button>
+          <button data-action="openBtn" data-icon="folder">Open project</button>
+          <button data-action="saveBtn" data-icon="save">Save project</button>
+          <button data-action="renderBtn" data-icon="image">Render PNG</button>
+          <button data-action="exportStlBtn" data-icon="cube">Export STL</button>
+          <button data-action="exportObjBtn" data-icon="cube">Export OBJ</button>
+          <div class="compact-menu-heading">Your view</div>
+          <button data-action="frameBtn" data-icon="focus">Frame selection</button>
+          <button data-action="gridBtn" data-icon="grid">Toggle grid</button>
+          <button data-action="cameraBtn" data-icon="camera">Reset camera</button>
+          <button data-display-action="material" aria-pressed="true" class="active">Material view</button>
+          <button data-display-action="wire" aria-pressed="false">Wireframe view</button>
+          <button data-display-action="rendered" aria-pressed="false">Rendered view</button>
+          <button data-action="helpBtn" data-icon="help">Controls & shortcuts</button>
+          <a href="2d-rider.html">Open 2D Rider <span aria-hidden="true">↗</span></a>
+          <a href="other.html">Back to Other</a>
+          <button id="compactMenuCloseBtn" aria-label="Close project menu">Close menu</button>
+        </div>
+      </details>
     </header>
     <div class="workspace">
       <aside
@@ -168,7 +191,18 @@
             <div class="utility-grid">
               <button data-add="meta" data-icon="organic">Metaball</button
               ><button data-add="light" data-icon="sun">Point light</button>
+              <button data-add="text" class="text-add"><span aria-hidden="true">Aa</span> Text</button>
             </div>
+            <label class="field-label" for="metaballVariant">NEW METABALL SHAPE</label>
+            <select id="metaballVariant" class="full-select">
+              <option value="ball">Sphere</option>
+              <option value="ellipsoid">Ellipsoid</option>
+              <option value="capsule">Capsule</option>
+              <option value="chain">Chain</option>
+              <option value="ring">Ring</option>
+              <option value="cluster">Cluster</option>
+              <option value="sheet">Sheet</option>
+            </select>
             <button id="importBtn" class="outline full" data-icon="upload">
               Import an STL model
             </button>
@@ -265,6 +299,7 @@
         <button id="libraryHelpBtn" class="library-help" data-icon="help">
           Controls & shortcuts
         </button>
+        <a href="2d-rider.html" class="studio-switch">Open 2D Rider <span aria-hidden="true">↗</span></a>
         <a href="other.html" class="back-link" data-icon="arrowLeft"
           >Back to Other</a
         >
@@ -286,6 +321,7 @@
               class="tool active"
               data-icon="move"
               title="Move (G)"
+              aria-label="Move selected object"
               aria-pressed="true"
             >
               <span>Move</span></button
@@ -294,6 +330,7 @@
               class="tool"
               data-icon="rotate"
               title="Rotate (R)"
+              aria-label="Rotate selected object"
               aria-pressed="false"
             >
               <span>Rotate</span></button
@@ -302,6 +339,7 @@
               class="tool"
               data-icon="scale"
               title="Scale (S)"
+              aria-label="Scale selected object"
               aria-pressed="false"
             >
               <span>Scale</span>
@@ -316,6 +354,8 @@
             title="Snap to increments (Shift)"
             aria-label="Snap to increments"
           ></button>
+          <button id="zoomInBtn" class="icon-button touch-zoom" aria-label="Zoom in" title="Zoom in"><span aria-hidden="true">＋</span></button>
+          <button id="zoomOutBtn" class="icon-button touch-zoom" aria-label="Zoom out" title="Zoom out"><span aria-hidden="true">−</span></button>
           <div class="toolbar-spacer"></div>
           <button
             id="undoBtn"
@@ -420,6 +460,27 @@
             >
           </div>
         </div>
+        <section id="animationPanel" class="animation-panel" aria-label="Animation timeline">
+          <div class="animation-header">
+            <button id="playBtn" class="animation-play" aria-label="Play animation" aria-pressed="false"><span aria-hidden="true">▶︎</span> Play</button>
+            <button id="animationToggle" class="animation-toggle" aria-expanded="false" aria-controls="animationBody">Timeline <span aria-hidden="true">⌃</span></button>
+            <h2 class="animation-heading">Animation</h2>
+            <button id="animationCloseBtn" class="icon-button animation-close" data-icon="close" aria-label="Close timeline"></button>
+          </div>
+          <div id="animationBody" class="animation-body">
+            <div class="timeline-tools">
+              <button id="stopAnimationBtn" class="outline" aria-label="Stop animation and reset simulation"><span aria-hidden="true">■</span> Stop</button>
+              <button id="keyframeBtn" class="outline" data-icon="plus">Add keyframe</button>
+              <button id="deleteKeyframeBtn" class="outline" data-icon="trash">Delete keyframe</button>
+              <label class="timeline-field" for="timelineTime">Time <span class="input-unit"><input id="timelineTime" type="number" min="0" max="10" step="0.1" value="0" inputmode="decimal" />s</span></label>
+              <label class="timeline-field" for="timelineDuration">Duration <span class="input-unit"><input id="timelineDuration" type="number" min="0.1" max="600" step="0.1" value="10" inputmode="decimal" />s</span></label>
+              <label class="loop-control"><input id="timelineLoop" type="checkbox" checked /> Loop</label>
+            </div>
+            <label class="sr-only" for="timelineScrub">Animation time in seconds</label>
+            <input id="timelineScrub" class="timeline-scrub" type="range" min="0" max="10" step="0.01" value="0" />
+            <div id="keyframeList" class="keyframe-list" aria-label="Selected object keyframes"><span class="muted">Select an object and add a keyframe.</span></div>
+          </div>
+        </section>
         <footer class="statusbar">
           <span id="sceneStats">0 objects</span
           ><span class="statusbar-help">Build something worth exploring.</span
@@ -487,61 +548,84 @@
                 aria-label="Reset transform"
               ></button>
             </div>
+            <div class="touch-transforms" role="group" aria-label="Quick transform adjustments">
+              <p class="control-hint">Tap to adjust. Use the numbers below for precise changes.</p>
+              <div class="touch-transform-grid">
+                <button data-nudge="x" data-delta="-.25" aria-label="Move left by 0.25 on the X axis">X −</button>
+                <button data-nudge="x" data-delta=".25" aria-label="Move right by 0.25 on the X axis">X +</button>
+                <button data-nudge="y" data-delta="-.25" aria-label="Move down by 0.25 on the Y axis">Y −</button>
+                <button data-nudge="y" data-delta=".25" aria-label="Move up by 0.25 on the Y axis">Y +</button>
+                <button data-nudge="z" data-delta="-.25" aria-label="Move backward by 0.25 on the Z axis">Z −</button>
+                <button data-nudge="z" data-delta=".25" aria-label="Move forward by 0.25 on the Z axis">Z +</button>
+                <button data-turn="-.261799" aria-label="Rotate selected object by minus 15 degrees">↶ 15°</button>
+                <button data-turn=".261799" aria-label="Rotate selected object by 15 degrees">↷ 15°</button>
+                <button data-resize=".8" aria-label="Scale selected object to 80 percent">Smaller</button>
+                <button data-resize="1.25" aria-label="Scale selected object to 125 percent">Bigger</button>
+              </div>
+            </div>
             <div class="axis-labels">
               <span></span><b class="axis-x">X</b><b class="axis-y">Y</b
               ><b class="axis-z">Z</b>
             </div>
             <div class="transform-row">
               <span>Position</span
-              ><input
+              ><label class="axis-input"><span class="axis-x">X</span><input
                 id="px"
                 type="number"
+                inputmode="decimal"
                 step="0.1"
                 aria-label="Position X"
-              /><input
+              /></label><label class="axis-input"><span class="axis-y">Y</span><input
                 id="py"
                 type="number"
+                inputmode="decimal"
                 step="0.1"
                 aria-label="Position Y"
-              /><input
+              /></label><label class="axis-input"><span class="axis-z">Z</span><input
                 id="pz"
                 type="number"
+                inputmode="decimal"
                 step="0.1"
                 aria-label="Position Z"
-              />
+              /></label>
             </div>
             <div class="transform-row">
               <span>Rotation</span
-              ><input
+              ><label class="axis-input"><span class="axis-x">X</span><input
                 id="rx"
                 type="number"
+                inputmode="decimal"
                 step="5"
                 aria-label="Rotation X degrees"
-              /><input
+              /></label><label class="axis-input"><span class="axis-y">Y</span><input
                 id="ry"
                 type="number"
+                inputmode="decimal"
                 step="5"
                 aria-label="Rotation Y degrees"
-              /><input
+              /></label><label class="axis-input"><span class="axis-z">Z</span><input
                 id="rz"
                 type="number"
+                inputmode="decimal"
                 step="5"
                 aria-label="Rotation Z degrees"
-              />
+              /></label>
             </div>
             <div class="transform-row">
               <span>Scale</span
-              ><input
+              ><label class="axis-input"><span class="axis-x">X</span><input
                 id="sx"
                 type="number"
+                inputmode="decimal"
                 step="0.1"
                 aria-label="Scale X"
-              /><input
+              /></label><label class="axis-input"><span class="axis-y">Y</span><input
                 id="sy"
                 type="number"
+                inputmode="decimal"
                 step="0.1"
                 aria-label="Scale Y"
-              /><input id="sz" type="number" step="0.1" aria-label="Scale Z" />
+              /></label><label class="axis-input"><span class="axis-z">Z</span><input id="sz" type="number" inputmode="decimal" step="0.1" aria-label="Scale Z" /></label>
             </div>
             <div class="transform-options">
               <button id="groundBtn" class="text-action" data-icon="ground">
@@ -556,11 +640,52 @@
             </div>
             <div id="shapeFields" class="shape-fields"></div>
           </section>
+          <section class="panel-section" id="textPanel" hidden>
+            <div class="section-heading"><h2>Text</h2><span class="eyebrow">EDITABLE</span></div>
+            <label class="field-label" for="textContent">WORDS</label>
+            <textarea id="textContent" rows="3" maxlength="200" placeholder="Type something" spellcheck="false"></textarea>
+            <div class="shape-fields">
+              <label for="textSize">Size<input id="textSize" type="number" min="0.05" max="50" step="0.1" value="1" inputmode="decimal" /></label>
+              <label for="textDepth">Depth<input id="textDepth" type="number" min="0.01" max="20" step="0.05" value="0.2" inputmode="decimal" /></label>
+            </div>
+            <label class="field-label spaced-label" for="fontSelect">FONT</label>
+            <select id="fontSelect" class="full-select"><option value="default">Studio sans</option></select>
+            <button id="fontUploadBtn" class="outline full" data-icon="upload">Upload a font</button>
+            <p class="muted control-hint">TTF, OTF, or Three.js font JSON.</p>
+            <div class="conversion-actions">
+              <button id="convertTextMeshBtn" class="outline" data-icon="cube">Convert to mesh</button>
+              <button id="convertTextMetaBtn" class="outline" data-icon="organic">Convert to metaball</button>
+            </div>
+          </section>
+          <section class="panel-section" id="physicsPanel">
+            <div class="section-heading"><h2>Physics</h2><span class="eyebrow">SIMULATION</span></div>
+            <label class="field-label" for="physicsType">BODY TYPE</label>
+            <select id="physicsType" class="full-select">
+              <option value="none">None</option>
+              <option value="static">Static collider</option>
+              <option value="rigid">Rigid body</option>
+              <option value="soft">Soft body</option>
+            </select>
+            <div class="shape-fields">
+              <label for="physicsMass">Mass<input id="physicsMass" type="number" min="0.01" max="10000" step="0.1" value="1" inputmode="decimal" /></label>
+              <label for="physicsRestitution">Bounce<input id="physicsRestitution" type="number" min="0" max="1" step="0.05" value="0.35" inputmode="decimal" /></label>
+              <label for="physicsFriction">Friction<input id="physicsFriction" type="number" min="0" max="1" step="0.05" value="0.4" inputmode="decimal" /></label>
+              <label for="physicsStiffness">Soft stiffness<input id="physicsStiffness" type="number" min="0.01" max="1" step="0.05" value="0.65" inputmode="decimal" /></label>
+            </div>
+            <p class="muted control-hint">Play to simulate. Stop returns to your starting scene.</p>
+          </section>
           <section class="panel-section" id="materialPanel">
             <div class="section-heading">
               <h2>Material</h2>
               <span class="eyebrow">SURFACE</span>
             </div>
+            <label class="field-label" for="shaderSelect">SHADER</label>
+            <select id="shaderSelect" class="full-select">
+              <option value="standard">Standard</option>
+              <option value="toon">Toon</option>
+              <option value="normal">Normals</option>
+              <option value="glass">Glass</option>
+            </select>
             <div
               class="material-presets"
               role="group"
@@ -668,6 +793,7 @@
       type="file"
       accept=".3drider,.json"
     /><input id="stlFile" class="file-input" type="file" accept=".stl" />
+    <input id="fontFile" class="file-input" type="file" accept=".json,.ttf,.otf" />
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <dialog id="helpDialog" aria-labelledby="helpTitle">
       <div class="dialog-heading">
@@ -696,7 +822,9 @@
       <p class="muted">
         Orbit: drag empty space · Pan: right-drag or two-finger drag · Zoom:
         scroll or pinch. On a small screen, open the side panels from the
-        toolbar.
+        toolbar. Swipe the toolbar to reach more tools. For precise changes,
+        edit the numbers in Inspector. Add a keyframe, move the timeline,
+        change the transform, then add another keyframe and press Play.
       </p>
       <button class="primary full" data-dialog-close>
         Let’s build something

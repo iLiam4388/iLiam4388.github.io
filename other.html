@@ -47,6 +47,7 @@ body{
   color:black;
   border-radius:24px;
   box-shadow:0 0 25px cyan;
+  box-sizing:border-box;
 }
 .empty-card h2{
   font-size:34px;
@@ -87,6 +88,14 @@ body{
   .empty-card{width:80%}
   .rider-btn{font-size:18px;padding:15px 28px}
 }
+@media(max-width:320px){
+  .page-title{font-size:30px;margin-top:25px}
+  .back-btn{font-size:13px;padding:12px 16px}
+  .empty-card{width:calc(100% - 20px);padding:22px 12px;margin:30px auto}
+  .empty-card h2{font-size:24px}
+  .empty-card p{font-size:14px}
+  .rider-btn{font-size:12px;padding:15px 10px;letter-spacing:0}
+}
 </style>
 </head>
 <body>
@@ -99,6 +108,12 @@ body{
   <h2>3D RIDER</h2>
   <p>Build, edit, and explore 3D creations right in your browser.</p>
   <a class="rider-btn" href="3d-rider.html">OPEN 3D RIDER →</a>
+</div>
+
+<div class="empty-card">
+  <h2>2D RIDER</h2>
+  <p>Create 2D shapes, text, animation, physics, metaballs, and liquids in a touch-friendly studio.</p>
+  <a class="rider-btn" href="2d-rider.html">OPEN 2D RIDER →</a>
 </div>
 
 <div class="divider"></div>

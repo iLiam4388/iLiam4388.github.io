@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#15171c">
+  <meta name="description" content="A touch-friendly 2D studio with keyframe animation, physics, liquids, metaballs and editable text.">
+  <title>2D Rider · Animation Studio</title>
+  <link rel="icon" type="image/png" href="images/favicon.png">
+  <link rel="stylesheet" href="rider-2d.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="other.html" aria-label="Back to Other"><span class="brand-icon">◇</span><span>2D Rider<small>ANIMATION STUDIO</small></span></a>
+    <input id="projectName" value="Untitled 2D scene" aria-label="Project name" maxlength="80">
+    <button id="projectMenuBtn" class="quiet" aria-controls="projectPanel" aria-expanded="false">Project</button>
+    <a class="switch-rider" href="3d-rider.html">3D Rider ↗</a>
+  </header>
+  <main class="workspace">
+    <aside class="panel build-panel" id="buildPanel" aria-label="Build and scene" tabindex="-1">
+      <div class="panel-heading"><h1>Build</h1><button class="close-panel" data-close aria-label="Close build panel">Done</button></div>
+      <section><h2>Add a shape</h2><div class="shape-grid">
+        <button data-add="rect">▣<span>Rectangle</span></button><button data-add="circle">●<span>Circle</span></button>
+        <button data-add="triangle">▲<span>Triangle</span></button><button data-add="star">★<span>Star</span></button>
+        <button data-add="hexagon">⬢<span>Hexagon</span></button><button data-add="text">Aa<span>Text</span></button>
+      </div></section>
+      <section><h2>Metaballs</h2><p class="muted">Nearby blobs merge into one surface.</p><div class="choice-grid">
+        <button data-meta="ball">Ball</button><button data-meta="capsule">Capsule</button><button data-meta="chain">Chain</button><button data-meta="ring">Ring</button><button data-meta="cluster">Cluster</button>
+      </div></section>
+      <section><h2>Liquid</h2><p class="muted">A lightweight particle fluid with cohesion, viscosity and collisions.</p><button id="addLiquidBtn" class="wide">Add liquid</button></section>
+      <section><h2>Scene <span id="objectCount">0</span></h2><div id="sceneList" class="scene-list"></div></section>
+      <section class="panel-links"><a href="3d-rider.html">Open 3D Rider ↗</a><a href="other.html">Back to Other</a></section>
+    </aside>
+    <div class="stage" id="stage">
+      <canvas id="canvas" aria-label="2D modeling canvas. Tap an object to select. Drag to move. Use Edit for rotation and scale." tabindex="0"></canvas>
+      <div class="viewport-tools"><button id="zoomOutBtn" aria-label="Zoom out">−</button><button id="fitBtn" aria-label="Fit the scene">Fit</button><button id="zoomInBtn" aria-label="Zoom in">+</button></div>
+      <button id="stagePlayBtn" class="stage-play" aria-label="Play animation and physics">▶︎</button>
+      <span id="stageStatus" class="stage-status">Drag to move · Space to play</span>
+      <div id="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <aside class="panel edit-panel" id="editPanel" aria-label="Object properties" tabindex="-1">
+      <div class="panel-heading"><h1>Edit</h1><button class="close-panel" data-close aria-label="Close edit panel">Done</button></div>
+      <div id="nothingSelected" class="muted empty-selection">Select a shape on the canvas or add one in Build.</div>
+      <div id="selectionEditor" hidden>
+        <section><label class="stacked">Object name<input id="objectName" maxlength="80"></label><div class="choice-grid"><button id="duplicateBtn">Duplicate</button><button id="deleteBtn" class="danger">Delete</button></div></section>
+        <section><h2>Transform</h2><p class="muted">Drag an object to move it. Change these values for precise placement.</p><div class="field-grid">
+          <label>X<input id="x" type="number" step="0.1" min="-1000" max="1000"></label><label>Y<input id="y" type="number" step="0.1" min="-1000" max="1000"></label>
+          <label>Rotate °<input id="rotation" type="number" step="5" min="-36000" max="36000"></label><label>Scale<input id="uniformScale" type="number" step="0.1" min="0.05" max="50"></label>
+          <label>Scale X<input id="sx" type="number" step="0.1" min="0.05" max="50"></label><label>Scale Y<input id="sy" type="number" step="0.1" min="0.05" max="50"></label>
+        </div><div class="choice-grid"><button id="rotateLeftBtn">↶ 15°</button><button id="rotateRightBtn">↷ 15°</button><button id="smallerBtn">Smaller</button><button id="largerBtn">Larger</button></div></section>
+        <section id="textSection" hidden><h2>Text</h2><label class="stacked">Text<textarea id="textContent" rows="3" maxlength="160"></textarea></label><label class="stacked">Font<select id="fontFamily"><option value="sans-serif">Sans serif</option><option value="serif">Serif</option><option value="monospace">Monospace</option></select></label><button id="uploadFontBtn" class="wide">Upload font</button><p class="muted">TTF, OTF, WOFF or WOFF2. Uploaded fonts stay in your saved project.</p><button id="textMeshBtn" class="wide">Convert text to mesh</button><button id="textMetaBtn" class="wide">Convert text to metaballs</button></section>
+        <section><h2>Surface</h2><label class="stacked">Color<input id="color" type="color"></label><label class="stacked">Shader<select id="shader"><option value="flat">Flat</option><option value="gloss">Gloss</option><option value="metal">Metal</option><option value="neon">Neon</option><option value="toon">Toon</option><option value="stripe">Stripes</option><option value="glass">Glass</option></select></label><label class="stacked">Opacity<input id="opacity" type="range" min="0.1" max="1" step="0.05"></label></section>
+        <section id="metaSection" hidden><h2>Blob shape</h2><label class="stacked">Merge strength<input id="influence" type="range" min="0.5" max="2.5" step="0.05"></label></section>
+        <section><h2>Physics</h2><label class="stacked">Body<select id="physics"><option value="none">Off</option><option value="rigid">Rigid body</option><option value="soft">Soft body</option><option value="static">Static collider</option></select></label><div class="field-grid"><label>Bounce<input id="bounce" type="number" min="0" max="1" step="0.1"></label><label>Mass<input id="mass" type="number" min="0.1" max="100" step="0.1"></label></div><label class="stacked">Softness<input id="softness" type="range" min="0.05" max="0.95" step="0.05"></label><p class="muted">Play to simulate. Keyframed objects act as moving colliders.</p></section>
+        <section><h2>Animation</h2><button id="addKeyframeBtn" class="primary wide">Keyframe at <span id="keyframeTime">0.0 s</span></button><div id="keyframeList" class="keyframe-list"></div><p class="muted">Move, rotate or scale, then add another keyframe at a later time.</p></section>
+      </div>
+    </aside>
+    <aside class="panel floating-panel" id="timelinePanel" aria-label="Animation timeline" tabindex="-1">
+      <div class="panel-heading"><h1>Animate</h1><button class="close-panel" data-close>Done</button></div>
+      <section><div class="choice-grid"><button id="playBtn" class="primary">▶ Play</button><button id="resetBtn">↺ Reset</button></div><label class="stacked">Time <output id="timeLabel">0.0 s</output><input id="time" type="range" min="0" max="5" step="0.01" value="0"></label><div class="field-grid"><label>Seconds<input id="timeNumber" type="number" min="0" max="120" step="0.1" value="0"></label><label>Duration<input id="duration" type="number" min="0.2" max="120" step="0.1" value="5"></label></div><label class="check"><input id="loop" type="checkbox" checked> Loop animation</label><button id="timelineKeyBtn" class="wide">Add selected keyframe</button></section>
+      <section><h2>World physics</h2><label class="stacked">Gravity<input id="gravity" type="number" min="-30" max="30" step="0.5" value="9.8"></label><label class="stacked">Floor Y<input id="floor" type="number" min="-100" max="100" step="0.5" value="3"></label><label class="check"><input id="floorEnabled" type="checkbox" checked> Floor collisions</label><p class="muted">2D liquid uses up to 240 particles per scene. Reset returns to the starting pose.</p></section>
+    </aside>
+    <aside class="panel floating-panel" id="projectPanel" aria-label="Project controls" tabindex="-1">
+      <div class="panel-heading"><h1>Project</h1><button class="close-panel" data-close>Done</button></div>
+      <section><button id="newBtn" class="wide">New scene</button><button id="openBtn" class="wide">Open project</button><button id="saveBtn" class="primary wide">Save project</button><button id="exportBtn" class="wide">Export PNG</button><p id="saveStatus" class="muted" role="status">Saved on this device</p></section>
+      <section><div class="choice-grid"><button id="undoBtn">Undo</button><button id="redoBtn">Redo</button></div><label class="stacked">Canvas background<input id="background" type="color" value="#181a20"></label><label class="check"><input id="grid" type="checkbox" checked> Show grid</label></section>
+      <section><h2>Touch controls</h2><p class="muted">Tap a shape to select, drag to move. Drag empty space to pan. Pinch to zoom. Use Edit for large rotation and scale controls. Play runs animation and physics together.</p><a class="wide-link" href="3d-rider.html">Open 3D Rider ↗</a><a class="wide-link" href="other.html">Back to Other</a></section>
+    </aside>
+  </main>
+  <nav class="dock" aria-label="Editor panels"><button data-panel="buildPanel" aria-controls="buildPanel" aria-expanded="false">＋ Build</button><button data-panel="editPanel" aria-controls="editPanel" aria-expanded="false">✎ Edit</button><button data-panel="timelinePanel" aria-controls="timelinePanel" aria-expanded="false">▶︎ Animate</button><button data-panel="projectPanel" aria-controls="projectPanel" aria-expanded="false">⋯ Project</button></nav>
+  <input id="projectFile" type="file" accept=".2drider,application/json" hidden><input id="fontFile" type="file" accept=".ttf,.otf,.woff,.woff2" hidden>
+  <script type="module" src="rider-2d.js"></script>
+</body>
+</html>

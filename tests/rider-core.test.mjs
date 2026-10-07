@@ -67,7 +67,7 @@ const projectWith = (...objects) => ({
 });
 
 test("all primitive defaults create independent complete records", () => {
-  assert.equal(PRIMITIVES.length, 8);
+  assert.equal(PRIMITIVES.length, 9);
   for (const definition of PRIMITIVES) {
     const first = createObjectRecord(definition.type);
     const second = createObjectRecord(definition.type);
@@ -521,4 +521,76 @@ test("every template produces valid editable objects with new identifiers", () =
     assert.deepEqual(roundTrip.objects, first);
   }
   assert.throws(() => createTemplate("unavailable"), TypeError);
+});
+
+test("animation, physics, uploaded fonts, shaders and mode survive project round trips", () => {
+  const fontData = {
+    familyName: "Local custom font", resolution: 1000,
+    glyphs: { A: { ha: 700, x_min: 0, x_max: 650, o: "m 0 0 l 300 700 l 600 0" }, " ": { ha: 300 } },
+  };
+  const text = createObjectRecord("text", {
+    text: { content: "A <title>\nRésumé", fontFamily: "Local custom font", fontName: "Upload.ttf", fontData, size: 1.5, depth: 0.25 },
+    material: { shader: "toon" },
+    physics: { type: "soft", mass: 2, restitution: 0.5, friction: 0.15, stiffness: 0.25, velocity: [1, 2, 0], angularVelocity: [0, 0, 2] },
+    keyframes: [
+      { time: 4, position: [3, 4, 0], rotation: [0, 0, Math.PI * 2], scale: [2, 1, 1], interpolation: "smooth" },
+      { time: 0, position: [0, 2, 0], rotation: [0, 0, 0], scale: [1, 1, 1], interpolation: "linear" },
+    ],
+  });
+  const meta = createObjectRecord("meta", {
+    parameters: { variant: "ring", radius: 1.2 },
+    metaSources: [{ position: [1, 0.5, 0], radius: 0.15 }, { position: [-1, 0.5, 0], radius: 0.15 }],
+  });
+  const input = { ...projectWith(text, meta), mode: "2d", timeline: { duration: 6, fps: 24, loop: false } };
+  const saved = normalizeProject(serializeProject(input));
+  assert.deepEqual(saved.objects, [text, meta]);
+  assert.deepEqual(saved.timeline, input.timeline);
+  assert.equal(saved.mode, "2d");
+  assert.equal(saved.objects[0].text.content, "A <title>\nRésumé");
+  fontData.glyphs.A.ha = 999;
+  assert.equal(text.text.fontData.glyphs.A.ha, 700);
+  assert.deepEqual(text.keyframes.map((frame) => frame.time), [0, 4]);
+});
+
+test("old projects acquire safe motion defaults and timelines include late keyframes", () => {
+  const old = normalizeProject(projectWith({ type: "box" }));
+  assert.equal(old.mode, "3d");
+  assert.deepEqual(old.timeline, { duration: 10, fps: 30, loop: true });
+  assert.deepEqual(old.objects[0].keyframes, []);
+  assert.equal(old.objects[0].physics.type, "none");
+  assert.equal(old.objects[0].material.shader, "standard");
+  const extended = normalizeProject({ ...projectWith({ type: "box", keyframes: [{ time: 12 }] }), timeline: { duration: 2 } });
+  assert.equal(extended.timeline.duration, 12);
+  assert.ok(extended.warnings.some((warning) => warning.includes("extended")));
+});
+
+test("duplicate keyframes use the last transform and all animation data is validated", () => {
+  const imported = normalizeProject(projectWith({
+    type: "box", keyframes: [{ time: 1, position: [0, 0, 0] }, { time: 1, position: [4, 3, 2] }],
+  }));
+  assert.equal(imported.objects[0].keyframes.length, 1);
+  assert.deepEqual(imported.objects[0].keyframes[0].position, [4, 3, 2]);
+  assert.ok(imported.warnings.some((warning) => warning.includes("same time")));
+  for (const overrides of [
+    { keyframes: null }, { keyframes: [{ time: Infinity }] }, { keyframes: [{ rotation: [0, 0] }] },
+    { keyframes: [{ interpolation: "unknown" }] }, { keyframes: Array(501).fill({}) },
+    { physics: { type: "ragdoll" } }, { physics: { mass: "1" } }, { physics: { velocity: [NaN, 0, 0] } },
+    { material: { shader: "unsupported" } }, { parameters: { variant: "unsupported" } },
+    { metaSources: [{ position: [0, 0], radius: 1 }] }, { metaSources: Array(513).fill({}) },
+  ]) assert.throws(() => createObjectRecord("meta", overrides), TypeError);
+  assert.throws(() => normalizeProject({ ...projectWith(), mode: "4d" }), TypeError);
+  assert.throws(() => normalizeProject({ ...projectWith(), timeline: { loop: "yes" } }), TypeError);
+});
+
+test("text imports reject malformed fonts and retain plain display text safely", () => {
+  for (const text of [
+    { fontData: "https://remote/font.json" }, { fontData: {} },
+    { fontData: { glyphs: {}, resolution: 1000 } },
+    { fontData: { glyphs: { A: { ha: 700 } }, resolution: 0 } },
+    { fontData: { glyphs: { A: { ha: "700" } }, resolution: 1000 } },
+    { fontData: { glyphs: { A: { ha: 700, o: {} } }, resolution: 1000 } },
+    { content: {} },
+  ]) assert.throws(() => createObjectRecord("text", { text }), TypeError);
+  const result = normalizeProject(projectWith({ type: "text", text: { content: "<b>Plain\u0000 text</b>" } }));
+  assert.equal(result.objects[0].text.content, "<b>Plain text</b>");
 });

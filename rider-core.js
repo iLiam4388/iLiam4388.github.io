@@ -7,6 +7,9 @@ export const MAX_OBJECTS = 1000;
 export const MAX_PROJECT_BYTES = 48 * 1024 * 1024;
 export const MAX_GEOMETRY_VALUES = 4000000;
 export const MAX_HISTORY_BYTES = 192 * 1024 * 1024;
+export const MAX_KEYFRAMES = 500;
+export const MAX_META_SOURCES = 512;
+export const MAX_FONT_BYTES = 8 * 1024 * 1024;
 
 const freeze = (value) => {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
@@ -52,8 +55,9 @@ export const PRIMITIVES = freeze([
   {
     type: "meta",
     label: "Metaball",
-    defaults: { radius: 0.65, influence: 1.25 },
+    defaults: { radius: 0.65, influence: 1.25, variant: "ball" },
   },
+  { type: "text", label: "Text", defaults: {} },
   { type: "light", label: "Point light", defaults: {} },
 ]);
 
@@ -74,6 +78,7 @@ export const PARAMETER_LIMITS = freeze({
 
 const DEFINITIONS = new Map(PRIMITIVES.map((item) => [item.type, item]));
 const MATERIAL_DEFAULTS = freeze({
+  shader: "standard",
   color: "#d6dbe5",
   metalness: 0.12,
   roughness: 0.38,
@@ -85,6 +90,14 @@ export const DEFAULT_ENVIRONMENT = freeze({
   background: "#181a20",
   grid: true,
   exposure: 1.15,
+});
+export const SHADERS = freeze(["standard", "toon", "normal", "glass", "metal", "matte", "unlit"]);
+export const META_VARIANTS = freeze(["ball", "ellipsoid", "capsule", "chain", "cluster", "ring", "sheet"]);
+export const PHYSICS_TYPES = freeze(["none", "static", "rigid", "soft", "liquid"]);
+export const DEFAULT_TIMELINE = freeze({ duration: 10, fps: 30, loop: true });
+export const DEFAULT_PHYSICS = freeze({
+  type: "none", mass: 1, restitution: 0.35, friction: 0.4, stiffness: 0.65,
+  velocity: [0, 0, 0], angularVelocity: [0, 0, 0],
 });
 const ID_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
 const LEGACY_TYPES = {
@@ -128,6 +141,91 @@ function boolean(value, fallback, path) {
   if (value === undefined) return fallback;
   if (typeof value !== "boolean") fail(path, "expected true or false");
   return value;
+}
+
+function choice(value, fallback, options, path) {
+  if (value === undefined) return fallback;
+  if (!options.includes(value)) fail(path, "expected one of " + options.join(", "));
+  return value;
+}
+
+function normalizePhysics(source, path, warnings) {
+  const settings = source === undefined ? {} : source;
+  if (!isRecord(settings)) fail(path, "expected physics settings");
+  const result = {
+    type: choice(settings.type, "none", PHYSICS_TYPES, path + ".type"),
+    velocity: vector(settings.velocity, [0, 0, 0], path + ".velocity", warnings),
+    angularVelocity: vector(settings.angularVelocity, [0, 0, 0], path + ".angularVelocity", warnings, "rotation"),
+  };
+  for (const [key, min, max] of [
+    ["mass", 0.01, 10000], ["restitution", 0, 1], ["friction", 0, 1], ["stiffness", 0.01, 1],
+  ]) result[key] = number(settings[key], DEFAULT_PHYSICS[key], min, max, path + "." + key, warnings);
+  return result;
+}
+
+function normalizeKeyframes(source, transform, path, warnings, projectBudget) {
+  if (source === undefined) return [];
+  if (!Array.isArray(source) || source.length > MAX_KEYFRAMES)
+    fail(path, "expected at most " + MAX_KEYFRAMES + " keyframes");
+  if (projectBudget) {
+    projectBudget.keyframes = (projectBudget.keyframes || 0) + source.length;
+    if (projectBudget.keyframes > 20000) fail("project.keyframes", "maximum 20000 keyframes");
+  }
+  const byTime = new Map();
+  source.forEach((frame, index) => {
+    const framePath = path + "[" + index + "]";
+    if (!isRecord(frame)) fail(framePath, "expected keyframe settings");
+    const time = number(frame.time, 0, 0, 3600, framePath + ".time", warnings);
+    const normalized = {
+      time,
+      position: vector(frame.position, transform.position, framePath + ".position", warnings),
+      rotation: vector(frame.rotation, transform.rotation, framePath + ".rotation", warnings, "rotation"),
+      scale: vector(frame.scale, transform.scale, framePath + ".scale", warnings, "scale"),
+      interpolation: choice(frame.interpolation, "linear", ["linear", "smooth", "step"], framePath + ".interpolation"),
+    };
+    if (byTime.has(time)) warning(warnings, framePath + " replaced an earlier keyframe at the same time.");
+    byTime.set(time, normalized);
+  });
+  return [...byTime.values()].sort((a, b) => a.time - b.time);
+}
+
+function normalizeText(source, path, warnings, projectBudget) {
+  const settings = source === undefined ? {} : source;
+  if (!isRecord(settings)) fail(path, "expected text settings");
+  let content = settings.content ?? "Rider";
+  if (typeof content !== "string") fail(path + ".content", "expected text");
+  if (content.length > 2048) {
+    content = content.slice(0, 2048);
+    warning(warnings, path + ".content was shortened to 2048 characters.");
+  }
+  content = content.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "");
+  let fontData = null;
+  if (settings.fontData !== undefined && settings.fontData !== null) {
+    if (!isRecord(settings.fontData) || !isRecord(settings.fontData.glyphs))
+      fail(path + ".fontData", "expected a Three.js typeface with glyphs");
+    const glyphs = Object.values(settings.fontData.glyphs);
+    if (!glyphs.length || glyphs.length > 65536 || typeof settings.fontData.resolution !== "number" || !Number.isFinite(settings.fontData.resolution) || settings.fontData.resolution <= 0 || settings.fontData.resolution > 100000)
+      fail(path + ".fontData", "expected glyphs and a positive typeface resolution");
+    for (const glyph of glyphs) {
+      if (!isRecord(glyph) || typeof glyph.ha !== "number" || !Number.isFinite(glyph.ha) || (glyph.o !== undefined && typeof glyph.o !== "string"))
+        fail(path + ".fontData.glyphs", "expected glyph advance and optional text outline");
+    }
+    fontData = cloneJSON(settings.fontData, path + ".fontData");
+    const bytes = JSON.stringify(fontData).length;
+    if (bytes > MAX_FONT_BYTES) fail(path + ".fontData", "font exceeds 8 MB");
+    if (projectBudget) {
+      projectBudget.fontBytes = (projectBudget.fontBytes || 0) + bytes;
+      if (projectBudget.fontBytes > MAX_FONT_BYTES * 2) fail("project.fontData", "combined fonts exceed 16 MB");
+    }
+  }
+  return {
+    content,
+    fontFamily: safeName(settings.fontFamily, "Helvetiker", 100),
+    fontName: safeName(settings.fontName, "Helvetiker", 100),
+    fontData,
+    size: number(settings.size, 1, 0.01, 100, path + ".size", warnings),
+    depth: number(settings.depth, 0.15, 0.001, 100, path + ".depth", warnings),
+  };
 }
 
 export function safeName(value, fallback = "Untitled", maxLength = 80) {
@@ -493,6 +591,7 @@ function normalizeObject(
   if (!isRecord(materialSource))
     fail(path + ".material", "expected material settings");
   const material = {
+    shader: choice(materialSource.shader, "standard", SHADERS, path + ".material.shader"),
     color: color(
       pick(materialSource.color, legacy ? materialSource.base : undefined),
       MATERIAL_DEFAULTS.color,
@@ -547,6 +646,10 @@ function normalizeObject(
   for (const [key, defaultValue] of Object.entries(
     definition?.defaults || {},
   )) {
+    if (key === "variant") {
+      parameters.variant = choice(parametersSource.variant, "ball", META_VARIANTS, path + ".parameters.variant");
+      continue;
+    }
     const limits = PARAMETER_LIMITS[key];
     const value = pick(
       parametersSource[key],
@@ -596,7 +699,23 @@ function normalizeObject(
     parameters,
     visible: boolean(source.visible, true, path + ".visible"),
     locked: boolean(source.locked, false, path + ".locked"),
+    physics: normalizePhysics(source.physics, path + ".physics", warnings),
   };
+  result.keyframes = normalizeKeyframes(source.keyframes, result, path + ".keyframes", warnings, geometryBudget);
+  if (type === "text" || source.text !== undefined)
+    result.text = normalizeText(source.text, path + ".text", warnings, geometryBudget);
+  if (source.metaSources !== undefined) {
+    if (!Array.isArray(source.metaSources) || source.metaSources.length > MAX_META_SOURCES)
+      fail(path + ".metaSources", "expected at most " + MAX_META_SOURCES + " field sources");
+    result.metaSources = source.metaSources.map((item, sourceIndex) => {
+      const itemPath = path + ".metaSources[" + sourceIndex + "]";
+      if (!isRecord(item)) fail(itemPath, "expected a field source");
+      return {
+        position: vector(item.position, [0, 0, 0], itemPath + ".position", warnings),
+        radius: number(item.radius, 0.1, 0.001, 1000, itemPath + ".radius", warnings),
+      };
+    });
+  }
   if (source.geometry !== undefined)
     result.geometry = normalizeGeometry(
       source.geometry,
@@ -671,10 +790,24 @@ export function normalizeProject(input) {
   const settings = source.environment === undefined ? {} : source.environment;
   if (!isRecord(settings))
     fail("project.environment", "expected environment settings");
+  const timeline = source.timeline === undefined ? {} : source.timeline;
+  if (!isRecord(timeline)) fail("project.timeline", "expected timeline settings");
+  let duration = number(timeline.duration, 10, 0.1, 3600, "project.timeline.duration", warnings);
+  const lastKeyframe = objects.reduce((last, object) => Math.max(last, object.keyframes.at(-1)?.time || 0), 0);
+  if (lastKeyframe > duration) {
+    duration = lastKeyframe;
+    warning(warnings, "The timeline was extended to include its last keyframe.");
+  }
   const project = {
     version: PROJECT_VERSION,
     name: safeName(source.name, "Untitled project"),
     objects,
+    mode: choice(source.mode, "3d", ["2d", "3d"], "project.mode"),
+    timeline: {
+      duration,
+      fps: number(timeline.fps, 30, 1, 60, "project.timeline.fps", warnings, true),
+      loop: boolean(timeline.loop, true, "project.timeline.loop"),
+    },
     environment: {
       background: color(
         settings.background,

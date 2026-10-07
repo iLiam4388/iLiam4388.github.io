@@ -17,6 +17,16 @@ import {
   History,
   createTemplate,
 } from "./rider-core.js";
+import {
+  loadDefaultFont, readFontFile, createTextGeometry, applyRiderMaterial,
+  updateMetaballSurface, geometryToMetaballSources, getMetaballSources,
+} from "./rider-modeling.js";
+import {
+  sampleTransform, recordKeyframe, removeKeyframe, createSimulation,
+  stepSimulation, seekSimulation, getSimulatedTransform,
+} from "./rider-motion.js";
+
+await loadDefaultFont();
 
 const $ = (id) => document.getElementById(id);
 const iconPaths = {
@@ -81,6 +91,8 @@ let project,
   toastTimer,
   saveTimer,
   autosaveAvailable = true;
+let animationTime = 0, playing = false, simulation = null, lastFrame = null;
+const uploadedFonts = new Map();
 const view = $("view"),
   scene = new THREE.Scene(),
   meshMap = new Map();
@@ -95,8 +107,8 @@ try {
     "<strong>Your browser needs WebGL to open the studio.</strong><span>Try a current browser with hardware acceleration enabled.</span>";
   throw error;
 }
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-renderer.shadowMap.enabled = true;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 600 ? 1 : 2));
+renderer.shadowMap.enabled = window.innerWidth > 600;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.domElement.setAttribute(
@@ -157,7 +169,7 @@ const metaMaterial = new THREE.MeshPhysicalMaterial({
   metalness: 0.1,
   vertexColors: true,
 });
-const metaSurface = new MarchingCubes(44, metaMaterial, true, true, 100000);
+const metaSurface = new MarchingCubes(window.innerWidth <= 600 ? 24 : 44, metaMaterial, true, true, 100000);
 metaSurface.isolation = 70;
 metaSurface.visible = false;
 scene.add(metaSurface);
@@ -180,8 +192,250 @@ function safeNumber(value, fallback, min = -10000, max = 10000) {
     ? THREE.MathUtils.clamp(n, min, max)
     : fallback;
 }
+function syncFontChoices(o) {
+  if (o.text.fontData) uploadedFonts.set(o.text.fontName, { fontData: o.text.fontData, fontFamily: o.text.fontFamily, fontName: o.text.fontName });
+  $("fontSelect").replaceChildren(new Option("Studio sans", "default"));
+  uploadedFonts.forEach((font, name) => $("fontSelect").add(new Option(name, name)));
+  $("fontSelect").value = o.text.fontData ? o.text.fontName : "default";
+}
+function refreshGeometry(o) {
+  const mesh = meshMap.get(o.id);
+  const next = geometryFor(o);
+  const previous = mesh.geometry;
+  mesh.geometry = next;
+  previous.dispose();
+  if (o.id === selectedId) selectionBox.setFromObject(mesh);
+  refreshStats();
+}
+function setText(o, text) {
+  const next = normalizeProject({ ...project, objects: project.objects.map((item) => item.id === o.id ? { ...item, text } : item) }).objects.find((item) => item.id === o.id);
+  const geometry = geometryFor(next);
+  const mesh = meshMap.get(o.id), previous = mesh.geometry;
+  mesh.geometry = geometry;
+  o.text = next.text;
+  previous.dispose();
+  if (o.id === selectedId) selectionBox.setFromObject(mesh);
+  refreshStats();
+}
+function syncTimeline() {
+  if (!project) return;
+  const duration = project.timeline.duration;
+  $("timelineDuration").value = duration;
+  $("timelineLoop").checked = project.timeline.loop;
+  $("timelineTime").max = $("timelineScrub").max = duration;
+  syncTimeInputs();
+  const o = selectedRecord();
+  $("keyframeBtn").disabled = !o || o.locked || playing;
+  $("deleteKeyframeBtn").disabled = !o?.keyframes.some((k) => Math.abs(k.time - animationTime) < 0.02) || playing;
+  $("keyframeList").replaceChildren();
+  for (const key of o?.keyframes || []) {
+    const button = document.createElement("button");
+    button.textContent = `${key.time.toFixed(2)}s`;
+    button.title = "Go to keyframe";
+    button.className = "keyframe-marker";
+    button.addEventListener("click", () => seekAnimation(key.time));
+    $("keyframeList").append(button);
+  }
+  if (!o?.keyframes.length) {
+    const hint = document.createElement("span");
+    hint.className = "muted";
+    hint.textContent = "Set a pose, add a keyframe, then set another pose at a new time.";
+    $("keyframeList").append(hint);
+  }
+}
+function syncTimeInputs() {
+  if (document.activeElement !== $("timelineTime")) $("timelineTime").value = animationTime.toFixed(2);
+  $("timelineScrub").value = animationTime;
+}
+function pauseAnimation() {
+  playing = false;
+  lastFrame = null;
+  $("playBtn").textContent = "▶︎ Play";
+  $("playBtn").setAttribute("aria-label", "Play animation");
+  $("playBtn").setAttribute("aria-pressed", "false");
+  if (selectedMesh() && selectedRecord()?.visible && !selectedRecord()?.locked) gizmo.attach(selectedMesh());
+}
+function makeSimulation() {
+  const bounds = {};
+  project.objects.forEach((o) => {
+    const mesh = meshMap.get(o.id);
+    if (!mesh.geometry || !mesh.geometry.getAttribute("position")?.count) return;
+    mesh.geometry.computeBoundingBox();
+    if (mesh.geometry.boundingBox.isEmpty()) return;
+    bounds[o.id] = { min: mesh.geometry.boundingBox.min.toArray(), max: mesh.geometry.boundingBox.max.toArray() };
+  });
+  return createSimulation(project.objects, { mode: "3d", ground: 0, bounds });
+}
+function applyAnimationPose() {
+  for (const o of project.objects) {
+    const mesh = meshMap.get(o.id);
+    const pose = simulation ? getSimulatedTransform(simulation, o.id) : sampleTransform(o, animationTime);
+    if (!pose) continue;
+    mesh.position.fromArray(pose.position);
+    mesh.rotation.set(...pose.rotation);
+    mesh.scale.fromArray(pose.scale);
+  }
+  updateMetas();
+  if (selectedMesh()) selectionBox.setFromObject(selectedMesh());
+  syncTimeInputs();
+}
+function seekAnimation(time) {
+  pauseAnimation();
+  animationTime = THREE.MathUtils.clamp(time, 0, project.timeline.duration);
+  simulation ||= makeSimulation();
+  seekSimulation(simulation, animationTime);
+  applyAnimationPose();
+  syncInspector();
+  syncTimeline();
+}
+$("playBtn").addEventListener("click", () => {
+  if (playing) { pauseAnimation(); syncInspector(); syncTimeline(); return; }
+  if (animationTime >= project.timeline.duration) { animationTime = 0; simulation = null; }
+  if (!simulation) { simulation = makeSimulation(); seekSimulation(simulation, animationTime); }
+  playing = true;
+  gizmo.detach();
+  $("playBtn").textContent = "Ⅱ Pause";
+  $("playBtn").setAttribute("aria-label", "Pause animation");
+  $("playBtn").setAttribute("aria-pressed", "true");
+  syncTimeline();
+});
+$("stopAnimationBtn").addEventListener("click", () => seekAnimation(0));
+$("timelineTime").addEventListener("change", () => seekAnimation(safeNumber($("timelineTime").value, animationTime, 0, project.timeline.duration)));
+$("timelineScrub").addEventListener("input", () => seekAnimation(Number($("timelineScrub").value)));
+$("timelineDuration").addEventListener("change", () => {
+  project.timeline.duration = Math.max(safeNumber($("timelineDuration").value, 10, 0.1, 600), ...project.objects.flatMap((o) => o.keyframes.map((k) => k.time)));
+  animationTime = Math.min(animationTime, project.timeline.duration);
+  commit();
+});
+$("timelineLoop").addEventListener("change", () => { project.timeline.loop = $("timelineLoop").checked; commit(); });
+$("keyframeBtn").addEventListener("click", () => {
+  const o = selectedRecord();
+  if (!o || o.locked) return;
+  updateRecordFromMesh();
+  animationTime = Number(animationTime.toFixed(2));
+  try { o.keyframes = recordKeyframe(o, animationTime); }
+  catch (error) { notify(error.message); return; }
+  commit(`Keyframe set at ${animationTime.toFixed(2)}s`);
+});
+$("deleteKeyframeBtn").addEventListener("click", () => {
+  const o = selectedRecord();
+  if (!o) return;
+  const keyframe = o.keyframes.find((key) => Math.abs(key.time - animationTime) < 0.02);
+  if (!keyframe) return;
+  o.keyframes = removeKeyframe(o, keyframe.time);
+  commit("Keyframe removed");
+  seekAnimation(animationTime);
+});
+$("animationToggle").addEventListener("click", () => {
+  const panel = $("animationPanel");
+  const open = panel.classList.toggle("is-open");
+  $("animationToggle").setAttribute("aria-expanded", String(open));
+  if (open) { $("libraryPanel").classList.remove("is-open"); $("inspectorPanel").classList.remove("is-open"); $("animationCloseBtn").focus(); }
+});
+$("animationCloseBtn").addEventListener("click", () => {
+  $("animationPanel").classList.remove("is-open");
+  $("animationToggle").setAttribute("aria-expanded", "false");
+  $("animationToggle").focus();
+});
+document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", () => {
+  $("compactMenu").open = false;
+  $("compactMenu").querySelector("summary").focus();
+  $(button.dataset.action).click();
+}));
+$("compactMenuCloseBtn").addEventListener("click", () => { $("compactMenu").open = false; $("compactMenu").querySelector("summary").focus(); });
+$("compactMenu").addEventListener("toggle", () => {
+  if ($("compactMenu").open) $("compactMenu").querySelector(".compact-menu-body button")?.focus();
+});
+document.querySelectorAll("[data-display-action]").forEach((button) => button.addEventListener("click", () => {
+  $("compactMenu").open = false;
+  $("compactMenu").querySelector("summary").focus();
+  document.querySelector(`.view-modes [data-mode="${button.dataset.displayAction}"]`).click();
+}));
+for (const [id, key, min, max] of [["physicsType", "type"], ["physicsMass", "mass", 0.01, 10000], ["physicsRestitution", "restitution", 0, 1], ["physicsFriction", "friction", 0, 1], ["physicsStiffness", "stiffness", 0.01, 1]]) {
+  $(id).addEventListener("change", () => {
+    const o = selectedRecord();
+    if (!o || o.type === "light") return;
+    o.physics[key] = key === "type" ? $(id).value : safeNumber($(id).value, o.physics[key], min, max);
+    commit();
+  });
+}
+$("shaderSelect").addEventListener("change", () => {
+  const o = selectedRecord();
+  if (!o || o.type === "light") return;
+  o.material.shader = $("shaderSelect").value;
+  updateMaterial(selectedMesh(), o);
+  updateMetas();
+  commit("Shader updated");
+});
+for (const [id, key, min, max] of [["textContent", "content"], ["textSize", "size", 0.05, 50], ["textDepth", "depth", 0.01, 20]]) {
+  $(id).addEventListener("change", () => {
+    const o = selectedRecord();
+    if (o?.type !== "text") return;
+    const previous = { ...o.text };
+    try {
+      setText(o, { ...o.text, [key]: key === "content" ? $(id).value.slice(0, 200) : safeNumber($(id).value, o.text[key], min, max) });
+      commit("Text updated");
+    } catch (error) { o.text = previous; syncInspector(); notify("Could not update text: " + error.message); }
+  });
+}
+$("fontUploadBtn").addEventListener("click", () => $("fontFile").click());
+$("fontFile").addEventListener("change", async (event) => {
+  const file = event.target.files[0], o = selectedRecord();
+  if (!file || o?.type !== "text") return;
+  try {
+    const font = await readFontFile(file);
+    if (!project.objects.includes(o) || o.type !== "text") return;
+    setText(o, { ...o.text, ...font });
+    uploadedFonts.set(font.fontName, font);
+    syncInspector();
+    commit("Font uploaded and saved with your text");
+  } catch (error) { notify("Could not load font: " + error.message); }
+  finally { event.target.value = ""; }
+});
+$("fontSelect").addEventListener("change", () => {
+  const o = selectedRecord();
+  if (o?.type !== "text") return;
+  try {
+    setText(o, { ...o.text, ...(uploadedFonts.get($("fontSelect").value) || { fontData: null, fontFamily: "Helvetiker", fontName: "Studio sans" }) });
+    commit("Font updated");
+  } catch (error) { syncInspector(); notify("Could not change font: " + error.message); }
+});
+function convertText(target) {
+  const o = selectedRecord(), mesh = selectedMesh();
+  if (o?.type !== "text") return;
+  try {
+    if (!mesh.geometry.getAttribute("position")?.count) throw new Error("Write visible text before converting it.");
+    const { text, parameters, geometry, ...common } = o;
+    let meshData;
+    if (target === "custom") {
+      // TextGeometry serializes font parameters; a mesh needs its actual vertex data.
+      const buffer = new THREE.BufferGeometry().copy(mesh.geometry);
+      meshData = buffer.toJSON();
+      buffer.dispose();
+    }
+    const next = target === "custom"
+      ? createObjectRecord("custom", { ...common, type: "custom", geometry: meshData })
+      : createObjectRecord("meta", { ...common, type: "meta", parameters: { radius: 0.1, influence: 1.25, variant: "ball" }, metaSources: geometryToMetaballSources(mesh.geometry, { maxSources: 128 }) });
+    project.objects[project.objects.indexOf(o)] = next;
+    rebuildScene();
+    commit(target === "custom" ? "Text converted to mesh. Undo restores editable text." : "Text converted to a merging metaball surface. Undo restores editable text.");
+  } catch (error) { notify("Could not convert text: " + error.message); }
+}
+$("convertTextMeshBtn").addEventListener("click", () => convertText("custom"));
+$("convertTextMetaBtn").addEventListener("click", () => convertText("meta"));
 function geometryFor(o) {
   const p = o.parameters;
+  if (o.type === "text") return createTextGeometry(o);
+  if (o.type === "meta") {
+    const box = new THREE.Box3();
+    for (const source of getMetaballSources(o)) {
+      const center = new THREE.Vector3(...source.position), radii = new THREE.Vector3(...source.radii);
+      box.expandByPoint(center.clone().sub(radii));
+      box.expandByPoint(center.clone().add(radii));
+    }
+    const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+    return new THREE.BoxGeometry(Math.max(0.001, size.x), Math.max(0.001, size.y), Math.max(0.001, size.z)).translate(center.x, center.y, center.z);
+  }
   if (o.type === "custom") {
     const g = new THREE.BufferGeometryLoader().parse(o.geometry);
     g.computeBoundingBox();
@@ -192,7 +446,6 @@ function geometryFor(o) {
     case "box":
       return new THREE.BoxGeometry(p.width, p.height, p.depth);
     case "sphere":
-    case "meta":
       return new THREE.SphereGeometry(
         p.radius || 1,
         p.widthSegments || 40,
@@ -223,19 +476,7 @@ function geometryFor(o) {
   }
 }
 function updateMaterial(mesh, record) {
-  const m = record.material;
-  mesh.material.color.set(m.color);
-  mesh.material.metalness = m.metalness;
-  mesh.material.roughness = m.roughness;
-  mesh.material.emissive.set(m.emissive);
-  mesh.material.emissiveIntensity = m.emissiveIntensity;
-  mesh.material.opacity = m.opacity;
-  mesh.material.transparent = m.opacity < 1;
-  mesh.material.depthWrite = m.opacity >= 0.95;
-  mesh.material.wireframe = displayMode === "wire";
-  mesh.material.side =
-    record.type === "plane" ? THREE.DoubleSide : THREE.FrontSide;
-  mesh.material.needsUpdate = true;
+  applyRiderMaterial(mesh, record, { displayMode });
 }
 function createMesh(o) {
   let mesh;
@@ -281,6 +522,9 @@ function disposeMesh(mesh) {
   });
 }
 function rebuildScene() {
+  pauseAnimation();
+  animationTime = 0;
+  simulation = null;
   gizmo.detach();
   meshMap.forEach(disposeMesh);
   meshMap.clear();
@@ -291,6 +535,7 @@ function rebuildScene() {
   refreshObjects();
   refreshStats();
   syncProjectHeading();
+  syncTimeline();
 }
 function applyEnvironment() {
   scene.background = new THREE.Color(project.environment.background);
@@ -304,67 +549,11 @@ function applyEnvironment() {
   $("gridBtn").setAttribute("aria-pressed", String(project.environment.grid));
 }
 function updateMetas() {
-  const metas = project.objects.filter((o) => o.type === "meta" && o.visible);
-  metaSurface.visible = metas.length > 0;
-  if (!metas.length) return;
-  const bounds = new THREE.Box3();
-  metas.forEach((o) => {
-    const center = new THREE.Vector3(...o.position);
-    const radius =
-      (o.parameters.radius || 1) *
-      Math.max(...o.scale.map(Math.abs)) *
-      (o.parameters.influence || 1.25);
-    bounds.expandByPoint(center.clone().addScalar(radius * 1.6));
-    bounds.expandByPoint(center.clone().addScalar(-radius * 1.6));
+  const metas = project.objects.filter((o) => o.type === "meta" && o.visible).map((o) => {
+    const mesh = meshMap.get(o.id);
+    return { ...o, position: mesh.position.toArray(), rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z], scale: mesh.scale.toArray() };
   });
-  const center = bounds.getCenter(new THREE.Vector3()),
-    size = Math.max(...bounds.getSize(new THREE.Vector3()).toArray(), 3);
-  metaSurface.position.copy(center);
-  metaSurface.scale.setScalar(size / 2);
-  metaSurface.reset();
-  let metalness = 0,
-    roughness = 0,
-    opacity = 0,
-    emission = new THREE.Color(0),
-    strength = 0;
-  metas.forEach((o) => {
-    const point = new THREE.Vector3(...o.position)
-      .sub(center)
-      .divideScalar(size)
-      .addScalar(0.5);
-    const radius =
-      (o.parameters.radius || 1) *
-      Math.max(...o.scale.map(Math.abs)) *
-      (o.parameters.influence || 1.25);
-    const normalizedRadius = radius / size;
-    const fieldStrength =
-      normalizedRadius * normalizedRadius * (metaSurface.isolation + 12);
-    metaSurface.addBall(
-      point.x,
-      point.y,
-      point.z,
-      fieldStrength,
-      12,
-      new THREE.Color(o.material.color),
-    );
-    metalness += o.material.metalness;
-    roughness += o.material.roughness;
-    opacity += o.material.opacity;
-    emission.add(
-      new THREE.Color(o.material.emissive).multiplyScalar(
-        o.material.emissiveIntensity,
-      ),
-    );
-    strength += o.material.emissiveIntensity;
-  });
-  metaMaterial.metalness = metalness / metas.length;
-  metaMaterial.roughness = roughness / metas.length;
-  metaMaterial.opacity = opacity / metas.length;
-  metaMaterial.transparent = metaMaterial.opacity < 1;
-  metaMaterial.emissive.copy(emission.multiplyScalar(1 / metas.length));
-  metaMaterial.emissiveIntensity = strength ? 1 : 0;
-  metaMaterial.wireframe = displayMode === "wire";
-  metaSurface.update();
+  updateMetaballSurface(metaSurface, metas, { displayMode, mode: "3d" });
 }
 function syncProjectHeading() {
   $("projectName").value = project.name;
@@ -374,10 +563,13 @@ function snapshot() {
   return { project: JSON.parse(serializeProject(project)), selectedId };
 }
 function commit(message) {
+  pauseAnimation();
+  simulation = null;
   dirty = true;
   history.push(snapshot());
   updateHistoryButtons();
   queueAutosave();
+  syncTimeline();
   if (message) notify(message);
 }
 function queueAutosave() {
@@ -424,7 +616,7 @@ function select(id, openInspector = true) {
   selectedId = project.objects.some((o) => o.id === id) ? id : null;
   const o = selectedRecord(),
     mesh = selectedMesh();
-  if (o && mesh && o.visible && !o.locked) {
+  if (o && mesh && o.visible && !o.locked && !playing) {
     gizmo.attach(mesh);
     selectionBox.setFromObject(mesh);
     selectionBox.visible = displayMode !== "rendered";
@@ -433,8 +625,10 @@ function select(id, openInspector = true) {
     selectionBox.visible = false;
   }
   syncInspector();
+  syncTimeline();
   refreshObjects();
   if (openInspector && window.innerWidth <= 950 && o) {
+    closeTimelineDrawer();
     $("inspectorPanel").classList.add("is-open");
     $("libraryPanel").classList.remove("is-open");
   }
@@ -514,14 +708,25 @@ function syncInspector() {
   if (!o) return;
   $("objectName").value = o.name;
   transformIds.forEach((id, i) => {
-    const arr = i < 3 ? o.position : i < 6 ? o.rotation : o.scale;
+    const mesh = selectedMesh();
+    const arr = i < 3 ? mesh.position.toArray() : i < 6 ? [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z] : mesh.scale.toArray();
     const n = arr[i % 3] * (i >= 3 && i < 6 ? 180 / Math.PI : 1);
     if (document.activeElement !== $(id)) $(id).value = Number(n.toFixed(3));
     $(id).disabled = o.locked;
   });
   $("materialPanel").hidden = o.type === "light";
   $("lightPanel").hidden = o.type !== "light";
-  $("shapePanel").hidden = o.type === "custom" || o.type === "light";
+  $("shapePanel").hidden = ["custom", "light", "text"].includes(o.type);
+  $("textPanel").hidden = o.type !== "text";
+  $("physicsType").value = o.physics.type;
+  for (const [id, key] of [["physicsMass", "mass"], ["physicsRestitution", "restitution"], ["physicsFriction", "friction"], ["physicsStiffness", "stiffness"]]) $(id).value = o.physics[key];
+  $("physicsType").disabled = o.type === "light";
+  if (o.type === "text") {
+    $("textContent").value = o.text.content;
+    $("textSize").value = o.text.size;
+    $("textDepth").value = o.text.depth;
+    syncFontChoices(o);
+  }
   if (o.type === "light") {
     $("lightColor").value = o.light.color;
     $("lightIntensity").max = Math.max(200, o.light.intensity);
@@ -530,6 +735,7 @@ function syncInspector() {
     $("lightRange").value = o.light.range;
   } else {
     const m = o.material;
+    $("shaderSelect").value = m.shader;
     $("color").value = m.color;
     $("colorHex").textContent = m.color.toUpperCase();
     $("metal").value = m.metalness;
@@ -550,10 +756,11 @@ function updateMaterialOutputs() {
   $("colorHex").textContent = $("color").value.toUpperCase();
 }
 function renderShapeFields(o) {
+  const parameterKeys = Object.keys(o.parameters).filter((key) => typeof o.parameters[key] === "number");
   const current = $("shapeFields").dataset.recordId;
   if (
     current === o.id &&
-    $("shapeFields").children.length === Object.keys(o.parameters).length
+    $("shapeFields").children.length === parameterKeys.length
   ) {
     $("shapeFields")
       .querySelectorAll("input")
@@ -565,7 +772,7 @@ function renderShapeFields(o) {
   }
   $("shapeFields").dataset.recordId = o.id;
   $("shapeFields").replaceChildren();
-  Object.keys(o.parameters).forEach((key) => {
+  parameterKeys.forEach((key) => {
     const label = document.createElement("label");
     label.textContent = key
       .replace(/([A-Z])/g, " $1")
@@ -635,6 +842,11 @@ transformIds.forEach((id, i) =>
     const o = selectedRecord(),
       mesh = selectedMesh();
     if (!o || !mesh) return;
+    pauseAnimation();
+    // Editing a scrubbed pose starts from the visible transform.
+    o.position = mesh.position.toArray();
+    o.rotation = [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z];
+    o.scale = mesh.scale.toArray();
     const array = i < 3 ? o.position : i < 6 ? o.rotation : o.scale,
       index = i % 3;
     let value = safeNumber(
@@ -777,7 +989,7 @@ function addObject(type) {
     notify("This scene has reached the 1,000 object limit.");
     return;
   }
-  const o = createObjectRecord(type);
+  const o = createObjectRecord(type, type === "meta" ? { parameters: { variant: $("metaballVariant").value } } : {});
   const center = orbit.target.clone();
   o.position[0] = Math.round(center.x * 2) / 2;
   o.position[2] = Math.round(center.z * 2) / 2;
@@ -798,6 +1010,7 @@ function addObject(type) {
   }
   updateMetas();
   select(o.id);
+  if (window.innerWidth <= 240) frameObjects([mesh]);
   refreshStats();
   commit(o.name + " added");
 }
@@ -877,6 +1090,7 @@ $("snapBtn").addEventListener("click", toggleSnap);
 document.querySelectorAll("[data-mode]").forEach((b) =>
   b.addEventListener("click", () => {
     displayMode = b.dataset.mode;
+    $("compactMenu").open = false;
     document.querySelectorAll("[data-mode]").forEach((x) => {
       const active = x === b;
       x.classList.toggle("active", active);
@@ -917,6 +1131,7 @@ $("sceneTab").addEventListener("click", () => showTab("scene"));
   }),
 );
 function openBuild() {
+  closeTimelineDrawer();
   showTab("build");
   $("libraryPanel").classList.add("is-open");
   $("inspectorPanel").classList.remove("is-open");
@@ -924,12 +1139,14 @@ function openBuild() {
 $("sceneAddBtn").addEventListener("click", openBuild);
 $("emptyAddBtn").addEventListener("click", openBuild);
 $("libraryToggle").addEventListener("click", () => {
+  closeTimelineDrawer();
   $("libraryPanel").classList.toggle("is-open");
   $("inspectorPanel").classList.remove("is-open");
   if ($("libraryPanel").classList.contains("is-open"))
     $("buildPanel").hidden ? $("sceneTab").focus() : $("buildTab").focus();
 });
 $("inspectorToggle").addEventListener("click", () => {
+  closeTimelineDrawer();
   $("inspectorPanel").classList.toggle("is-open");
   $("libraryPanel").classList.remove("is-open");
   if ($("inspectorPanel").classList.contains("is-open"))
@@ -963,6 +1180,7 @@ function duplicateSelected() {
     id: undefined,
     name: o.name + " copy",
     position: [o.position[0] + 0.6, o.position[1], o.position[2] + 0.6],
+    keyframes: o.keyframes.map((key) => ({ ...structuredClone(key), position: [key.position[0] + 0.6, key.position[1], key.position[2] + 0.6] })),
   });
   if (!canInsert([copy])) return;
   project.objects.push(copy);
@@ -1008,13 +1226,21 @@ $("groundBtn").addEventListener("click", () => {
   if (!o || o.type === "light") return;
   mesh.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(mesh);
-  o.position[1] -= box.min.y;
-  mesh.position.y = o.position[1];
-  updateMetas();
-  selectionBox.setFromObject(mesh);
-  syncInspector();
+  if (box.isEmpty()) { notify("Add visible text before placing it on the ground."); return; }
+  mesh.position.y -= box.min.y;
+  updateRecordFromMesh();
   commit("Placed on ground");
 });
+document.querySelectorAll("[data-nudge], [data-turn], [data-resize]").forEach((button) => button.addEventListener("click", () => {
+  const o = selectedRecord(), mesh = selectedMesh();
+  if (!o || o.locked || !mesh) return;
+  pauseAnimation();
+  if (button.dataset.nudge) mesh.position[button.dataset.nudge] = THREE.MathUtils.clamp(mesh.position[button.dataset.nudge] + Number(button.dataset.delta), -10000, 10000);
+  else if (button.dataset.turn) mesh.rotation.y += Number(button.dataset.turn);
+  else mesh.scale.fromArray(mesh.scale.toArray().map((value) => Math.sign(value) * THREE.MathUtils.clamp(Math.abs(value) * Number(button.dataset.resize), 0.001, 1000)));
+  updateRecordFromMesh();
+  commit();
+}));
 $("undoBtn").addEventListener("click", () => restore(history.undo()));
 $("redoBtn").addEventListener("click", () => restore(history.redo()));
 function frameObjects(objects, direction = null) {
@@ -1068,6 +1294,14 @@ document
   .forEach((b) =>
     b.addEventListener("click", () => setCamera(b.dataset.camera)),
   );
+for (const [id, factor] of [["zoomInBtn", 0.8], ["zoomOutBtn", 1.25]]) {
+  $(id)?.addEventListener("click", () => {
+    const offset = camera.position.clone().sub(orbit.target);
+    offset.setLength(THREE.MathUtils.clamp(offset.length() * factor, orbit.minDistance, orbit.maxDistance));
+    camera.position.copy(orbit.target).add(offset);
+    orbit.update();
+  });
+}
 let pointerStart = null;
 renderer.domElement.addEventListener("pointerdown", (e) => {
   if (e.button === 0)
@@ -1272,7 +1506,8 @@ function exportGroup() {
         );
     });
     geometry.setDrawRange(0, count);
-    const mesh = new THREE.Mesh(geometry, metaMaterial);
+    const mesh = new THREE.Mesh(geometry, metaSurface.material);
+    mesh.userData.exportGeometry = true;
     mesh.position.copy(metaSurface.position);
     mesh.scale.copy(metaSurface.scale);
     group.add(mesh);
@@ -1304,8 +1539,7 @@ function exportModel(format) {
     group.children
       .filter(
         (m) =>
-          m.geometry !== meshMap.get(m.userData.recordId)?.geometry &&
-          m.material === metaMaterial,
+          m.userData.exportGeometry,
       )
       .forEach((m) => m.geometry.dispose());
     document.querySelector(".export-menu").open = false;
@@ -1334,7 +1568,30 @@ $("renderBtn").addEventListener("click", () => {
   sceneLightMarkers(displayMode !== "rendered");
   document.querySelector(".export-menu").open = false;
 });
+function closeTimelineDrawer() {
+  $("animationPanel").classList.remove("is-open");
+  $("animationToggle").setAttribute("aria-expanded", "false");
+}
 document.addEventListener("keydown", (e) => {
+  const drawer = window.innerWidth <= 600
+    ? ($("compactMenu").open ? $("compactMenu") : document.querySelector(".sidebar.is-open, .animation-panel.is-open"))
+    : null;
+  if (drawer && e.key === "Escape") {
+    e.preventDefault();
+    if (drawer === $("compactMenu")) $("compactMenuCloseBtn").click();
+    else if (drawer === $("animationPanel")) $("animationCloseBtn").click();
+    else drawer.querySelector("[data-panel-close]").click();
+    return;
+  }
+  if (drawer && e.key === "Tab") {
+    const scope = drawer === $("compactMenu") ? drawer.querySelector(".compact-menu-body") : drawer;
+    const focusable = [...scope.querySelectorAll("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],summary,[tabindex='0']")].filter((el) => el.getClientRects().length);
+    const first = focusable[0], last = focusable.at(-1);
+    if ((e.shiftKey && document.activeElement === first) || (!e.shiftKey && document.activeElement === last)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first)?.focus();
+    }
+  }
   if (
     e.target.closest("input,textarea,select,[contenteditable=true]") ||
     document.querySelector("dialog[open]")
@@ -1368,6 +1625,11 @@ document.addEventListener("keydown", (e) => {
     select(null, false);
     $("libraryPanel").classList.remove("is-open");
     $("inspectorPanel").classList.remove("is-open");
+    $("animationPanel").classList.remove("is-open");
+    $("animationToggle").setAttribute("aria-expanded", "false");
+  } else if (key === " " && !modifier) {
+    e.preventDefault();
+    $("playBtn").click();
   }
 });
 document.addEventListener("click", (e) => {
@@ -1417,9 +1679,35 @@ setCamera("perspective");
 updateHistoryButtons();
 $("loading").hidden = true;
 if (recovered) notify("Your last workspace is back. Keep creating.");
-renderer.setAnimationLoop(() => {
+let lastRenderTime = -Infinity;
+renderer.setAnimationLoop((timestamp) => {
+  // Keep small devices cool and avoid doing GPU work faster than the preview needs.
+  const interval = window.innerWidth <= 240 ? 1000 / 20 : 1000 / 30;
+  if (timestamp - lastRenderTime < interval) return;
+  lastRenderTime = timestamp;
+  if (playing) {
+    const dt = lastFrame === null ? 0 : Math.min((timestamp - lastFrame) / 1000, 0.1);
+    lastFrame = timestamp;
+    animationTime += dt;
+    if (animationTime >= project.timeline.duration) {
+      if (project.timeline.loop) {
+        animationTime %= project.timeline.duration;
+        simulation = makeSimulation();
+        seekSimulation(simulation, animationTime);
+      } else {
+        animationTime = project.timeline.duration;
+        seekSimulation(simulation, animationTime);
+        pauseAnimation();
+        syncTimeline();
+      }
+    } else stepSimulation(simulation, dt);
+    applyAnimationPose();
+  }
   orbit.update();
   if (selectionBox.visible && selectedMesh())
     selectionBox.setFromObject(selectedMesh());
-  composer.render();
+  const covered = window.innerWidth <= 600 && ($("compactMenu").open || document.querySelector(".sidebar.is-open, .animation-panel.is-open"));
+  if (covered || document.hidden) return;
+  if (window.innerWidth <= 600 && displayMode !== "rendered") renderer.render(scene, camera);
+  else composer.render();
 });
