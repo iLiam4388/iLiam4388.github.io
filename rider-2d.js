@@ -231,21 +231,29 @@ function rgb(color) { return [1, 3, 5].map((offset) => parseInt(color.slice(offs
 function drawMetaballs() {
   const objects = scene.objects.filter((object) => object.type === "meta" && object.physics !== "soft");
   if (!objects.length) return;
-  const sources = objects.flatMap((object) => object.sources.map((source) => ({ ...localToWorld(object, source), r: source.r * Math.sqrt(object.sx * object.sy) * object.influence, object, rgb: rgb(object.color) })));
+  const sources = objects.flatMap((object) => object.sources.map((source) => {
+    const angle = object.rotation * Math.PI / 180, c = Math.cos(angle), s = Math.sin(angle), rx = source.r * object.sx * object.influence, ry = source.r * object.sy * object.influence;
+    return { ...localToWorld(object, source), rx, ry, c, s, extentX: Math.hypot(rx * c, ry * s), extentY: Math.hypot(rx * s, ry * c), object, rgb: rgb(object.color) };
+  }));
   const viewportLeft = view.x - view.width / view.zoom / 2, viewportRight = view.x + view.width / view.zoom / 2;
   const viewportTop = view.y - view.height / view.zoom / 2, viewportBottom = view.y + view.height / view.zoom / 2;
-  const left = Math.max(viewportLeft, Math.min(...sources.map((s) => s.x - s.r * 3))), right = Math.min(viewportRight, Math.max(...sources.map((s) => s.x + s.r * 3)));
-  const top = Math.max(viewportTop, Math.min(...sources.map((s) => s.y - s.r * 3))), bottom = Math.min(viewportBottom, Math.max(...sources.map((s) => s.y + s.r * 3)));
+  const left = Math.max(viewportLeft, Math.min(...sources.map((s) => s.x - s.extentX * 3))), right = Math.min(viewportRight, Math.max(...sources.map((s) => s.x + s.extentX * 3)));
+  const top = Math.max(viewportTop, Math.min(...sources.map((s) => s.y - s.extentY * 3))), bottom = Math.min(viewportBottom, Math.max(...sources.map((s) => s.y + s.extentY * 3)));
   if (right <= left || bottom <= top) return;
   const width = clamp(Math.ceil((right - left) * view.zoom / 3), 2, 180), height = clamp(Math.ceil((bottom - top) * view.zoom / 3), 2, 180);
-  const key = JSON.stringify([sources.map((s) => [s.x, s.y, s.r, s.object.color, s.object.opacity, s.object.shader]), left, right, top, bottom, width, height]);
+  const key = JSON.stringify([sources.map((s) => [s.x, s.y, s.rx, s.ry, s.c, s.s, s.object.color, s.object.opacity, s.object.shader]), left, right, top, bottom, width, height]);
   if (key !== metaCacheKey) {
     metaCanvas.width = width; metaCanvas.height = height;
     const image = metaCtx.createImageData(width, height), stepX = (right - left) / width, stepY = (bottom - top) / height;
     for (let py = 0; py < height; py++) for (let px = 0; px < width; px++) {
       const x = left + (px + 0.5) * stepX, y = top + (py + 0.5) * stepY;
       let field = 0, best = 0, nearest = sources[0], gx = 0, gy = 0;
-      for (const s of sources) { const dx = x - s.x, dy = y - s.y, dist = Math.max(0.0001, dx * dx + dy * dy), value = s.r * s.r / dist; field += value; gx += value * dx / dist; gy += value * dy / dist; if (value > best) { best = value; nearest = s; } }
+      for (const s of sources) {
+        const dx = x - s.x, dy = y - s.y, lx = dx * s.c + dy * s.s, ly = -dx * s.s + dy * s.c, rx2 = s.rx * s.rx, ry2 = s.ry * s.ry;
+        const distance = Math.max(0.0001, lx * lx / rx2 + ly * ly / ry2), value = 1 / distance;
+        field += value; gx += value * value * (lx / rx2 * s.c - ly / ry2 * s.s); gy += value * value * (lx / rx2 * s.s + ly / ry2 * s.c);
+        if (value > best) { best = value; nearest = s; }
+      }
       if (field < 0.92) continue;
       const index = (py * width + px) * 4, shade = nearest.object.shader === "flat" ? 1 : clamp(0.84 - (gx + gy) / (Math.hypot(gx, gy) || 1) * 0.22, 0.55, 1.15);
       for (let channel = 0; channel < 3; channel++) image.data[index + channel] = Math.min(255, nearest.rgb[channel] * shade);
@@ -321,7 +329,7 @@ function selectObject(id) { selectedId = id; refresh(); dirty = true; }
 function addObject(type, variant) {
   if (scene.objects.length >= MAX_OBJECTS) return toast("This scene is full (150 objects).");
   const used = scene.objects.filter((o) => o.type === "liquid").reduce((sum, o) => sum + o.particleCount, 0);
-  if (type === "liquid" && used >= MAX_PARTICLES) return toast("This scene already has 240 liquid particles.");
+  if (type === "liquid" && MAX_PARTICLES - used < 12) return toast("At least 12 free particle slots are needed to add liquid (240 per scene).");
   history(); const object = makeObject(type, variant); if (type === "liquid") object.particleCount = Math.min(80, MAX_PARTICLES - used);
   scene.objects.push(object); selectedId = object.id; changed({ geometry: true }); closePanels();
   if (view.width < 320) fitScene();

@@ -180,6 +180,41 @@ with sync_playwright() as p:
     page.screenshot(path=str(ARTIFACTS / "soft-fluid.png"))
     print("Soft spring deformation and interacting liquid particles passed", flush=True)
 
+    # A nonuniformly scaled single metaball really becomes an ellipse, including rotation.
+    blob_project = project([body("meta", "ellipse", color="#ffffff", sources=[{"x": 0, "y": 0, "r": 0.65}])])
+    blob_project["floorEnabled"] = False
+    import_project(page, blob_project)
+    def white_extent():
+        page.wait_for_timeout(60)
+        return page.evaluate("""() => {
+          const c = document.getElementById('canvas'), data = c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+          let x0=c.width, x1=0, y0=c.height, y1=0;
+          for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++){
+            const i=(y*c.width+x)*4;
+            if(data[i]>235&&data[i+1]>235&&data[i+2]>235){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+          }
+          return {width:x1-x0+1,height:y1-y0+1};
+        }""")
+    circle_extent = white_extent()
+    field(page, "#sx", 2)
+    field(page, "#sy", 0.5)
+    ellipse_extent = white_extent()
+    assert ellipse_extent["width"] > circle_extent["width"] * 1.8
+    assert ellipse_extent["height"] < circle_extent["height"] * 0.6
+    field(page, "#rotation", 90)
+    rotated_extent = white_extent()
+    assert abs(rotated_extent["width"] - ellipse_extent["height"]) < 12
+    assert abs(rotated_extent["height"] - ellipse_extent["width"]) < 12
+
+    # The minimum fluid emitter size cannot produce an unopenable exported scene.
+    import_project(page, project([body("liquid", "nearly-full", particleCount=236)]))
+    page.locator("#addLiquidBtn").click()
+    assert len(state(page)["project"]["objects"]) == 1
+    nearly_full = save_project(page)
+    import_project(page, nearly_full)
+    assert state(page)["project"] == nearly_full
+    print("Anisotropic metaball rendering and liquid-capacity boundary passed", flush=True)
+
     # Uploaded font bytes, editable text, real polygon outlines/counters and metaballs.
     import_project(page, project([]))
     page.locator('[data-add="text"]').click()
