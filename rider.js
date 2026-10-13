@@ -25,6 +25,9 @@ import {
   sampleTransform, recordKeyframe, removeKeyframe, createSimulation,
   stepSimulation, seekSimulation, getSimulatedTransform,
 } from "./rider-motion.js";
+import { bufferGeometryJSON } from "./rider-mesh.js";
+import { createMeshEditor } from "./rider-mesh-editor.js";
+import { animationExportSettings, exportAnimation } from "./rider-animation-export.js";
 
 await loadDefaultFont();
 
@@ -92,6 +95,7 @@ let project,
   saveTimer,
   autosaveAvailable = true;
 let animationTime = 0, playing = false, simulation = null, lastFrame = null;
+let exportInProgress = false, exportController = null;
 const uploadedFonts = new Map();
 const view = $("view"),
   scene = new THREE.Scene(),
@@ -173,6 +177,16 @@ const metaSurface = new MarchingCubes(window.innerWidth <= 600 ? 24 : 44, metaMa
 metaSurface.isolation = 70;
 metaSurface.visible = false;
 scene.add(metaSurface);
+const meshEditor = createMeshEditor({ scene, camera, renderer, gizmo, selectedMesh, selectedRecord,
+  pauseAnimation, persistGeometry, commit, notify, refreshStats, syncInspector });
+
+function persistGeometry(geometry) {
+  const o = selectedRecord();
+  const next = normalizeProject({ ...project, objects: project.objects.map((item) => item.id === o.id
+    ? { ...item, type: "custom", parameters: {}, geometry: bufferGeometryJSON(geometry) } : item) }).objects.find((item) => item.id === o.id);
+  o.type = "custom"; o.parameters = {}; o.geometry = next.geometry;
+  refreshObjects();
+}
 
 function notify(message) {
   $("toast").textContent = message;
@@ -253,7 +267,7 @@ function pauseAnimation() {
   $("playBtn").textContent = "▶︎ Play";
   $("playBtn").setAttribute("aria-label", "Play animation");
   $("playBtn").setAttribute("aria-pressed", "false");
-  if (selectedMesh() && selectedRecord()?.visible && !selectedRecord()?.locked) gizmo.attach(selectedMesh());
+  if (!meshEditor.attach() && selectedMesh() && selectedRecord()?.visible && !selectedRecord()?.locked) gizmo.attach(selectedMesh());
 }
 function makeSimulation() {
   const bounds = {};
@@ -278,6 +292,7 @@ function applyAnimationPose() {
   updateMetas();
   if (selectedMesh()) selectionBox.setFromObject(selectedMesh());
   syncTimeInputs();
+  if (meshEditor.mode !== "object" && !exportInProgress) meshEditor.refreshPose();
 }
 function seekAnimation(time) {
   pauseAnimation();
@@ -289,6 +304,7 @@ function seekAnimation(time) {
   syncTimeline();
 }
 $("playBtn").addEventListener("click", () => {
+  if (meshEditor.mode !== "object") meshEditor.setMode("object");
   if (playing) { pauseAnimation(); syncInspector(); syncTimeline(); return; }
   if (animationTime >= project.timeline.duration) { animationTime = 0; simulation = null; }
   if (!simulation) { simulation = makeSimulation(); seekSimulation(simulation, animationTime); }
@@ -616,8 +632,9 @@ function select(id, openInspector = true) {
   selectedId = project.objects.some((o) => o.id === id) ? id : null;
   const o = selectedRecord(),
     mesh = selectedMesh();
+  meshEditor.onObjectSelection();
   if (o && mesh && o.visible && !o.locked && !playing) {
-    gizmo.attach(mesh);
+    if (!meshEditor.attach()) gizmo.attach(mesh);
     selectionBox.setFromObject(mesh);
     selectionBox.visible = displayMode !== "rendered";
   } else {
@@ -702,9 +719,10 @@ function syncInspector() {
   $("selectionControls").hidden = !o;
   $("selectedKind").textContent = o
     ? o.type === "custom"
-      ? "IMPORTED MESH"
+      ? "EDITABLE MESH"
       : o.type.toUpperCase()
     : "NO SELECTION";
+  meshEditor.sync();
   if (!o) return;
   $("objectName").value = o.name;
   transformIds.forEach((id, i) => {
@@ -747,6 +765,7 @@ function syncInspector() {
     updateMaterialOutputs();
     renderShapeFields(o);
   }
+  meshEditor.sync();
 }
 function updateMaterialOutputs() {
   ["metal", "rough", "opacity"].forEach(
@@ -814,6 +833,7 @@ function renderShapeFields(o) {
   });
 }
 function updateRecordFromMesh() {
+  if (meshEditor.mode !== "object") { meshEditor.updateTransform(); return; }
   const mesh = selectedMesh(),
     o = selectedRecord();
   if (!mesh || !o) return;
@@ -830,6 +850,11 @@ function updateRecordFromMesh() {
 gizmo.addEventListener("dragging-changed", (event) => {
   isDragging = event.value;
   orbit.enabled = !isDragging;
+  if (meshEditor.mode !== "object") {
+    if (isDragging) meshEditor.startTransform();
+    else meshEditor.finishTransform();
+    return;
+  }
   if (!isDragging) {
     updateRecordFromMesh();
     refreshStats();
@@ -1331,6 +1356,7 @@ renderer.domElement.addEventListener("pointerup", (e) => {
     ),
     ray = new THREE.Raycaster();
   ray.setFromCamera(point, camera);
+  if (meshEditor.pick(e, ray)) return;
   const targets = project.objects
     .filter((o) => o.visible)
     .map((o) => meshMap.get(o.id));
@@ -1554,6 +1580,7 @@ $("renderBtn").addEventListener("click", () => {
   grid.visible = false;
   selectionBox.visible = false;
   gizmo.getHelper().visible = false;
+  meshEditor.setVisible(false);
   sceneLightMarkers(false);
   composer.render();
   renderer.domElement.toBlob((blob) => {
@@ -1565,8 +1592,88 @@ $("renderBtn").addEventListener("click", () => {
   grid.visible = oldGrid;
   selectionBox.visible = oldBox;
   gizmo.getHelper().visible = oldGizmo;
+  meshEditor.setVisible(true);
   sceneLightMarkers(displayMode !== "rendered");
   document.querySelector(".export-menu").open = false;
+});
+function exportSettings() {
+  const start = Number($("animationExportStart").value), end = Number($("animationExportEnd").value);
+  if (end > project.timeline.duration || start >= project.timeline.duration) throw new Error("The export range must fit within the timeline.");
+  return animationExportSettings({ start, end, fps: Number($("animationExportFps").value),
+    width: Number($("animationExportWidth").value), aspect: view.clientWidth / view.clientHeight });
+}
+function syncExportSummary() {
+  try {
+    const s = exportSettings();
+    $("animationExportSummary").textContent = `${s.width} × ${s.height} · ${s.frames} frames · ${(s.end - s.start).toFixed(2)} seconds`;
+    $("startAnimationExportBtn").disabled = false;
+  } catch (error) { $("animationExportSummary").textContent = error.message; $("startAnimationExportBtn").disabled = true; }
+}
+function openAnimationExport(format) {
+  $("animationExportFormat").value = format;
+  $("animationExportStart").value = 0;
+  $("animationExportEnd").value = project.timeline.duration;
+  $("animationExportStart").max = $("animationExportEnd").max = project.timeline.duration;
+  $("animationExportFps").value = [15, 24, 30, 60].includes(project.timeline.fps) ? project.timeline.fps : 30;
+  $("animationExportProgress").hidden = true; $("animationExportStatus").textContent = "";
+  $("cancelAnimationExportBtn").textContent = "Close";
+  document.querySelector(".export-menu").open = false;
+  syncExportSummary(); $("animationExportDialog").showModal();
+}
+$("exportGifBtn").addEventListener("click", () => openAnimationExport("gif"));
+$("exportMp4Btn").addEventListener("click", () => openAnimationExport("mp4"));
+$("animationExportSettings").addEventListener("input", syncExportSummary);
+function cancelAnimationExport() {
+  if (exportController) { exportController.abort(); $("animationExportStatus").textContent = "Cancelling…"; }
+  else $("animationExportDialog").close();
+}
+$("cancelAnimationExportBtn").addEventListener("click", cancelAnimationExport);
+$("closeAnimationExportBtn").addEventListener("click", cancelAnimationExport);
+$("animationExportDialog").addEventListener("cancel", (event) => { if (exportController) { event.preventDefault(); cancelAnimationExport(); } });
+$("startAnimationExportBtn").addEventListener("click", async () => {
+  if (exportInProgress) return;
+  let settings;
+  try { settings = exportSettings(); } catch (error) { $("animationExportStatus").textContent = error.message; return; }
+  const format = $("animationExportFormat").value;
+  const old = { time: animationTime, simulation, playing, grid: grid.visible, box: selectionBox.visible,
+    gizmo: gizmo.getHelper().visible, pixelRatio: renderer.getPixelRatio(), aspect: camera.aspect };
+  const poses = new Map([...meshMap].map(([id, mesh]) => [id, { position: mesh.position.clone(), quaternion: mesh.quaternion.clone(), scale: mesh.scale.clone() }]));
+  pauseAnimation(); exportInProgress = true; exportController = new AbortController();
+  $("startAnimationExportBtn").disabled = true;
+  $("animationExportSettings").querySelectorAll("input,select").forEach((input) => { input.disabled = true; });
+  $("animationExportProgress").hidden = false; $("animationExportProgress").value = 0;
+  $("cancelAnimationExportBtn").textContent = "Cancel export";
+  grid.visible = selectionBox.visible = gizmo.getHelper().visible = false;
+  meshEditor.setVisible(false); sceneLightMarkers(false);
+  try {
+    renderer.setPixelRatio(1); renderer.setSize(settings.width, settings.height, false);
+    composer.setPixelRatio(1); composer.setSize(settings.width, settings.height);
+    camera.aspect = settings.width / settings.height; camera.updateProjectionMatrix();
+    simulation = makeSimulation();
+    const blob = await exportAnimation({ format, settings, signal: exportController.signal, loop: project.timeline.loop,
+      renderFrame(time) {
+        animationTime = time; seekSimulation(simulation, time); applyAnimationPose(); composer.render();
+        return renderer.domElement;
+      },
+      progress(value, message) { $("animationExportProgress").value = value; $("animationExportStatus").textContent = message; },
+    });
+    download(blob, filename("." + format));
+    $("animationExportStatus").textContent = format.toUpperCase() + " downloaded";
+    notify(format.toUpperCase() + " animation exported");
+  } catch (error) {
+    $("animationExportStatus").textContent = exportController.signal.aborted ? "Export cancelled" : "Export failed: " + error.message;
+  } finally {
+    exportController = null; exportInProgress = false;
+    animationTime = old.time; simulation = old.simulation;
+    for (const [id, pose] of poses) { const mesh = meshMap.get(id); mesh.position.copy(pose.position); mesh.quaternion.copy(pose.quaternion); mesh.scale.copy(pose.scale); }
+    updateMetas(); grid.visible = old.grid; selectionBox.visible = old.box;
+    gizmo.getHelper().visible = old.gizmo; meshEditor.setVisible(true); sceneLightMarkers(displayMode !== "rendered");
+    renderer.setPixelRatio(old.pixelRatio); composer.setPixelRatio(old.pixelRatio); camera.aspect = old.aspect; resize();
+    meshEditor.attach(); syncInspector(); syncTimeline();
+    if (old.playing) $("playBtn").click();
+    $("animationExportSettings").querySelectorAll("input,select").forEach((input) => { input.disabled = false; });
+    $("cancelAnimationExportBtn").textContent = "Close"; syncExportSummary();
+  }
 });
 function closeTimelineDrawer() {
   $("animationPanel").classList.remove("is-open");
@@ -1613,15 +1720,22 @@ document.addEventListener("keydown", (e) => {
     duplicateSelected();
   } else if (!modifier && (key === "delete" || key === "backspace")) {
     e.preventDefault();
-    deleteSelected();
+    if (meshEditor.mode === "object") deleteSelected(); else meshEditor.deleteSelection();
+  } else if (!modifier && ["1", "2", "3"].includes(key)) {
+    e.preventDefault(); meshEditor.setMode({ "1": "vertex", "2": "edge", "3": "face" }[key]);
+  } else if (!modifier && key === "tab" && e.target === renderer.domElement) {
+    e.preventDefault(); meshEditor.setMode(meshEditor.mode === "object" ? "face" : "object");
+  } else if (!modifier && key === "a" && meshEditor.mode !== "object") {
+    e.preventDefault(); meshEditor.selectAll();
   } else if (!modifier && ["g", "r", "s"].includes(key)) {
     e.preventDefault();
     setTool({ g: "translate", r: "rotate", s: "scale" }[key]);
   } else if (!modifier && key === "f") {
     e.preventDefault();
     frameObjects(selectedMesh() ? [selectedMesh()] : allModelMeshes());
-  } else if (key === "shift" && !e.repeat) toggleSnap();
+  } else if (key === "shift" && !e.repeat && meshEditor.mode === "object") toggleSnap();
   else if (key === "escape") {
+    if (meshEditor.mode !== "object") { meshEditor.clearSelection(); return; }
     select(null, false);
     $("libraryPanel").classList.remove("is-open");
     $("inspectorPanel").classList.remove("is-open");
@@ -1643,6 +1757,7 @@ window.addEventListener("beforeunload", (e) => {
   }
 });
 function resize() {
+  if (exportInProgress) return;
   const w = view.clientWidth,
     h = view.clientHeight;
   if (!w || !h) return;
@@ -1681,6 +1796,7 @@ $("loading").hidden = true;
 if (recovered) notify("Your last workspace is back. Keep creating.");
 let lastRenderTime = -Infinity;
 renderer.setAnimationLoop((timestamp) => {
+  if (exportInProgress) return;
   // Keep small devices cool and avoid doing GPU work faster than the preview needs.
   const interval = window.innerWidth <= 240 ? 1000 / 20 : 1000 / 30;
   if (timestamp - lastRenderTime < interval) return;

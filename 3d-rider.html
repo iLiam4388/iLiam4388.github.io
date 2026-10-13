@@ -69,6 +69,10 @@
           <div class="menu-popover">
             <button id="renderBtn" data-icon="image">
               Render PNG<span>Current camera view</span></button
+            ><button id="exportGifBtn" data-icon="image">
+              Export GIF<span>Animated camera view</span></button
+            ><button id="exportMp4Btn" data-icon="camera">
+              Export MP4<span>Animation & physics video</span></button
             ><button id="exportStlBtn" data-icon="cube">
               Export STL<span>For 3D tools & printing</span></button
             ><button id="exportObjBtn" data-icon="cube">
@@ -92,6 +96,8 @@
           <button data-action="openBtn" data-icon="folder">Open project</button>
           <button data-action="saveBtn" data-icon="save">Save project</button>
           <button data-action="renderBtn" data-icon="image">Render PNG</button>
+          <button data-action="exportGifBtn" data-icon="image">Export GIF</button>
+          <button data-action="exportMp4Btn" data-icon="camera">Export MP4</button>
           <button data-action="exportStlBtn" data-icon="cube">Export STL</button>
           <button data-action="exportObjBtn" data-icon="cube">Export OBJ</button>
           <div class="compact-menu-heading">Your view</div>
@@ -315,6 +321,12 @@
             aria-controls="libraryPanel"
             aria-expanded="false"
           ></button>
+          <div class="tool-group component-modes" role="group" aria-label="Mesh selection mode">
+            <button class="tool active" data-component-mode="object" aria-pressed="true" title="Object mode (Tab)">Object</button>
+            <button class="tool" data-component-mode="vertex" aria-pressed="false" title="Vertex selection (1)">Vertices</button>
+            <button class="tool" data-component-mode="edge" aria-pressed="false" title="Edge selection (2)">Edges</button>
+            <button class="tool" data-component-mode="face" aria-pressed="false" title="Face selection (3)">Faces</button>
+          </div>
           <div class="tool-group">
             <button
               data-tool="translate"
@@ -536,6 +548,37 @@
                 aria-label="Delete selected object"
               ></button>
             </div>
+          </section>
+          <section id="meshEditPanel" class="panel-section" hidden>
+            <div class="section-heading"><h2>Mesh modeling</h2><span id="meshCounts" class="muted"></span></div>
+            <p id="componentStatus" role="status">Select components on the canvas.</p>
+            <p class="control-hint">Click or tap to select. Shift-click adds or removes a component. Move, rotate, and scale edit the selection.</p>
+            <div class="mesh-actions">
+              <button id="selectAllComponentsBtn">Select all</button>
+              <button id="clearComponentsBtn">Deselect</button>
+            </div>
+            <label class="mesh-check"><input id="meshXray" type="checkbox" />X-ray selection (include hidden components)</label>
+            <label class="mesh-check"><input id="meshMultiSelect" type="checkbox" />Add to selection (for touch)</label>
+            <p class="control-hint">Selection center · object-local coordinates</p>
+            <div class="mesh-center">
+              <label>X<input id="componentX" type="number" step="0.1" aria-label="Selection center X" /></label>
+              <label>Y<input id="componentY" type="number" step="0.1" aria-label="Selection center Y" /></label>
+              <label>Z<input id="componentZ" type="number" step="0.1" aria-label="Selection center Z" /></label>
+            </div>
+            <div class="mesh-actions" role="group" aria-label="Rotate and scale selected components">
+              <button data-component-turn="-.261799">Rotate Y −15°</button>
+              <button data-component-turn=".261799">Rotate Y +15°</button>
+              <button data-component-scale=".8">Scale ×0.8</button>
+              <button data-component-scale="1.25">Scale ×1.25</button>
+            </div>
+            <label class="spaced-label">Extrude distance<input id="extrudeDistance" type="number" value="0.25" step="0.1" min="-100" max="100" /></label>
+            <div class="mesh-actions">
+              <button id="extrudeFacesBtn">Extrude faces</button>
+              <button id="subdivideFacesBtn">Subdivide faces</button>
+              <button id="deleteComponentsBtn" class="delete">Delete selection</button>
+              <button id="exitMeshEditBtn">Object mode</button>
+            </div>
+            <p class="control-hint">The first mesh edit converts the shape to editable geometry. Undo restores the original shape. Deleting vertices or edges removes their attached faces.</p>
           </section>
           <section class="panel-section transform-section">
             <div class="section-heading">
@@ -810,6 +853,7 @@
         Click a shape to select it, then drag the colored handles to transform
         it. Add shapes from Build, or start with a ready-made model.
       </p>
+      <p>Choose Vertices, Edges, or Faces to model the selected mesh. Shift-click to select more; use the handles to move, rotate, or scale them. Inspector has extrusion, subdivision, and precise selection coordinates. Export GIF or MP4 renders your chosen timeline range with animation and physics.</p>
       <div class="shortcut-grid">
         <span>Move / Rotate / Scale</span
         ><span><kbd>G</kbd><kbd>R</kbd><kbd>S</kbd></span
@@ -818,6 +862,9 @@
         ><span>Undo / Redo</span><kbd>⌘ / Ctrl Z / Shift Z</kbd
         ><span>Save project</span><kbd>⌘ / Ctrl S</kbd
         ><span>Toggle snapping</span><kbd>Shift</kbd>
+        <span>Object / mesh mode</span><kbd>Tab</kbd>
+        <span>Vertices / Edges / Faces</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span>
+        <span>Select all components</span><kbd>A</kbd>
       </div>
       <p class="muted">
         Orbit: drag empty space · Pan: right-drag or two-finger drag · Zoom:
@@ -850,6 +897,22 @@
           Save current project</button
         ><button id="confirmNewBtn" class="primary">Start empty scene</button>
       </div>
+    </dialog>
+    <dialog id="animationExportDialog" aria-labelledby="animationExportTitle">
+      <div class="dialog-heading"><span class="eyebrow">ANIMATION EXPORT</span><button id="closeAnimationExportBtn" class="icon-button" data-icon="close" aria-label="Close animation export"></button></div>
+      <h2 id="animationExportTitle">Export animation</h2>
+      <p>Render the current camera view, including keyframes and physics. Choose the range and output size.</p>
+      <div id="animationExportSettings" class="export-settings">
+        <label>Format<select id="animationExportFormat"><option value="gif">GIF</option><option value="mp4">MP4</option></select></label>
+        <label>Width<select id="animationExportWidth"><option value="320">320 px</option><option value="640" selected>640 px</option><option value="1280">1280 px</option><option value="1920">1920 px</option></select></label>
+        <label>Frame rate<select id="animationExportFps"><option value="15">15 fps</option><option value="24">24 fps</option><option value="30" selected>30 fps</option><option value="60">60 fps</option></select></label>
+        <label>Start (seconds)<input id="animationExportStart" type="number" min="0" value="0" step="0.1" /></label>
+        <label>End (seconds)<input id="animationExportEnd" type="number" min="0.1" value="10" step="0.1" /></label>
+      </div>
+      <p id="animationExportSummary" class="muted"></p>
+      <progress id="animationExportProgress" value="0" max="1" hidden></progress>
+      <p id="animationExportStatus" role="status" aria-live="polite"></p>
+      <div class="dialog-actions"><button id="cancelAnimationExportBtn" class="outline">Close</button><button id="startAnimationExportBtn" class="primary">Export animation</button></div>
     </dialog>
     <script type="module" src="rider.js"></script>
     <script>

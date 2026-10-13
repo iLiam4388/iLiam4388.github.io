@@ -231,6 +231,27 @@ summary.primary:hover {
 .export-menu {
   position: relative;
 }
+.component-modes { flex-shrink: 0; }
+.toolbar { overflow-x: auto; scrollbar-width: none; }
+.toolbar::-webkit-scrollbar { display: none; }
+.toolbar > * { flex-shrink: 0; }
+.toolbar-spacer { flex-shrink: 1; }
+#animationExportDialog { max-height: calc(100dvh - 20px); overflow-y: auto; }
+.component-modes .tool { font-size: 10px; padding: 8px; }
+.mesh-actions, .mesh-center, .export-settings { display: grid; gap: 8px; margin-top: 12px; }
+.mesh-actions, .export-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mesh-actions button { padding: 9px 6px; background: #302c3c; border: 1px solid var(--line); border-radius: 6px; }
+.mesh-actions button:disabled { opacity: .4; cursor: default; }
+.mesh-center { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mesh-center label, .export-settings label { min-width: 0; font-size: 11px; }
+.mesh-center input, .export-settings input, .export-settings select { width: 100%; min-width: 0; margin-top: 6px; }
+.export-settings input, .export-settings select { padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: #191b23; color: var(--text); }
+.mesh-check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; }
+.mesh-check input { width: auto; }
+#componentStatus { font-size: 12px; color: var(--purple); margin: 10px 0; }
+#meshCounts { font-size: 9px; }
+#animationExportProgress { width: 100%; accent-color: var(--purple); }
+#animationExportStatus { min-height: 1.4em; font-size: 12px; }
 .export-menu summary {
   list-style: none;
   cursor: pointer;
