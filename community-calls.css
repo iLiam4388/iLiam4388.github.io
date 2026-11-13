@@ -30,3 +30,15 @@
 #iliam-call-ui .call-voice{display:grid;place-items:center;height:230px;background:#112747;border-radius:15px;font-size:50px;margin:16px 0}
 #iliam-call-ui .call-center{justify-content:center}
 @media(max-width:650px){#iliam-call-ui .call-videos{grid-template-columns:1fr}#iliam-call-ui .call-videos video.local{height:130px}#iliam-call-ui .call-panel{padding:16px}#iliam-call-ui .call-screen{padding:10px}#iliam-call-ui .call-videos video{height:39vh}}
+
+/* Account privacy controls */
+#iliam-call-settings-button{background:linear-gradient(#6e7cff,#42339a);box-shadow:0 0 12px #9185ff88}
+#iliam-call-settings-button:disabled{opacity:.55;cursor:not-allowed}
+#iliam-call-ui .call-dnd-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:15px;margin:14px 0 18px;background:#182f4d;border:1px solid #6dd8ff55;border-radius:14px}
+#iliam-call-ui .call-dnd-row span{display:flex;flex-direction:column;gap:5px}
+#iliam-call-ui .call-dnd-row small{font-size:12px;color:#b9d6e7;line-height:1.4}
+#iliam-call-ui .call-dnd-row input{width:23px;height:23px;accent-color:#43e5bf;flex:none;cursor:pointer}
+#iliam-call-ui .call-settings-heading{font-size:17px;margin:20px 0 4px}
+#iliam-call-ui .call-block-row{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:12px;background:#ffffff12;border:1px solid #ffffff33}
+#iliam-call-ui .call-block-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:650}
+#iliam-call-ui .call-block-row .call-btn{flex:none;font-size:12px;padding:8px 11px}
