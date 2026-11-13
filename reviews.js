@@ -10,7 +10,7 @@ if(root){
   const $=id=>root.querySelector("#"+id);
   root.innerHTML=[
     '<div class="review-compose-card">',
-    '<div class="review-compose-head"><div class="review-compose-profile"><img id="review-my-avatar" class="review-avatar" alt="Your profile picture"><span id="review-identity" class="review-identity">Sign in to review</span></div><h2 class="review-compose-title">Leave a review</h2></div>',
+    '<div class="review-compose-head"><h2 class="review-compose-title">Leave a review</h2><div class="review-compose-profile"><img id="review-my-avatar" class="review-avatar" alt="Your profile picture"><span id="review-identity" class="review-identity">Sign in to review</span></div></div>',
     '<span class="review-rating-label">Your rating</span>',
     '<div class="review-star-row" id="review-star-row" role="group" aria-label="Star rating"></div>',
     '<textarea id="review-input" class="review-textarea" maxlength="1200" placeholder="What did you like? What could be better?"></textarea>',
@@ -37,7 +37,7 @@ if(root){
       stars[i].classList.toggle("selected",i<rating);
       stars[i].setAttribute("aria-pressed",String(i+1===rating));
     }
-    ratingHint.textContent=ratingLabels[rating];
+    ratingHint.textContent=rating+" / 5 stars";
   }
   drawRating();
   input.oninput=()=>{$("review-character").textContent=input.value.length+" / 1200";};
