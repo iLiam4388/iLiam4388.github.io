@@ -40,6 +40,18 @@ if(launch){
  const pickerStatus=s=>$("call-picker-status").textContent=s;
  const name=p=>p?.nickname||p?.username||"iLiam user";
  const when=t=>t?.toMillis?.()||0;
+ function captureError(err,type){
+  const kind=type==="video"?"camera and microphone":"microphone";
+  const errorName=String(err?.name||"");
+  const message=String(err?.message||"");
+  if(["NotAllowedError","PermissionDeniedError","SecurityError"].includes(errorName)||/permission denied|permission blocked|not allowed/i.test(message))
+   return "Access to your "+kind+" was blocked. In Opera, click the site permissions icon next to the address and allow Microphone"+(type==="video"?" and Camera":"")+". In Windows Settings → Privacy & security → "+(type==="video"?"Camera and Microphone":"Microphone")+", enable access for desktop apps, then retry.";
+  if(errorName==="NotFoundError"||errorName==="DevicesNotFoundError")
+   return "No usable "+kind+" was found. Connect a device and check Windows sound/camera settings.";
+  if(errorName==="NotReadableError"||errorName==="TrackStartError")
+   return "Your "+kind+" is unavailable or in use. Close other apps using it and try again.";
+  return err?.message||"Unable to access microphone/camera.";
+ }
  function safeAvatar(p){
   try{const u=new URL(p.photoURL);if(["http:","https:"].includes(u.protocol))return u.href;}catch{}
   const letter=name(p).slice(0,1).toUpperCase().replace(/[<&>"]/g,"")||"U";
@@ -190,7 +202,7 @@ if(launch){
    const flush=setupCandidates(s,"callee");watchCall(s,true,flush);
    status("Ringing "+name(friend)+"…");
   }catch(e){if(media&&!session){media.stream.getTracks().forEach(t=>t.stop());media.pc.close();}
-   cleanup();visible("call-picker",true);pickerStatus("Could not start: "+e.message);
+   cleanup();visible("call-picker",true);pickerStatus("Could not start: "+captureError(e,type));
   }finally{working=false;}
  }
  $("call-video").onclick=()=>call("video");$("call-audio").onclick=()=>call("audio");
@@ -233,7 +245,7 @@ if(launch){
    await flush();watchCall(s,false,flush);status("Connecting…");
   }catch(e){
    if(media&&!session){media.stream.getTracks().forEach(t=>t.stop());media.pc.close();}
-   cleanup();visible("call-incoming",true);$("call-incoming-error").textContent="Could not answer: "+e.message;
+   cleanup();visible("call-incoming",true);$("call-incoming-error").textContent="Could not answer: "+captureError(e,invite.type);
   }finally{$("call-accept").disabled=false;working=false;}
  };
  function subscribeInbox(uid){
