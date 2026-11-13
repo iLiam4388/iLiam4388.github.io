@@ -674,14 +674,33 @@ service cloud.firestore {
             && chatId.matches('^group_[A-Za-z0-9_-]+$'))
         )
         && chatUsersExist(request.resource.data.members);
+      // Members can edit the name/photo; only the creator may add or
+      // remove members. Creator must stay in a group; maximum four total.
       allow update: if signedIn()
         && request.auth.uid in resource.data.members
         && resource.data.kind == 'group'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','imageUrl'])
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['title','imageUrl','members'])
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.kind == resource.data.kind
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 1
         && request.resource.data.title.size() <= 60
-        && (!('imageUrl' in request.resource.data) || validChatImage(request.resource.data.imageUrl));
+        && (!('imageUrl' in request.resource.data) || validChatImage(request.resource.data.imageUrl))
+        && request.resource.data.members is list
+        && request.resource.data.members.size() >= 2
+        && request.resource.data.members.size() <= 4
+        && request.resource.data.members.toSet().size() ==
+          request.resource.data.members.size()
+        && request.resource.data.createdBy in request.resource.data.members
+        && (
+          request.resource.data.members == resource.data.members
+          || (
+            request.auth.uid == resource.data.createdBy
+            && chatUsersExist(request.resource.data.members)
+          )
+        );
       allow delete: if false;
 
       match /messages/{messageId} {
