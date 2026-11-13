@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Community - iLiam</title>
 <link rel="icon" type="image/png" href="images/favicon.png">
-<link rel="stylesheet" href="community-calls.css?v=4">
+<link rel="stylesheet" href="community-calls.css?v=6">
 <link rel="stylesheet" href="community-group-calls.css?v=1">
+<link rel="stylesheet" href="community-messages.css?v=1">
 
 <style>
 *{box-sizing:border-box}
@@ -100,6 +101,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
   <!-- Kept for backwards-compatible legacy incoming calls and the shared Call Settings module. -->
   <button class="profile-btn" id="iliam-call-button" type="button" disabled hidden style="display:none!important">📞 LEGACY CALL</button>
   <button class="profile-btn" id="iliam-group-button" type="button" disabled>📞 CALL SOMEONE</button>
+  <button class="profile-btn" id="iliam-messages-button" type="button" disabled>✉ MESSAGES</button>
   <button class="profile-btn" id="iliam-call-settings-button" type="button" disabled>⚙ CALL SETTINGS</button>
   <button class="profile-btn" id="profileButton" type="button">👤 PROFILE</button>
   <button class="admin-panel-btn" id="adminButton" type="button" hidden>🛡 ADMIN</button>
@@ -923,7 +925,8 @@ async function renderSavedPosts(){
 }
 </script>
 <script type="module" src="site-notifications.js"></script>
-<script type="module" src="community-calls.js?v=5"></script>
-<script type="module" src="community-group-calls.js?v=3"></script>
+<script type="module" src="community-calls.js?v=6"></script>
+<script type="module" src="community-group-calls.js?v=4"></script>
+<script type="module" src="community-messages.js?v=1"></script>
 </body>
 </html>
