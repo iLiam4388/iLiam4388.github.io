@@ -60,40 +60,45 @@
 }
 #iliam-reviews .review-compose-head{
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  flex-wrap:wrap;
-  margin-bottom:12px;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+  gap:9px;
+  margin-bottom:19px;
+  text-align:left;
 }
 #iliam-reviews .review-compose-profile{
   display:flex;
-  gap:10px;
+  gap:9px;
   align-items:center;
   min-width:0;
+  width:100%;
 }
 #iliam-reviews .review-compose-title{
   margin:0;
   color:#fff;
-  font-size:17px;
-  font-weight:800;
-  text-shadow:0 0 7px #fff8;
+  font-size:20px;
+  font-weight:700;
+  line-height:1.3;
+  letter-spacing:0;
+  text-shadow:0 0 7px #fff7;
 }
 #iliam-reviews .review-identity{
   color:#fff;
   background:none;
   border:0;
   padding:0;
-  font-size:13px;
-  line-height:1.5;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.4;
   overflow-wrap:anywhere;
 }
 #iliam-reviews .review-rating-label{
   display:block;
-  font-size:13px;
-  font-weight:bold;
+  font-size:14px;
+  font-weight:600;
   color:#fff;
-  margin:8px 0 5px;
+  margin:4px 0 8px;
 }
 #iliam-reviews .review-star-row{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 #iliam-reviews .review-star{
@@ -111,12 +116,12 @@
   text-shadow:0 0 10px #ff0,0 0 22px #ffae00;
 }
 #iliam-reviews .review-star:hover{transform:scale(1.08)}
-#iliam-reviews .review-rating-desc{color:#fff;font-size:13px;margin-left:8px}
+#iliam-reviews .review-rating-desc{color:#fff;font-size:13px;font-weight:400;margin-left:8px;white-space:nowrap}
 #iliam-reviews .review-textarea{
   display:block;
   width:100%;
   min-height:115px;
-  margin-top:15px;
+  margin-top:18px;
   padding:15px;
   resize:vertical;
   border:3px solid white;
@@ -219,7 +224,7 @@
   box-shadow:0 0 6px #5555;
 }
 #iliam-reviews .review-compose-profile .review-avatar{
-  width:38px;height:38px;flex-basis:38px;
+  width:40px;height:40px;flex-basis:40px;
 }
 #iliam-reviews .review-user-details{min-width:0;flex:1}
 #iliam-reviews .review-name{font-size:15px;font-weight:800;color:#1a1930;overflow-wrap:anywhere}
@@ -307,7 +312,7 @@
   .review-section{margin:28px auto;border-radius:18px;padding:18px}
   .review-section .reviews-header{align-items:center}
   .review-section .reviews-header>div:first-child{flex:1 1 100%;text-align:center}
-  #iliam-reviews .review-compose-head{align-items:flex-start}
+  #iliam-reviews .review-compose-head{align-items:flex-start;gap:8px}
   #iliam-reviews .review-reply-form{flex-direction:column}
   #iliam-reviews .review-star-row{gap:1px}
   #iliam-reviews .review-star{font-size:33px}
