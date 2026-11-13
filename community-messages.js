@@ -72,6 +72,188 @@ if(launcher){
    }catch(e){console.warn("Chat profile lookup:",e);}
   }));
  }
+ function toast(title,body,onClick){
+  const item=document.createElement("button");item.type="button";item.className="im-toast";
+  const head=document.createElement("strong");head.textContent=title;
+  const content=document.createElement("span");content.textContent=body;item.append(head,content);
+  item.onclick=()=>{item.remove();onClick?.();};
+  document.body.append(item);
+  setTimeout(()=>item.remove(),6500);
+ }
+ function notify(title,body,activate){
+  toast(title,body,activate);
+  if("Notification" in window && Notification.permission==="granted" && document.hidden){
+   try{const n=new Notification(title,{body,tag:"iliam-"+title});n.onclick=()=>{window.focus();activate?.();n.close();};}catch(e){console.warn("Notification:",e);}
+  }
+ }
+ function openFromNotification(c){
+  display("im-backdrop",true);showConversation(c);
+ }
+ function stopNotifications(){
+  for(const fn of inboxWatchers.values())fn();
+  inboxWatchers.clear();seenMessageIds.clear();
+ }
+ function watchMessageNotices(){
+  if(!user)return;
+  const eligible=chats.filter(c=>!hiddenChats.has(c.id));
+  const ids=new Set(eligible.map(c=>c.id));
+  for(const [id,fn] of inboxWatchers)if(!ids.has(id)){fn();inboxWatchers.delete(id);seenMessageIds.delete(id);}
+  for(const c of eligible){
+   if(inboxWatchers.has(c.id))continue;
+   let initialized=false;
+   const stop=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","desc"),limit(1)),snapshot=>{
+    const top=snapshot.docs[0];
+    if(!initialized){initialized=true;seenMessageIds.set(c.id,top?.id||"");return;}
+    if(!top || top.id===seenMessageIds.get(c.id))return;
+    seenMessageIds.set(c.id,top.id);
+    const msg=top.data();
+    if(msg.uid===user.uid||messageDnd||messageBlocks.has(msg.uid))return;
+    if(current?.id===c.id && !$("im-backdrop").hidden && !document.hidden)return;
+    notify("New message · "+chatName(c),msg.text.slice(0,140),()=>openFromNotification(c));
+   },e=>console.warn("Message notifications:",e));
+   inboxWatchers.set(c.id,stop);
+  }
+ }
+ function updateConversationControls(){
+  const has=Boolean(current);
+  display("im-delete",has);
+  display("im-edit-group",has&&current.kind==="group");
+  display("im-call",has);
+  if(has){
+   $("im-title").replaceChildren();
+   if(current.kind==="group"&&current.imageUrl){
+    const image=document.createElement("img");image.className="im-avatar";image.alt="";
+    image.src=current.imageUrl;$("im-title").append(image);
+   }
+   const title=document.createElement("span");title.textContent=chatName(current);$("im-title").append(title);
+  }
+ }
+ function renderSettingsPeople(){
+  const area=$("im-block-users"),search=$("im-block-search").value.toLowerCase().trim();
+  area.replaceChildren();
+  const sorted=people.filter(p=>(label(p)+" "+p.username).toLowerCase().includes(search))
+    .sort((a,b)=>Number(messageBlocks.has(b.uid))-Number(messageBlocks.has(a.uid))||label(a).localeCompare(label(b)));
+  for(const p of sorted.slice(0,100)){
+   const row=document.createElement("div");row.className="im-entry";
+   const name=document.createElement("span");name.className="im-account-label";name.textContent=label(p)+" @"+p.username;
+   const button=document.createElement("button");button.className="im-btn"+(messageBlocks.has(p.uid)?"":" danger");
+   button.textContent=messageBlocks.has(p.uid)?"Unblock":"Block";
+   button.onclick=async()=>{
+    if(!user)return;
+    button.disabled=true;$("im-settings-status").textContent="Updating block list…";
+    try{
+     const ref=doc(db,"messageBlocks",user.uid,"users",p.uid);
+     if(messageBlocks.has(p.uid))await deleteDoc(ref);
+     else await setDoc(ref,{uid:p.uid,blockedAt:serverTimestamp()});
+     $("im-settings-status").textContent="Saved.";
+    }catch(e){$("im-settings-status").textContent="Could not update block: "+e.message;}
+    finally{button.disabled=false;}
+   };
+   row.append(name,button);area.append(row);
+  }
+  if(!area.children.length)area.textContent="No matching users.";
+ }
+ async function openSettings(){
+  display("im-settings",true);
+  $("im-settings-status").textContent="";
+  $("im-dnd").checked=messageDnd;
+  $("im-block-users").textContent="Loading accounts…";
+  try{
+   const snap=await getDocs(query(collection(db,"profiles"),limit(200)));
+   if(!user)return;
+   people=snap.docs.filter(d=>d.id!==user.uid).map(d=>({uid:d.id,...d.data()}));
+   renderSettingsPeople();
+  }catch(e){$("im-settings-status").textContent="Could not load accounts: "+e.message;}
+ }
+ function compressedGroupPhoto(file){
+  return new Promise((resolve,reject)=>{
+   if(!file||!file.type.startsWith("image/"))return reject(Error("Choose an image file."));
+   if(file.size>12*1024*1024)return reject(Error("Image must be under 12 MB."));
+   const url=URL.createObjectURL(file),image=new Image();
+   image.onload=()=>{
+    URL.revokeObjectURL(url);
+    try{
+     const canvas=document.createElement("canvas");canvas.width=192;canvas.height=192;
+     const ctx=canvas.getContext("2d");
+     if(!ctx)throw Error("Image resizing is not available.");
+     const side=Math.min(image.width,image.height);
+     ctx.drawImage(image,(image.width-side)/2,(image.height-side)/2,side,side,0,0,192,192);
+     const data=canvas.toDataURL("image/jpeg",0.74);
+     if(data.length>120000)throw Error("Compressed group picture is too large.");
+     resolve(data);
+    }catch(e){reject(e);}
+   };
+   image.onerror=()=>{URL.revokeObjectURL(url);reject(Error("Could not read image."));};
+   image.src=url;
+  });
+ }
+ async function saveGroup(){
+  if(!current||current.kind!=="group"||!user)return;
+  const c=current,title=$("im-edit-title").value.trim();
+  if(!title)return $("im-group-status").textContent="Enter a group name.";
+  $("im-save-group").disabled=true;$("im-group-status").textContent="Saving group…";
+  try{
+   const data={title};
+   if(pendingGroupImage!==undefined)data.imageUrl=pendingGroupImage;
+   await updateDoc(doc(db,"chats",c.id),data);
+   Object.assign(c,data);
+   updateConversationControls();drawInbox();
+   display("im-group-edit",false);
+  }catch(e){$("im-group-status").textContent="Could not edit group: "+e.message;}
+  finally{$("im-save-group").disabled=false;}
+ }
+ $("im-settings-open").onclick=openSettings;
+ $("im-settings-close").onclick=()=>display("im-settings",false);
+ $("im-block-search").oninput=renderSettingsPeople;
+ $("im-dnd").onchange=async e=>{
+  if(!user)return;
+  const enabled=e.target.checked;
+  e.target.disabled=true;$("im-settings-status").textContent="Saving Do Not Disturb…";
+  try{
+   await setDoc(doc(db,"messagePreferences",user.uid,"settings","messages"),{doNotDisturb:enabled,updatedAt:serverTimestamp()});
+   $("im-settings-status").textContent=enabled?"Message notifications muted.":"Message notifications enabled.";
+  }catch(err){$("im-dnd").checked=messageDnd;$("im-settings-status").textContent="Could not save: "+err.message;}
+  finally{e.target.disabled=false;}
+ };
+ $("im-enable-alerts").onclick=async()=>{
+  if(!("Notification" in window)){return $("im-settings-status").textContent="This browser does not support system notifications. In-page notices still work.";}
+  const permission=await Notification.requestPermission();
+  $("im-settings-status").textContent=permission==="granted"?"Browser notifications enabled.":"Browser notifications were not allowed.";
+ };
+ $("im-edit-group").onclick=()=>{
+  if(!current||current.kind!=="group")return;
+  pendingGroupImage=undefined;
+  $("im-edit-title").value=current.title||"";
+  $("im-edit-image").value="";
+  const preview=$("im-group-preview");preview.hidden=!current.imageUrl;
+  if(current.imageUrl)preview.src=current.imageUrl;
+  $("im-group-status").textContent="";
+  display("im-group-edit",true);
+ };
+ $("im-group-close").onclick=()=>display("im-group-edit",false);
+ $("im-edit-image").onchange=async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  $("im-group-status").textContent="Preparing image…";
+  try{
+   pendingGroupImage=await compressedGroupPhoto(file);
+   $("im-group-preview").src=pendingGroupImage;$("im-group-preview").hidden=false;
+   $("im-group-status").textContent="Image ready. Click Save changes.";
+  }catch(err){$("im-group-status").textContent=err.message;}
+ };
+ $("im-remove-group-photo").onclick=()=>{
+  pendingGroupImage="";$("im-group-preview").hidden=true;
+  $("im-edit-image").value="";$("im-group-status").textContent="Picture will be removed when you save.";
+ };
+ $("im-save-group").onclick=saveGroup;
+ $("im-delete").onclick=async()=>{
+  if(!current||!user)return;
+  const c=current;
+  if(!confirm("Delete this conversation from your inbox? Other participants keep their messages."))return;
+  try{
+   await setDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id),{hiddenAt:serverTimestamp()});
+   hiddenChats.add(c.id);resetCurrent();drawInbox();watchMessageNotices();
+  }catch(e){alert("Could not hide conversation: "+e.message);}
+ };
  function resetCurrent(){
   if(stopMessages){stopMessages();stopMessages=null;}
   current=null;
