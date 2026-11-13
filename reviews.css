@@ -1,57 +1,316 @@
-/* iLiam reviews — 2026 responsive redesign */
-.review-section{box-sizing:border-box;width:min(960px,calc(100% - 28px));max-width:960px;margin:48px auto;padding:clamp(18px,3.2vw,35px);border-radius:24px;border:1px solid #527b9f;background:linear-gradient(138deg,#0b2a44 0%,#0d1734 59%,#1a1140 100%);color:#eafaff;box-shadow:0 0 20px #00d5ff33,0 18px 44px #0008;text-align:left}
-.review-section h1{font-size:clamp(25px,4.5vw,39px);letter-spacing:1px;margin:0;color:white;text-shadow:0 0 17px #00c8ff77}
-.review-section .reviews-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px}
-.review-section .reviews-subtitle{margin:8px 0 0;color:#a5d1e3;line-height:1.5;font-size:14px}
+/* iLiam Reviews — restored classic pink neon theme */
+.review-section{
+  box-sizing:border-box;
+  width:min(920px,calc(100% - 28px));
+  max-width:920px;
+  margin:45px auto;
+  padding:clamp(18px,3vw,35px);
+  background:linear-gradient(to bottom,#ff8cff,#d000ff);
+  border:3px solid #fff;
+  border-radius:24px;
+  box-shadow:0 0 25px #ff66ff,0 0 50px cyan;
+  color:#fff;
+  text-align:center;
+}
+.review-section .reviews-header{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:16px;
+}
+.review-section .reviews-header>div:first-child{
+  flex:1 1 230px;
+  text-align:center;
+}
+.review-section h1{
+  font-size:clamp(30px,5.5vw,42px);
+  margin:0;
+  font-weight:900;
+  color:#fff;
+  text-shadow:0 0 10px white,0 0 25px cyan;
+}
+.review-section .reviews-subtitle{display:none}
+.review-section #iliam-account .account-button{
+  border:2px solid #fff;
+  background:#ffffff24;
+  color:#fff;
+  box-shadow:0 0 10px #fff8;
+  font-size:13px;
+}
 #iliam-reviews,#iliam-reviews *{box-sizing:border-box}
-#iliam-reviews{color:#eafaff;text-align:left;font-family:Verdana,Arial,sans-serif;min-width:0}
+#iliam-reviews{
+  color:#fff;
+  text-align:left;
+  font-family:Verdana,Arial,sans-serif;
+  min-width:0;
+}
 #iliam-reviews [hidden]{display:none!important}
-#iliam-reviews button,#iliam-reviews textarea{font:inherit}
-#iliam-reviews button{cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .15s ease}
-#iliam-reviews button:hover:not(:disabled){transform:translateY(-1px);border-color:#6ee7ff}
+#iliam-reviews button,#iliam-reviews textarea,#iliam-reviews input{font:inherit}
+#iliam-reviews button{cursor:pointer}
 #iliam-reviews button:disabled{opacity:.5;cursor:not-allowed}
-#iliam-reviews .review-compose-card{background:#071b30;border:1px solid #315874;border-radius:20px;padding:clamp(15px,2.4vw,24px);margin-bottom:24px;box-shadow:inset 0 1px #ffffff0b}
-#iliam-reviews .review-compose-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-#iliam-reviews .review-compose-title{font-size:18px;font-weight:800;margin:0}
-#iliam-reviews .review-identity{font-size:12px;color:#91ddeb;background:#14405a;padding:7px 10px;border-radius:999px}
-#iliam-reviews .review-rating-label{display:block;font-size:13px;color:#add7eb;margin:18px 0 6px}
-#iliam-reviews .review-star-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-#iliam-reviews .review-star{border:0;background:transparent;padding:1px 3px;color:#4a607c;font-size:clamp(32px,5vw,41px);line-height:1.1;text-shadow:none}
-#iliam-reviews .review-star.selected{color:#ffd45d;text-shadow:0 0 14px #ffce4b44}
-#iliam-reviews .review-rating-desc{margin-left:10px;color:#bcd5e5;font-size:13px}
-#iliam-reviews .review-textarea{resize:vertical;display:block;width:100%;min-height:106px;margin-top:16px;padding:15px 16px;border:1px solid #3a647d;border-radius:13px;background:#0d2840;color:#fff;line-height:1.5;outline:none}
-#iliam-reviews .review-textarea::placeholder{color:#90aec4}
-#iliam-reviews .review-textarea:focus,#iliam-reviews .review-reply-input:focus{border-color:#51dff6;box-shadow:0 0 0 3px #00ddff22}
-#iliam-reviews .review-compose-foot{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px}
-#iliam-reviews .review-character{font-size:12px;color:#8eaec6}
-#iliam-reviews .review-primary{border:0;border-radius:12px;background:linear-gradient(130deg,#2addce,#2bbcff);padding:12px 21px;font-weight:800;color:#041323}
-#iliam-reviews .review-state{font-size:13px;min-height:18px;color:#a8d9ed;margin:12px 0 0}
-#iliam-reviews .review-state.error{color:#ff9fbe}
-#iliam-reviews .review-list-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 0 12px}
-#iliam-reviews .review-list-header h2{margin:0;color:white;font-size:20px}
-#iliam-reviews .review-total{border:1px solid #3d6886;border-radius:999px;padding:5px 10px;color:#b9d7ea;font-size:12px}
-#iliam-reviews .review-item{border:1px solid #2d5273;border-radius:18px;background:#0a2139;padding:clamp(14px,2vw,20px);margin:12px 0;text-align:left;box-shadow:0 5px 22px #0002}
-#iliam-reviews .review-item.featured{border-color:#b3a15b;box-shadow:0 0 18px #eac75b22}
-#iliam-reviews .review-avatar{height:40px;width:40px;flex:0 0 40px;border-radius:13px;background:linear-gradient(145deg,#1486b0,#5b42b4);display:grid;place-items:center;font-weight:900;font-size:18px}
-#iliam-reviews .review-user-row{display:flex;gap:12px;align-items:center;min-width:0}
+#iliam-reviews .review-compose-card{
+  background:transparent;
+  border:none;
+  border-radius:0;
+  padding:4px 0 12px;
+  margin:0 auto 20px;
+  box-shadow:none;
+}
+#iliam-reviews .review-compose-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+#iliam-reviews .review-compose-profile{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  min-width:0;
+}
+#iliam-reviews .review-compose-title{
+  margin:0;
+  color:#fff;
+  font-size:17px;
+  font-weight:800;
+  text-shadow:0 0 7px #fff8;
+}
+#iliam-reviews .review-identity{
+  color:#fff;
+  background:none;
+  border:0;
+  padding:0;
+  font-size:13px;
+  line-height:1.5;
+  overflow-wrap:anywhere;
+}
+#iliam-reviews .review-rating-label{
+  display:block;
+  font-size:13px;
+  font-weight:bold;
+  color:#fff;
+  margin:8px 0 5px;
+}
+#iliam-reviews .review-star-row{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+#iliam-reviews .review-star{
+  background:none;
+  border:0;
+  padding:1px 3px;
+  color:#772a78;
+  font-size:clamp(32px,5.3vw,41px);
+  line-height:1.1;
+  text-shadow:none;
+  transition:transform .15s ease;
+}
+#iliam-reviews .review-star.selected{
+  color:#ffd700;
+  text-shadow:0 0 10px #ff0,0 0 22px #ffae00;
+}
+#iliam-reviews .review-star:hover{transform:scale(1.08)}
+#iliam-reviews .review-rating-desc{color:#fff;font-size:13px;margin-left:8px}
+#iliam-reviews .review-textarea{
+  display:block;
+  width:100%;
+  min-height:115px;
+  margin-top:15px;
+  padding:15px;
+  resize:vertical;
+  border:3px solid white;
+  border-radius:16px;
+  background:#fff;
+  color:#161322;
+  line-height:1.5;
+  outline:none;
+  box-shadow:0 0 10px #ffffff66;
+}
+#iliam-reviews .review-textarea::placeholder{color:#777}
+#iliam-reviews .review-textarea:focus,
+#iliam-reviews .review-reply-input:focus{
+  outline:3px solid #71ffff;
+  outline-offset:2px;
+}
+#iliam-reviews .review-compose-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+#iliam-reviews .review-character{color:#fff;font-size:12px}
+#iliam-reviews .review-primary{
+  display:inline-block;
+  padding:14px 30px;
+  border:0;
+  border-radius:16px;
+  background:linear-gradient(to bottom,#66ff99,#00aa44);
+  color:#fff;
+  font-size:17px;
+  font-weight:bold;
+  box-shadow:0 0 15px lime,0 0 30px cyan;
+}
+#iliam-reviews .review-primary:hover:not(:disabled){filter:brightness(1.06)}
+#iliam-reviews .review-state{
+  min-height:0;
+  margin:9px 0 0;
+  color:#fff;
+  font-size:13px;
+  line-height:1.5;
+}
+#iliam-reviews .review-state:empty{display:none}
+#iliam-reviews .review-state.error{color:#fff3c1}
+#iliam-reviews .review-login-hint{font-size:13px;line-height:1.5;color:#fff}
+#iliam-reviews .review-login-hint a{color:#fff;text-decoration:underline}
+#iliam-reviews .review-list-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:14px 0;
+}
+#iliam-reviews .review-list-header h2{
+  margin:0;
+  color:#fff;
+  font-size:18px;
+  font-weight:800;
+}
+#iliam-reviews .review-total{
+  padding:0;
+  color:#fff;
+  background:transparent;
+  border:0;
+  font-size:13px;
+}
+#iliam-reviews .review-item{
+  background:#fff;
+  color:#101422;
+  border:2px solid #fff;
+  border-radius:16px;
+  text-align:left;
+  margin:15px auto;
+  padding:clamp(14px,2vw,20px);
+  box-shadow:0 0 18px cyan;
+  overflow-wrap:anywhere;
+}
+#iliam-reviews .review-item.featured{
+  border:3px solid #ffdd33;
+  box-shadow:0 0 20px #fff300;
+}
+#iliam-reviews .review-user-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+#iliam-reviews .review-avatar{
+  display:block;
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+  border-radius:50%;
+  border:2px solid #fff;
+  object-fit:cover;
+  background:#122d59;
+  box-shadow:0 0 6px #5555;
+}
+#iliam-reviews .review-compose-profile .review-avatar{
+  width:38px;height:38px;flex-basis:38px;
+}
 #iliam-reviews .review-user-details{min-width:0;flex:1}
-#iliam-reviews .review-name{color:white;font-size:14px;font-weight:800;overflow-wrap:anywhere}
-#iliam-reviews .review-meta{font-size:12px;color:#9db7ca;margin-top:4px}
-#iliam-reviews .review-stars-small{color:#ffd35f;font-size:19px;letter-spacing:1px;white-space:nowrap}
-#iliam-reviews .review-featured{font-size:11px;color:#f9dc77;font-weight:800}
-#iliam-reviews .review-text{font-size:14px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;color:#e3effa;margin:16px 0}
-#iliam-reviews .review-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-#iliam-reviews .review-action{border:1px solid #315c77;border-radius:999px;background:#15334c;color:#c7e8fa;padding:8px 12px;font-size:12px}
-#iliam-reviews .review-action.active{background:#244a51;border-color:#64d8b9;color:#baffdf}
-#iliam-reviews .review-action.danger{color:#ffc5c5;border-color:#8d4a64}
-#iliam-reviews .review-replies{margin:15px 0 0;padding-top:10px;border-top:1px solid #375872}
-#iliam-reviews .review-reply{background:#102c48;padding:12px;margin-top:9px;border-radius:12px;border-left:3px solid #48bddd}
-#iliam-reviews .review-reply .review-text{margin:8px 0 10px}
-#iliam-reviews .review-reply-form{display:flex;gap:8px;margin-top:12px;align-items:stretch}
-#iliam-reviews .review-reply-input{min-width:0;flex:1;border-radius:10px;border:1px solid #385d78;background:#0b253c;color:white;padding:11px;outline:none}
-#iliam-reviews .review-reply-form button{border:1px solid #43b4cf;background:#0c5177;color:#e7fcff;border-radius:10px;padding:9px 13px}
-#iliam-reviews .review-empty{padding:27px 20px;border:1px dashed #527b91;border-radius:14px;text-align:center;color:#aac9dc}
-#iliam-reviews .review-error-box{padding:20px;border:1px solid #7a6986;border-radius:14px;background:#261e3c;color:#e6d5f8;line-height:1.6}
-#iliam-reviews .review-login-hint{font-size:13px;color:#a9cada;line-height:1.5}
-#iliam-reviews .review-login-hint a{color:#83ebff}
-@media(max-width:600px){.review-section{margin:28px auto;border-radius:18px}.review-section .reviews-header{align-items:flex-start}#iliam-reviews .review-star{font-size:33px}#iliam-reviews .review-reply-form{flex-direction:column}#iliam-reviews .review-star-row{gap:1px}#iliam-reviews .review-user-row{align-items:flex-start}#iliam-reviews .review-stars-small{font-size:16px}}
+#iliam-reviews .review-name{font-size:15px;font-weight:800;color:#1a1930;overflow-wrap:anywhere}
+#iliam-reviews .review-meta{margin-top:3px;color:#62616c;font-size:12px}
+#iliam-reviews .review-stars-small{
+  color:#e5a900;
+  font-size:19px;
+  white-space:nowrap;
+  letter-spacing:1px;
+}
+#iliam-reviews .review-featured{
+  margin:9px 0 0;
+  color:#976b00;
+  font-size:12px;
+  font-weight:bold;
+}
+#iliam-reviews .review-text{
+  margin:15px 0;
+  white-space:pre-wrap;
+  color:#1a1a1a;
+  font-size:16px;
+  line-height:1.55;
+  overflow-wrap:anywhere;
+}
+#iliam-reviews .review-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+}
+#iliam-reviews .review-action{
+  border:1px solid #d0d8e2;
+  background:#eff4fa;
+  color:#23415c;
+  border-radius:12px;
+  padding:8px 12px;
+  font-size:13px;
+  font-weight:700;
+}
+#iliam-reviews .review-action:hover:not(:disabled){background:#dbefff}
+#iliam-reviews .review-action.active{background:#d6ffef;border-color:#56c5a4;color:#136b55}
+#iliam-reviews .review-action.danger{background:#ffe6ee;color:#9d194a;border-color:#ffd0dd}
+#iliam-reviews .review-replies{
+  margin-top:14px;
+  padding-top:12px;
+  border-top:1px solid #dddded;
+}
+#iliam-reviews .review-reply{
+  background:#f0faff;
+  border-left:3px solid #00bcd4;
+  border-radius:12px;
+  margin:9px 0;
+  padding:12px;
+}
+#iliam-reviews .review-reply .review-text{font-size:14px;margin:9px 0}
+#iliam-reviews .review-reply-form{display:flex;gap:8px;align-items:stretch;margin-top:12px}
+#iliam-reviews .review-reply-input{
+  flex:1;
+  min-width:0;
+  padding:11px;
+  border:1px solid #bcc9d9;
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+}
+#iliam-reviews .review-reply-form button{
+  border:0;
+  background:linear-gradient(#66ff99,#00aa44);
+  color:white;
+  border-radius:10px;
+  padding:10px 16px;
+  font-weight:bold;
+}
+#iliam-reviews .review-empty,#iliam-reviews .review-error-box{
+  padding:20px;
+  border:2px dashed #fff;
+  border-radius:15px;
+  margin:14px 0;
+  text-align:center;
+  color:#fff;
+  line-height:1.5;
+}
+#iliam-reviews .review-error-box button{margin-top:8px}
+@media(max-width:600px){
+  .review-section{margin:28px auto;border-radius:18px;padding:18px}
+  .review-section .reviews-header{align-items:center}
+  .review-section .reviews-header>div:first-child{flex:1 1 100%;text-align:center}
+  #iliam-reviews .review-compose-head{align-items:flex-start}
+  #iliam-reviews .review-reply-form{flex-direction:column}
+  #iliam-reviews .review-star-row{gap:1px}
+  #iliam-reviews .review-star{font-size:33px}
+  #iliam-reviews .review-stars-small{font-size:15px}
+  #iliam-reviews .review-primary{width:100%}
+}
