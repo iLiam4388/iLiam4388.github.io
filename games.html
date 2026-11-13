@@ -81,7 +81,7 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
 </section>
 <div class="status" id="status">Connecting to Firebase…</div>
 <main class="games-grid" id="gamesGrid"></main>
-<div class="bottom-admin-wrap"><button class="admin-btn" id="adminButton" type="button">⚙ ADMIN</button></div>
+<div class="bottom-admin-wrap"><button class="admin-btn" id="adminButton" type="button" hidden>⚙ ADMIN</button></div>
 <footer>© 2026 iLiam</footer>
 
 
@@ -89,7 +89,7 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
   <div class="admin-panel">
     <h2>iLiam Games Admin</h2>
     <div id="adminLoginView">
-      <p class="admin-login-note">Enter the admin password to unlock the game editor.</p>
+      <p class="admin-login-note">Only real iLiam admins can edit games.</p>
       <div class="admin-grid">
         <div class="admin-field full"><label for="adminPassword">Admin password</label><input id="adminPassword" type="password" autocomplete="off" placeholder="Password"></div>
       </div>
@@ -137,7 +137,8 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import{getFirestore,collection,onSnapshot,query,orderBy,addDoc}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import{getFirestore,collection,onSnapshot,query,orderBy,addDoc,doc,getDoc}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import{getAuth,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyD7QF6z6e2psZzQwkmO7LLkc4twcNrZWEg",
@@ -152,9 +153,7 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-// Change this password to whatever you want.
-// NOTE: this is a client-side convenience lock, not strong security.
-const ADMIN_PASSWORD="admin123";
+const auth=getAuth(app);
 let adminUnlocked=false;
 const grid=document.getElementById('gamesGrid');
 const status=document.getElementById('status');
@@ -196,7 +195,7 @@ function openAdmin(){
   document.body.style.overflow='hidden';
   adminLoginView.hidden=adminUnlocked;
   adminEditorView.hidden=!adminUnlocked;
-  adminPassword.focus();
+  if(!adminUnlocked)return closeAdmin();
 }
 function closeAdmin(){
   adminOverlay.classList.remove('open');
@@ -210,33 +209,27 @@ function resetAdminForm(){
   gameFeatured.checked=false;gameEnabled.checked=false;gameOrder.value='9999';
 }
 async function writeGame(data){
-  if(!adminUnlocked)throw new Error('Admin password required.');
+  if(!adminUnlocked||!auth.currentUser||(await getDoc(doc(db,'admins',auth.currentUser.uid))).exists()===false)throw new Error('Real administrator access required.');
   return addDoc(collection(db,'games'),data);
 }
-adminButton.addEventListener('click',openAdmin);
+adminButton.addEventListener('click',()=>{if(adminUnlocked)openAdmin()});
 adminCloseLogin.addEventListener('click',closeAdmin);
 adminClose.addEventListener('click',closeAdmin);
 adminOverlay.addEventListener('click',e=>{if(e.target===adminOverlay)closeAdmin()});
-adminLogin.addEventListener('click',()=>{
-  if(adminPassword.value===ADMIN_PASSWORD){
-    adminUnlocked=true;
-    adminPassword.value='';
+// Admin access is based on the same Firebase Auth identity as Community.
+let unsubscribeRole=null;
+onAuthStateChanged(auth,user=>{
+  if(unsubscribeRole){unsubscribeRole();unsubscribeRole=null}
+  adminUnlocked=false;adminButton.hidden=true;adminEditorView.hidden=true;
+  if(!user){closeAdmin();return}
+  unsubscribeRole=onSnapshot(doc(db,'admins',user.uid),snap=>{
+    adminUnlocked=snap.exists();adminButton.hidden=!adminUnlocked;
+    adminEditorView.hidden=!adminUnlocked;
     adminLoginView.hidden=true;
-    adminEditorView.hidden=false;
-    adminMessage.textContent='Admin unlocked.';
-  }else{
-    adminMessage.textContent='Wrong password.';
-    adminPassword.select();
-  }
+    if(!adminUnlocked)closeAdmin();
+  },()=>{adminUnlocked=false;adminButton.hidden=true;closeAdmin()});
 });
-adminPassword.addEventListener('keydown',e=>{if(e.key==='Enter')adminLogin.click()});
-adminLogout.addEventListener('click',()=>{
-  adminUnlocked=false;
-  resetAdminForm();
-  adminLoginView.hidden=false;
-  adminEditorView.hidden=true;
-  adminMessage.textContent='Admin locked.';
-});
+adminLogout.addEventListener('click',closeAdmin);
 resetGameForm.addEventListener('click',resetAdminForm);
 createGame.addEventListener('click',async()=>{
   adminMessage.textContent='Adding game…';
@@ -367,5 +360,6 @@ onSnapshot(q,snap=>{
   console.error(err);
 });
 </script>
+<script type="module" src="site-notifications.js"></script>
 </body>
 </html>
