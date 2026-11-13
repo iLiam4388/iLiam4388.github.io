@@ -32,3 +32,15 @@
 #iliam-group-ui .gc-voice{font-size:49px}
 #iliam-group-ui .gc-callbox .gc-status{margin:5px 0}
 @media(max-width:600px){#iliam-group-ui .gc-panel{padding:16px}#iliam-group-ui .gc-callbox{height:96vh;padding:10px}#iliam-group-ui .gc-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(145px,1fr)}#iliam-group-ui .gc-tile{min-height:145px}#iliam-group-ui .gc-tile video{max-height:30vh}}
+
+/* Privacy tools inside the unified Call Someone panel */
+#iliam-group-ui .gc-top-controls{display:flex;gap:8px;align-items:center}
+#iliam-group-ui .gc-block-editor{margin:13px 0;padding:13px;border:1px solid #477c98;border-radius:14px;background:#061a2c}
+#iliam-group-ui .gc-block-editor h3{margin:0;font-size:17px}
+#iliam-group-ui .gc-block-row{cursor:default}
+#iliam-group-ui .gc-block-row .gc-button{flex:none;padding:8px 11px;font-size:12px}
+#iliam-group-ui .gc-dnd-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #47869b;margin-top:17px;padding:17px 8px 4px;cursor:pointer}
+#iliam-group-ui .gc-dnd-footer span{display:flex;flex-direction:column;gap:5px}
+#iliam-group-ui .gc-dnd-footer small{color:#add9e9;font-size:12px}
+#iliam-group-ui .gc-dnd-footer input{width:23px;height:23px;flex:none;accent-color:#41e5ae;cursor:pointer}
+#iliam-group-ui #gc-privacy-status:empty{min-height:0;margin:0}
