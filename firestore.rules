@@ -600,12 +600,52 @@ service cloud.firestore {
         && (members.size() < 4
           || exists(/databases/$(database)/documents/profiles/$(members[3])));
     }
+    function validChatImage(v) {
+      return v is string && v.size() <= 120000
+        && (v == '' || v.matches('^https://[^ ]+$')
+          || v.matches('^data:image/jpeg;base64,[A-Za-z0-9+/=]+$'));
+    }
+    function dmAllowed(m) {
+      return m.size() != 2
+        || (!exists(/databases/$(database)/documents/messageBlocks/$(m[0])/users/$(m[1]))
+          && !exists(/databases/$(database)/documents/messageBlocks/$(m[1])/users/$(m[0])));
+    }
+    match /messagePreferences/{uid} {
+      match /hidden/{chatId} {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid)
+          && request.resource.data.keys().hasOnly(['hiddenAt'])
+          && request.resource.data.hiddenAt == request.time;
+        allow delete: if isSelf(uid);
+      }
+      match /settings/{id} {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid) && id == 'messages'
+          && request.resource.data.keys().hasOnly(['doNotDisturb','updatedAt'])
+          && request.resource.data.keys().hasAll(['doNotDisturb','updatedAt'])
+          && request.resource.data.doNotDisturb is bool
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if isSelf(uid);
+      }
+    }
+    match /messageBlocks/{uid}/users/{blockedUid} {
+      allow read: if isSelf(uid);
+      allow create: if isSelf(uid) && blockedUid != uid
+        && exists(/databases/$(database)/documents/profiles/$(blockedUid))
+        && request.resource.data.keys().hasOnly(['uid','blockedAt'])
+        && request.resource.data.keys().hasAll(['uid','blockedAt'])
+        && request.resource.data.uid == blockedUid
+        && request.resource.data.blockedAt == request.time;
+      allow delete: if isSelf(uid);
+      allow update: if false;
+    }
+
     match /chats/{chatId} {
       allow get, list: if signedIn()
         && request.auth.uid in resource.data.members;
       allow create: if hasProfile()
         && request.resource.data.keys().hasOnly([
-          'members','kind','title','createdBy','createdAt'
+          'members','kind','title','createdBy','createdAt','imageUrl'
         ])
         && request.resource.data.keys().hasAll([
           'members','kind','title','createdBy','createdAt'
@@ -621,6 +661,7 @@ service cloud.firestore {
         && request.resource.data.kind in ['direct','group']
         && request.resource.data.title is string
         && request.resource.data.title.size() <= 60
+        && (!('imageUrl' in request.resource.data) || validChatImage(request.resource.data.imageUrl))
         && (
           (request.resource.data.kind == 'direct'
             && request.resource.data.members.size() == 2
@@ -633,11 +674,20 @@ service cloud.firestore {
             && chatId.matches('^group_[A-Za-z0-9_-]+$'))
         )
         && chatUsersExist(request.resource.data.members);
-      allow update, delete: if false;
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.members
+        && resource.data.kind == 'group'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','imageUrl'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 1
+        && request.resource.data.title.size() <= 60
+        && (!('imageUrl' in request.resource.data) || validChatImage(request.resource.data.imageUrl));
+      allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if chatMember(chatId);
         allow create: if chatMember(chatId)
+          && dmAllowed(get(/databases/$(database)/documents/chats/$(chatId)).data.members)
           && request.resource.data.keys().hasOnly(['uid','text','createdAt'])
           && request.resource.data.keys().hasAll(['uid','text','createdAt'])
           && request.resource.data.uid == request.auth.uid
