@@ -10,15 +10,14 @@ if(root){
   const $=id=>root.querySelector("#"+id);
   root.innerHTML=[
     '<div class="review-compose-card">',
-    '<div class="review-compose-head"><h2 class="review-compose-title">Leave a review</h2><div class="review-compose-profile"><img id="review-my-avatar" class="review-avatar" alt="Your profile picture"><span id="review-identity" class="review-identity">Sign in to review</span></div></div>',
-    '<span class="review-rating-label">Your rating</span>',
+    '<div class="review-compose-head"><div class="review-compose-profile"><img id="review-my-avatar" class="review-avatar" alt="Your profile picture"><span id="review-identity" class="review-identity">Sign in to review</span></div></div>',
     '<div class="review-star-row" id="review-star-row" role="group" aria-label="Star rating"></div>',
     '<textarea id="review-input" class="review-textarea" maxlength="1200" placeholder="What did you like? What could be better?"></textarea>',
     '<div class="review-compose-foot"><span id="review-character" class="review-character">0 / 1200</span><button id="review-submit" class="review-primary" type="button">Post review</button></div>',
     '<p id="review-status" class="review-state" role="status"></p>',
     '<p id="review-login-hint" class="review-login-hint" hidden>Use the Sign in button above, or <a href="community.html">visit Community</a> to manage your account.</p>',
     '</div>',
-    '<div class="review-list-header"><h2>Recent reviews</h2><span id="review-total" class="review-total">Loading…</span></div>',
+    '<div class="review-list-header"><h2>Reviews from visitors</h2><span id="review-total" class="review-total">Loading…</span></div>',
     '<div id="review-list" aria-live="polite"><div class="review-empty">Loading reviews…</div></div>'
   ].join("");
   const input=$("review-input"),post=$("review-submit"),status=$("review-status"),list=$("review-list");
