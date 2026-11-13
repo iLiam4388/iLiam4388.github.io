@@ -261,7 +261,7 @@ if(launcher){
   $("im-messages").replaceChildren();
   $("im-messages").textContent="Choose a chat or add someone.";
   $("im-input").disabled=true;$("im-send").disabled=true;
-  display("im-call",false);display("im-call-menu",false);
+  display("im-call",false);display("im-edit-group",false);display("im-delete",false);display("im-call-menu",false);
  }
  async function showConversation(c){
   if(!user||!c)return;
@@ -271,7 +271,7 @@ if(launcher){
   if(current?.id!==c.id)return;
   $("im-title").textContent=chatName(c);
   $("im-input").disabled=false;$("im-send").disabled=false;
-  display("im-call",true);display("im-call-menu",false);
+  updateConversationControls();display("im-call-menu",false);
   drawInbox();
   $("im-messages").textContent="Loading messages…";
   stopMessages=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","asc"),limit(100)),snap=>{
@@ -279,6 +279,7 @@ if(launcher){
    const board=$("im-messages");board.replaceChildren();
    for(const row of snap.docs){
     const m=row.data();
+    if(messageBlocks.has(m.uid))continue;
     const bubble=document.createElement("div");bubble.className="im-bubble"+(m.uid===user.uid?" mine":"");
     if(c.kind==="group"){
      const who=document.createElement("span");who.className="im-sender";who.textContent=m.uid===user.uid?"You":label(profileOf(m.uid));bubble.append(who);
@@ -294,12 +295,17 @@ if(launcher){
  function drawInbox(){
   const list=$("im-conversations");list.replaceChildren();
   for(const c of chats){
+   if(hiddenChats.has(c.id))continue;
    const btn=document.createElement("button");btn.type="button";
    btn.className="im-entry"+(c.id===current?.id?" selected":"");
-   btn.textContent=(c.kind==="group"?"👥 ":"👤 ")+chatName(c);
+   if(c.kind==="group"&&c.imageUrl){
+    const avatar=document.createElement("img");avatar.className="im-avatar";avatar.src=c.imageUrl;avatar.alt="";
+    btn.append(avatar);
+   }
+   const title=document.createElement("span");title.textContent=(c.kind==="group"?"👥 ":"👤 ")+chatName(c);btn.append(title);
    btn.onclick=()=>showConversation(c);list.append(btn);
   }
-  if(!chats.length)list.innerHTML='<p class="im-empty">No conversations yet. Select Add user to start one.</p>';
+  if(!list.children.length)list.innerHTML='<p class="im-empty">No conversations visible. Select Add user to start one.</p>';
  }
  function updatePicker(){
   const count=picked.size;
@@ -387,7 +393,12 @@ if(launcher){
    const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title})};
    profiles.set(user.uid,profile);
    for(const p of guests)profiles.set(p.uid,p);
-   display("im-new",false);await showConversation(c);
+   if(hiddenChats.has(c.id)){
+    await deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id));
+    hiddenChats.delete(c.id);
+   }
+   if(!chats.some(x=>x.id===c.id))chats.unshift(c);
+   display("im-new",false);await showConversation(c);drawInbox();watchMessageNotices();
   }catch(e){
    const denied=e?.code==="permission-denied"||/insufficient permissions/i.test(e?.message||"");
    newStatus(denied
@@ -425,6 +436,11 @@ if(launcher){
  $("im-video").onclick=()=>callChat("video");
  onAuthStateChanged(auth,async u=>{
   if(stopInbox){stopInbox();stopInbox=null;}
+  if(stopHidden){stopHidden();stopHidden=null;}
+  if(stopBlocked){stopBlocked();stopBlocked=null;}
+  if(stopMessageDnd){stopMessageDnd();stopMessageDnd=null;}
+  stopNotifications();
+  hiddenChats=new Set();messageBlocks=new Set();messageDnd=false;
   resetCurrent();user=u;profile=null;chats=[];profiles.clear();
   launcher.disabled=true;
   if(!u){display("im-backdrop",false);return;}
@@ -433,11 +449,28 @@ if(launcher){
    if(auth.currentUser?.uid!==u.uid||!snap.exists())return;
    profile=snap.data();profiles.set(u.uid,profile);
    launcher.disabled=false;
+   stopHidden=onSnapshot(collection(db,"messagePreferences",u.uid,"hidden"),snap=>{
+    hiddenChats=new Set(snap.docs.map(d=>d.id));
+    if(current&&hiddenChats.has(current.id))resetCurrent();
+    drawInbox();watchMessageNotices();
+   },e=>console.warn("Hidden chats unavailable:",e));
+   stopBlocked=onSnapshot(collection(db,"messageBlocks",u.uid,"users"),snap=>{
+    messageBlocks=new Set(snap.docs.map(d=>d.id));renderSettingsPeople();
+    if(current)showConversation(current);
+   },e=>console.warn("Message block list unavailable:",e));
+   stopMessageDnd=onSnapshot(doc(db,"messagePreferences",u.uid,"settings","messages"),snap=>{
+    messageDnd=snap.exists()&&snap.data().doNotDisturb===true;
+    $("im-dnd").checked=messageDnd;
+   },e=>console.warn("Message DND unavailable:",e));
    stopInbox=onSnapshot(query(collection(db,"chats"),where("members","array-contains",u.uid),limit(100)),async snap=>{
     chats=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
     await ensureProfiles([...new Set(chats.flatMap(c=>c.members))]);
     if(auth.currentUser?.uid!==u.uid)return;
-    drawInbox();
+    if(current){
+     const updated=chats.find(c=>c.id===current.id);
+     if(updated){current=updated;updateConversationControls();}
+    }
+    drawInbox();watchMessageNotices();
    },e=>{
     const denied=e?.code==="permission-denied";
     $("im-conversations").textContent=denied
