@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,updateDoc,query,where,limit,onSnapshot,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,query,where,limit,onSnapshot,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 // iLiam Community voice/video calling. Firestore carries signaling only, not media.
@@ -16,6 +16,14 @@ if(launch){
   '<div class="call-user-list" id="call-users"></div><div class="call-actions">',
   '<button class="call-btn primary" id="call-video" disabled>📹 Video call</button><button class="call-btn primary" id="call-audio" disabled>📞 Audio call</button></div>',
   '<p class="call-status" id="call-picker-status" role="status"></p></div></section>',
+  '<section class="call-backdrop" id="call-settings" hidden><div class="call-panel" role="dialog" aria-modal="true" aria-label="Call settings">',
+  '<div class="call-row"><h2 class="call-title">Call privacy</h2><button class="call-btn" id="call-settings-close">✕ Close</button></div>',
+  '<p class="call-subtitle">Your settings are saved to Firebase and follow your iLiam account on other devices.</p>',
+  '<label class="call-dnd-row"><span><strong>🌙 Do Not Disturb</strong><small>Stop new voice and video calls from ringing.</small></span><input id="call-dnd" type="checkbox" aria-label="Do Not Disturb"></label>',
+  '<h3 class="call-settings-heading">Blocked users</h3><p class="call-subtitle">People you block cannot call you, and you cannot call them until you unblock them.</p>',
+  '<input id="call-block-search" class="call-input" type="search" placeholder="Search users to block or unblock" aria-label="Find accounts to block">',
+  '<div class="call-user-list" id="call-block-users"></div>',
+  '<p class="call-status" id="call-settings-status" role="status"></p></div></section>',
   '<section class="call-incoming" id="call-incoming" hidden><h2 class="call-title" id="call-incoming-heading">Incoming call</h2>',
   '<p id="call-incoming-name"></p><div class="call-actions"><button class="call-btn primary" id="call-accept">Accept</button>',
   '<button class="call-btn danger" id="call-decline">Decline</button></div><p class="call-status" id="call-incoming-error"></p></section>',
@@ -34,6 +42,9 @@ if(launch){
  const $=id=>ui.querySelector("#"+id);
  let me=null,profile=null,people=[],chosen=null,incoming=null,session=null;
  let stopInbox=null,stopCall=null,stopCandidates=null,working=false;
+ let stopSettings=null,stopBlocks=null,doNotDisturb=false,blockedIds=new Set(),settingsPeople=[],privacyReady=false;
+ const settingsButton=document.getElementById("iliam-call-settings-button");
+ if(settingsButton)settingsButton.disabled=true;
  launch.disabled=true;
  const visible=(id,on)=>{$(id).hidden=!on};
  const status=s=>$("call-status").textContent=s;
@@ -57,10 +68,95 @@ if(launch){
   const letter=name(p).slice(0,1).toUpperCase().replace(/[<&>"]/g,"")||"U";
   return "data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" rx="40" fill="#265075"/><text x="40" y="54" fill="white" text-anchor="middle" font-family="Arial" font-size="35">'+letter+'</text></svg>');
  }
+ function privacyStatus(text){$("call-settings-status").textContent=text||"";}
+ function updateDndUi(){
+  const checkbox=$("call-dnd");
+  if(document.activeElement!==checkbox)checkbox.checked=doNotDisturb;
+  checkbox.disabled=!privacyReady||!me;
+  if(settingsButton)settingsButton.textContent=doNotDisturb?"🌙 DND ON":"⚙ CALL SETTINGS";
+ }
+ function renderBlockUsers(){
+  const text=$("call-block-search").value.trim().toLowerCase();
+  const list=$("call-block-users");list.replaceChildren();
+  const accounts=settingsPeople.filter(p=>(name(p)+" "+(p.username||"")).toLowerCase().includes(text));
+  accounts.sort((a,b)=>Number(blockedIds.has(b.uid))-Number(blockedIds.has(a.uid))||name(a).localeCompare(name(b)));
+  for(const p of accounts.slice(0,100)){
+   const row=document.createElement("div");row.className="call-block-row";
+   const img=document.createElement("img");img.className="call-avatar";img.alt="";img.referrerPolicy="no-referrer";img.src=safeAvatar(p);
+   const textElement=document.createElement("div");textElement.className="call-block-name";textElement.textContent=name(p)+"  @"+p.username;
+   const button=document.createElement("button");button.type="button";button.className="call-btn"+(blockedIds.has(p.uid)?"":" danger");
+   button.textContent=blockedIds.has(p.uid)?"Unblock":"Block";
+   button.onclick=async()=>{
+    if(!me||!privacyReady)return;
+    button.disabled=true;privacyStatus("Saving block list…");
+    try{
+     const ref=doc(db,"callBlocks",me.uid,"users",p.uid);
+     if(blockedIds.has(p.uid))await deleteDoc(ref);
+     else await setDoc(ref,{uid:p.uid,blockedAt:serverTimestamp()});
+     privacyStatus(blockedIds.has(p.uid)?"Updating block list…":"Saved.");
+    }catch(e){privacyStatus("Could not update block list: "+e.message);button.disabled=false;}
+   };
+   row.append(img,textElement,button);list.append(row);
+  }
+  if(!list.children.length)list.textContent="No matching accounts.";
+ }
+ async function openPrivacy(){
+  if(!me||!profile)return alert("Sign in to Community first.");
+  visible("call-settings",true);
+  $("call-block-search").value="";
+  $("call-block-users").textContent="Loading users…";
+  privacyStatus("");
+  updateDndUi();
+  try{
+   const snap=await getDocs(query(collection(db,"profiles"),limit(200)));
+   if(!me)return;
+   settingsPeople=snap.docs.filter(d=>d.id!==me.uid).map(d=>({uid:d.id,...d.data()}));
+   renderBlockUsers();
+  }catch(e){privacyStatus("Could not load accounts: "+e.message);}
+ }
+ if(settingsButton)settingsButton.onclick=openPrivacy;
+ $("call-settings-close").onclick=()=>visible("call-settings",false);
+ $("call-block-search").oninput=renderBlockUsers;
+ $("call-dnd").onchange=async event=>{
+  if(!me||!privacyReady)return;
+  const desired=event.target.checked;
+  event.target.disabled=true;privacyStatus("Saving Do Not Disturb…");
+  try{
+   await setDoc(doc(db,"callSettings",me.uid),{doNotDisturb:desired,updatedAt:serverTimestamp()});
+   privacyStatus(desired?"Do Not Disturb is on. Calls will not ring.":"Do Not Disturb is off. Calls are allowed.");
+  }catch(e){event.target.checked=doNotDisturb;privacyStatus("Could not change Do Not Disturb: "+e.message);}
+  finally{event.target.disabled=false;}
+ };
+ function stopPrivacyListeners(){
+  if(stopSettings){stopSettings();stopSettings=null;}
+  if(stopBlocks){stopBlocks();stopBlocks=null;}
+  privacyReady=false;blockedIds=new Set();doNotDisturb=false;settingsPeople=[];
+  visible("call-settings",false);updateDndUi();
+ }
+ function subscribePrivacy(uid){
+  stopPrivacyListeners();
+  if(settingsButton)settingsButton.disabled=false;
+  stopSettings=onSnapshot(doc(db,"callSettings",uid),snap=>{
+   doNotDisturb=snap.exists()&&snap.data().doNotDisturb===true;
+   privacyReady=true;updateDndUi();
+   if(doNotDisturb&&incoming&&!session)declinePending(incoming.id);
+  },e=>{privacyStatus("Could not read call settings: "+e.message);privacyReady=false;updateDndUi();});
+  stopBlocks=onSnapshot(collection(db,"callBlocks",uid,"users"),snap=>{
+   blockedIds=new Set(snap.docs.map(d=>d.id));
+   renderBlockUsers();drawPeople();
+   if(incoming&&blockedIds.has(incoming.callerId)&&!session)declinePending(incoming.id);
+  },e=>privacyStatus("Could not read blocked users: "+e.message));
+ }
+ async function declinePending(id){
+  if(!id)return;
+  if(incoming?.id===id)incoming=null;
+  visible("call-incoming",false);
+  try{await updateDoc(doc(db,"calls",id),{status:"declined"});}catch(e){console.warn("Could not decline call:",e);}
+ }
  function drawPeople(){
   const q=$("call-search").value.toLowerCase().trim(),area=$("call-users");
   area.replaceChildren();
-  for(const p of people.filter(x=>(name(x)+" "+x.username).toLowerCase().includes(q)).slice(0,100)){
+  for(const p of people.filter(x=>!blockedIds.has(x.uid)&&(name(x)+" "+x.username).toLowerCase().includes(q)).slice(0,100)){
    const row=document.createElement("button");row.type="button";row.className="call-user";
    row.setAttribute("aria-selected",String(chosen?.uid===p.uid));
    const img=document.createElement("img");img.className="call-avatar";img.alt="";img.referrerPolicy="no-referrer";
@@ -186,6 +282,7 @@ if(launch){
  }
  async function call(type){
   if(working||session||!chosen||!me||!profile)return;
+  if(blockedIds.has(chosen.uid)){pickerStatus("Unblock this person before calling.");return;}
   working=true;const friend=chosen;
   pickerStatus("Requesting microphone/camera permission…");
   let media;
@@ -213,6 +310,9 @@ if(launch){
  }
  $("call-video").onclick=()=>call("video");$("call-audio").onclick=()=>call("audio");
  function displayIncoming(){
+  if(incoming&&!session&&(doNotDisturb||blockedIds.has(incoming.callerId))){
+   declinePending(incoming.id);return;
+  }
   if(!incoming||session){visible("call-incoming",false);return;}
   $("call-incoming-heading").textContent=incoming.type==="video"?"📹 Incoming video call":"📞 Incoming audio call";
   $("call-incoming-name").textContent=(incoming.callerName||"Someone")+" is calling you.";
@@ -267,11 +367,13 @@ if(launch){
  onAuthStateChanged(auth,async user=>{
   if(stopInbox){stopInbox();stopInbox=null;}
   me=user;profile=null;launch.disabled=true;
+  stopPrivacyListeners();
+  if(settingsButton)settingsButton.disabled=true;
   if(!user){incoming=null;visible("call-incoming",false);if(session)cleanup();return;}
   try{
    const snap=await getDoc(doc(db,"profiles",user.uid));
    if(auth.currentUser?.uid!==user.uid)return;
-   if(snap.exists()){profile=snap.data();launch.disabled=false;subscribeInbox(user.uid);}
+   if(snap.exists()){profile=snap.data();launch.disabled=false;subscribePrivacy(user.uid);subscribeInbox(user.uid);}
   }catch(e){console.warn("Call sign-in:",e);}
  });
  window.addEventListener("pagehide",()=>{
