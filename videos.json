@@ -1,0 +1,27 @@
+[
+  {
+    "title": "Golden Sphere Animation",
+    "video": "videos/golden-sphere.mp4",
+    "download": "videos/golden-sphere.mp4"
+  },
+  {
+    "title": "PolyCoke Chaos",
+    "video": "videos/coke.mp4",
+    "download": "videos/coke.mp4"
+  },
+  {
+    "title": "Green Screen",
+    "video": "videos/greenscreen.mp4",
+    "download": "videos/greenscreen.mp4"
+  },
+  {
+    "title": "Cloth Simulation",
+    "video": "videos/cloth.mp4",
+    "download": "videos/cloth.mp4"
+  },
+  {
+    "title": "Jelly",
+    "video": "videos/jelly.mp4",
+    "download": "videos/jelly.mp4"
+  }
+]
