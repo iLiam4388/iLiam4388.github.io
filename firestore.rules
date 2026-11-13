@@ -347,6 +347,7 @@ service cloud.firestore {
 
     function canReceiveCall(calleeUid, callerUid) {
       return !exists(/databases/$(database)/documents/callBlocks/$(calleeUid)/users/$(callerUid))
+        && !exists(/databases/$(database)/documents/callBlocks/$(callerUid)/users/$(calleeUid))
         && (!exists(/databases/$(database)/documents/callSettings/$(calleeUid))
           || get(/databases/$(database)/documents/callSettings/$(calleeUid)).data.doNotDisturb == false);
     }
