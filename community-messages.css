@@ -37,3 +37,16 @@
 #iliam-messages-ui .im-actions{display:flex;gap:8px;flex-wrap:wrap}
 #iliam-messages-ui .im-call-menu{position:absolute;right:18px;top:68px;z-index:2;background:#0b3653;border:2px solid cyan;border-radius:13px;padding:10px;display:grid;gap:7px;box-shadow:0 9px 30px #0009}
 @media(max-width:720px){#iliam-messages-ui .im-shell{height:96vh}#iliam-messages-ui .im-main{grid-template-columns:1fr}#iliam-messages-ui .im-sidebar{max-height:150px;overflow:auto;border-right:0;border-bottom:1px solid #32617a}#iliam-messages-ui .im-list{display:flex;overflow:auto}#iliam-messages-ui .im-entry{min-width:160px;max-width:220px}#iliam-messages-ui .im-top{padding:11px}#iliam-messages-ui .im-chat-head{padding:9px}#iliam-messages-ui .im-bubbles{padding:12px}}
+
+#iliam-messages-ui .im-avatar{width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid #88dcff;flex:none}
+#iliam-messages-ui .im-chat-head h3{display:flex;align-items:center;gap:9px}
+#iliam-messages-ui .im-group-preview{display:block;margin:12px auto;max-width:150px;width:150px;height:150px;object-fit:cover;border-radius:20px;border:2px solid #71e5ff}
+#iliam-messages-ui .im-group-preview[hidden]{display:none!important}
+#iliam-messages-ui .im-panel label{display:block;margin-top:14px;font-weight:700}
+#iliam-messages-ui .im-dnd-row{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 10px;padding:13px;border-top:1px solid #3a8f9f}
+#iliam-messages-ui .im-dnd-row input{width:23px;height:23px;accent-color:#59edb9}
+#iliam-messages-ui .im-account-label{flex:1;min-width:0;overflow-wrap:anywhere}
+#iliam-messages-ui .im-entry .im-btn{flex:none;padding:7px 10px;font-size:12px}
+.im-toast{z-index:11000;position:fixed;bottom:18px;right:18px;width:min(360px,calc(100% - 36px));padding:14px 17px;background:#0b344e;color:white;border:2px solid cyan;border-radius:14px;box-shadow:0 4px 28px #000b;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:left;font:14px Verdana,Arial,sans-serif}
+.im-toast span{font-size:12px;color:#c6f0f5;overflow-wrap:anywhere}
+@media(max-width:720px){#iliam-messages-ui .im-top .im-actions{gap:5px}#iliam-messages-ui .im-top .im-btn{padding:9px 7px;font-size:12px}#iliam-messages-ui .im-chat-head .im-btn{padding:8px;font-size:11px}#iliam-messages-ui .im-chat-head h3{flex-basis:100%}}
