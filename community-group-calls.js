@@ -95,14 +95,6 @@ if(launch){
  }
  launch.onclick=openPicker;$("gc-close").onclick=()=>show("gc-picker",false);
  $("gc-search").oninput=drawPeople;
- function stopPeers(){
-  if(!current)return;
-  for(const p of current.peers.values()){
-   p.unsubs.forEach(fn=>fn());
-   p.pc.close();p.tile.remove();
-  }
-  current.peers.clear();
- }
  function teardown(){
   const s=current;current=null;
   if(s){
@@ -120,6 +112,7 @@ if(launch){
    try{p.pc.close();}catch{}
   }
   s.peers.clear();
+  s.pending.clear();
  }
  async function leaveRoom(){
   const s=current;
@@ -155,16 +148,16 @@ if(launch){
    player=document.createElement("video");player.autoplay=true;player.playsInline=true;player.muted=local;
    if(local)player.className="self";
    player.srcObject=stream;
-   player.play().catch(()=>{});
    tile.append(player);
   }else{
    const symbol=document.createElement("div");symbol.className="gc-voice";symbol.textContent=local?"🎙":"📞";tile.append(symbol);
    if(!local){
-    player=document.createElement("audio");player.autoplay=true;player.srcObject=stream;tile.append(player);player.play().catch(()=>{});
+    player=document.createElement("audio");player.autoplay=true;player.srcObject=stream;tile.append(player);
    }
   }
   const caption=document.createElement("div");caption.className="gc-label";caption.textContent=label;tile.append(caption);
   $("gc-grid").append(tile);
+  if(player)player.play().catch(()=>{});
   return {tile,media:player};
  }
  function refreshCount(s){
@@ -177,17 +170,18 @@ if(launch){
   catch{return "User";}
  }
  async function connectPeer(s,uid){
-  if(current!==s||s.peers.has(uid)||blocked.has(uid))return;
+  if(current!==s||s.peers.has(uid)||s.pending.has(uid)||blocked.has(uid))return;
+  s.pending.add(uid);
   // Lower Firebase UID offers; the other participant answers.
   const a=[me.uid,uid].sort()[0],b=[me.uid,uid].sort()[1],offerer=me.uid===a;
   const connectionRef=doc(s.ref,"connections",a+"__"+b);
   const pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]});
   for(const track of s.stream.getTracks())pc.addTrack(track,s.stream);
   const remote=new MediaStream(),label=await peerName(uid);
-  if(current!==s){pc.close();return;}
+  if(current!==s){pc.close();s.pending.delete(uid);return;}
   const view=addTile(s,uid,label+" · Connecting",remote);
   const p={pc,uid,connectionRef,remote,unsubs:[],tile:view.tile,media:view.media,answered:false,answerSent:false};
-  s.peers.set(uid,p);
+  s.peers.set(uid,p);s.pending.delete(uid);
   const pending=[],localCandidates=[];
   let connectionExists=false;
   const icePath=offerer?"aCandidates":"bCandidates",remotePath=offerer?"bCandidates":"aCandidates";
@@ -287,7 +281,7 @@ if(launch){
    ref=doc(collection(db,"groupCalls"));
    await setDoc(ref,{hostId:me.uid,hostName:displayName(myProfile),participants,type,status:"open",createdAt:serverTimestamp()});
    await setDoc(doc(ref,"members",me.uid),{uid:me.uid,status:"accepted",updatedAt:serverTimestamp()});
-   const session={ref,stream,type,host:true,peers:new Map(),unsubs:[]};
+   const session={ref,stream,type,host:true,peers:new Map(),pending:new Set(),unsubs:[]};
    beginSession(session);started=true;
    let invited=0,failed=[];
    for(const guest of guests)try{
@@ -336,7 +330,7 @@ if(launch){
    stream=await capture(invite.type);
    await updateDoc(doc(ref,"members",me.uid),{status:"accepted",updatedAt:serverTimestamp()});
    incoming=null;
-   beginSession({ref,stream,type:invite.type,host:false,peers:new Map(),unsubs:[]});
+   beginSession({ref,stream,type:invite.type,host:false,peers:new Map(),pending:new Set(),unsubs:[]});
   }catch(e){
    if(stream)stream.getTracks().forEach(t=>t.stop());
    $("gc-invite-status").textContent=mediaError(e);
@@ -401,6 +395,9 @@ if(launch){
    stopBlocks=onSnapshot(collection(db,"callBlocks",user.uid,"users"),snap=>{
     blocked=new Set(snap.docs.map(d=>d.id));
     if(incoming&&blocked.has(incoming.hostId))declineInvite(incoming.id);
+    if(current){
+     for(const uid of [...current.peers.keys()])if(blocked.has(uid))removePeer(current,uid);
+    }
     drawPeople();checkInvites();
    },e=>console.warn("Group call blocks:",e));
    listenInbox(user.uid);
