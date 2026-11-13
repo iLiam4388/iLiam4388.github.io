@@ -11,12 +11,12 @@ if(launch){
  const ui=document.createElement("div");ui.id="iliam-group-ui";
  ui.innerHTML=[
   '<section class="gc-layer" id="gc-picker" hidden><div class="gc-panel" role="dialog" aria-modal="true" aria-label="Group call picker">',
-  '<div class="gc-head"><h2>Call multiple people</h2><button id="gc-close" class="gc-button">✕ Close</button></div>',
-  '<p class="gc-note">Choose up to 3 friends for a temporary group call (4 people including you). No permanent group is created.</p>',
+  '<div class="gc-head"><h2>Call someone</h2><button id="gc-close" class="gc-button">✕ Close</button></div>',
+  '<p class="gc-note">Choose 1, 2, or 3 friends. Select one person for a private call, or more for a group call.</p>',
   '<input id="gc-search" class="gc-input" type="search" placeholder="Search iLiam accounts" aria-label="Search iLiam accounts">',
   '<div class="gc-users" id="gc-users"></div><p class="gc-note" id="gc-count">0 of 3 selected</p>',
-  '<div class="gc-actions"><button class="gc-button good" id="gc-video" disabled>📹 Group video call</button>',
-  '<button class="gc-button good" id="gc-audio" disabled>📞 Group audio call</button></div>',
+  '<div class="gc-actions"><button class="gc-button good" id="gc-video" disabled>📹 Video call</button>',
+  '<button class="gc-button good" id="gc-audio" disabled>📞 Audio call</button></div>',
   '<p class="gc-status" id="gc-picker-status" role="status"></p></div></section>',
   '<section class="gc-invite" id="gc-invite" hidden aria-live="assertive">',
   '<h2 id="gc-invite-title">Incoming group call</h2><p id="gc-invite-who"></p>',
@@ -56,7 +56,7 @@ if(launch){
   return m||"Could not start group call.";
  }
  function updateButtons(){
-  $("gc-count").textContent=selected.size+" of 3 selected";
+  $("gc-count").textContent=selected.size+" of 3 selected"+(selected.size===1?" · Private call":selected.size>1?" · Group call":"");
   $("gc-video").disabled=!selected.size||working;
   $("gc-audio").disabled=!selected.size||working;
  }
@@ -252,7 +252,8 @@ if(launch){
  }
  function beginSession(s){
   current=s;show("gc-picker",false);show("gc-invite",false);show("gc-active",true);
-  $("gc-active-title").textContent=s.type==="video"?"📹 Group video call":"📞 Group audio call";
+  const label=s.participantCount===2?"Call":"Group call";
+  $("gc-active-title").textContent=(s.type==="video"?"📹 Video ":"📞 Audio ")+label;
   show("gc-camera",s.type==="video");
   $("gc-mute").textContent="🎙 Mute";$("gc-camera").textContent="📷 Camera off";
   $("gc-grid").replaceChildren();addTile(s,me.uid,"You",s.stream,true);
@@ -281,7 +282,7 @@ if(launch){
    ref=doc(collection(db,"groupCalls"));
    await setDoc(ref,{hostId:me.uid,hostName:displayName(myProfile),participants,type,status:"open",createdAt:serverTimestamp()});
    await setDoc(doc(ref,"members",me.uid),{uid:me.uid,status:"accepted",updatedAt:serverTimestamp()});
-   const session={ref,stream,type,host:true,peers:new Map(),pending:new Set(),unsubs:[]};
+   const session={ref,stream,type,host:true,participantCount:participants.length,peers:new Map(),pending:new Set(),unsubs:[]};
    beginSession(session);started=true;
    let invited=0,failed=[];
    for(const guest of guests)try{
@@ -304,8 +305,9 @@ if(launch){
  $("gc-audio").onclick=()=>startGroup("audio");
  function showInvite(){
   if(current||!incoming){show("gc-invite",false);return;}
-  $("gc-invite-title").textContent=incoming.type==="video"?"📹 Incoming group video call":"📞 Incoming group audio call";
-  $("gc-invite-who").textContent=(incoming.hostName||"Someone")+" invited you to a call with up to 4 people.";
+  const isGroup=incoming.room?.participants?.length>2;
+  $("gc-invite-title").textContent=(incoming.type==="video"?"📹 Incoming video call":"📞 Incoming audio call")+(isGroup?" (group)":"");
+  $("gc-invite-who").textContent=(incoming.hostName||"Someone")+(isGroup?" invited you to a group call.":" is calling you.");
   $("gc-invite-status").textContent="";
   show("gc-invite",true);
  }
@@ -330,7 +332,7 @@ if(launch){
    stream=await capture(invite.type);
    await updateDoc(doc(ref,"members",me.uid),{status:"accepted",updatedAt:serverTimestamp()});
    incoming=null;
-   beginSession({ref,stream,type:invite.type,host:false,peers:new Map(),pending:new Set(),unsubs:[]});
+   beginSession({ref,stream,type:invite.type,host:false,participantCount:room.data().participants.length,peers:new Map(),pending:new Set(),unsubs:[]});
   }catch(e){
    if(stream)stream.getTracks().forEach(t=>t.stop());
    $("gc-invite-status").textContent=mediaError(e);
