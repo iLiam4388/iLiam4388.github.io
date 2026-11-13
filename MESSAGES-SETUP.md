@@ -37,3 +37,11 @@ The app currently loads a limited set of accounts and the newest 100 messages pe
 - **Important:** changes to `firestore.rules` must be **published manually in Firebase Console** before these new features will be allowed. GitHub commits do not deploy Firebase rules.
 
 Testing suggestion: with two signed-in accounts, enable notifications, exchange messages, try DND on one side, block/unblock, edit a group picture/name, then delete a chat from just one inbox and verify that it still exists for the other person.
+
+## Editing group membership
+
+Inside a group conversation, select **✎ Edit group**. The group creator can search for accounts, tick people to add, untick members to remove, and choose **Save changes**. The creator must remain in the group and the total must be **2–4 members**.
+
+Security rules permit only the **creator** to change the member list. Other members can still edit the group name/picture. Members removed from a chat lose access to that conversation under Firestore rules. **New members gain access to the existing message history**, so choose invitees carefully. Updating a group chat changes which accounts the conversation's Call button invites.
+
+The latest `firestore.rules` must be published in Firebase Console before member editing can work; updating GitHub Pages alone does not deploy the rules.
