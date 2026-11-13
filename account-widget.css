@@ -1,0 +1,26 @@
+#iliam-account{font-family:Verdana,Arial,sans-serif;position:relative;color:#fff;z-index:45}
+#iliam-account button{font:inherit;cursor:pointer}
+#iliam-account .account-button{border:1px solid #58e8ff;background:#08263f;color:#dcfbff;padding:11px 17px;border-radius:13px;box-shadow:0 0 12px #00ffff22;font-weight:750;white-space:nowrap}
+#iliam-account .account-button:hover{background:#124260;box-shadow:0 0 16px #00ffff55}
+#iliam-account .account-panel{position:absolute;z-index:100;right:0;top:calc(100% + 10px);width:min(300px,calc(100vw - 24px));background:#081d34;border:1px solid #44708c;border-radius:15px;padding:16px;box-shadow:0 14px 40px #000a;text-align:left}
+#iliam-account .account-panel p{margin:0 0 14px;font-size:14px;overflow-wrap:anywhere}
+#iliam-account .account-panel a{color:#88eaff}
+#iliam-account .account-panel button{border:1px solid #44708c;border-radius:9px;padding:10px 14px;color:#fff;background:#143c5e}
+#iliam-account [hidden],#iliam-login-overlay[hidden]{display:none!important}
+#iliam-login-overlay{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:15px;background:rgba(0,5,18,.85);backdrop-filter:blur(9px);font-family:Verdana,Arial,sans-serif}
+#iliam-login-overlay .login-card{width:min(430px,100%);max-height:95vh;overflow:auto;text-align:left;border:1px solid #4bdfff;border-radius:23px;padding:24px;background:linear-gradient(150deg,#0f2a4a,#090c22);box-shadow:0 0 45px #00d9ff44;color:#fff;box-sizing:border-box}
+#iliam-login-overlay .login-head{display:flex;justify-content:space-between;align-items:center;gap:14px}
+#iliam-login-overlay h2{margin:0 0 10px;font-size:25px;color:#fff}
+#iliam-login-overlay .login-close{font-size:22px;background:transparent;color:#eee;border:0;padding:4px 8px;cursor:pointer}
+#iliam-login-overlay .login-tabs{display:flex;gap:8px;margin:18px 0}
+#iliam-login-overlay button{cursor:pointer;font:inherit}
+#iliam-login-overlay .login-tab{padding:10px 15px;border:1px solid #45718d;background:#122d49;color:#daeefe;border-radius:9px;flex:1}
+#iliam-login-overlay .login-tab.active{background:#136c95;border-color:#54e3f9;font-weight:bold}
+#iliam-login-overlay label{display:block;font-size:13px;color:#bfe8ff;margin:12px 0 6px}
+#iliam-login-overlay input{width:100%;box-sizing:border-box;font:inherit;background:#071a2c;color:white;border:1px solid #497a98;border-radius:10px;padding:13px;outline:none}
+#iliam-login-overlay input:focus{border-color:cyan;box-shadow:0 0 0 3px #00ffff33}
+#iliam-login-overlay .login-submit{border:0;width:100%;border-radius:12px;padding:13px;background:#20bdd7;color:#03121e;font-weight:bold;margin-top:18px}
+#iliam-login-overlay .login-submit:disabled{opacity:.55;cursor:wait}
+#iliam-login-overlay .login-error{min-height:20px;font-size:13px;line-height:1.4;color:#ffc2d3}
+#iliam-login-overlay .login-hint{font-size:12px;color:#a8c5d5;line-height:1.5}
+@media(max-width:520px){#iliam-account .account-button{padding:9px 11px;font-size:13px}#iliam-login-overlay .login-card{padding:18px}}
