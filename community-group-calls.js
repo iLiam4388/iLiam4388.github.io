@@ -47,6 +47,25 @@ if(launch){
  let me=null,myProfile=null,people=[],selected=new Map(),current=null,incoming=null,working=false;
  let dnd=false,blocked=new Set(),stopSettings=null,stopBlocks=null,stopInbox=null,privacyReady=false;
  const roomSubscriptions=new Map(),inviteStates=new Map();
+ let lastNotifiedInvite=null;
+ function notifyIncomingCall(invite){
+  if(!invite||invite.id===lastNotifiedInvite)return;
+  lastNotifiedInvite=invite.id;
+  const title=invite.type==="video"?"📹 Incoming video call":"📞 Incoming audio call";
+  const body=(invite.hostName||"Someone")+" is calling you.";
+  if("Notification" in window && Notification.permission==="granted" && document.hidden){
+   try{const n=new Notification(title,{body,tag:"iliam-group-"+invite.id});
+    n.onclick=()=>{window.focus();n.close();};
+   }catch(e){console.warn("Call notification:",e);}
+  }
+  const toast=document.createElement("button");toast.type="button";toast.className="im-toast";
+  const heading=document.createElement("strong");heading.textContent=title;
+  const detail=document.createElement("span");detail.textContent=body;
+  toast.append(heading,detail);
+  toast.onclick=()=>{toast.remove();$("gc-accept").focus();};
+  document.body.append(toast);
+  setTimeout(()=>toast.remove(),6500);
+ }
  launch.disabled=true;
  function avatar(p){
   try{const u=new URL(p.photoURL);if(["http:","https:"].includes(u.protocol))return u.href;}catch{}
@@ -387,6 +406,7 @@ if(launch){
   $("gc-invite-who").textContent=(incoming.hostName||"Someone")+(isGroup?" invited you to a group call.":" is calling you.");
   $("gc-invite-status").textContent="";
   show("gc-invite",true);
+  notifyIncomingCall(incoming);
  }
  async function declineInvite(roomId){
   if(!roomId||!me)return;
@@ -449,7 +469,7 @@ if(launch){
  function clearInbox(){
   if(stopInbox){stopInbox();stopInbox=null;}
   for(const fn of roomSubscriptions.values())fn();
-  roomSubscriptions.clear();inviteStates.clear();incoming=null;
+  roomSubscriptions.clear();inviteStates.clear();incoming=null;lastNotifiedInvite=null;
   show("gc-invite",false);
  }
  function clearPrivacy(){
