@@ -1,0 +1,32 @@
+/* iLiam Community Calls — scoped so Community styles do not leak */
+#iliam-call-button{background:linear-gradient(#42c9ff,#185aca);box-shadow:0 0 13px #00ffff88}
+#iliam-call-ui [hidden]{display:none!important}
+#iliam-call-ui{position:fixed;inset:0;z-index:10050;pointer-events:none;font-family:Verdana,Arial,sans-serif;color:#fff}
+#iliam-call-ui *{box-sizing:border-box}
+#iliam-call-ui button{width:auto;cursor:pointer;font:inherit}
+#iliam-call-ui .call-backdrop{pointer-events:auto;position:absolute;inset:0;background:#000b;backdrop-filter:blur(8px);display:grid;place-items:center;padding:16px}
+#iliam-call-ui .call-panel{width:min(530px,100%);max-height:92vh;overflow:auto;text-align:left;border:2px solid #54e0ff;border-radius:22px;padding:22px;background:linear-gradient(150deg,#081f3b,#11132c);box-shadow:0 0 35px #00eaff66}
+#iliam-call-ui .call-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#iliam-call-ui .call-title{margin:0 0 14px;font-size:24px;text-shadow:0 0 12px cyan}
+#iliam-call-ui .call-subtitle{color:#b7e8f5;font-size:13px;line-height:1.5}
+#iliam-call-ui .call-input{width:100%;background:#fff;color:#121a2c;border:2px solid #a9ddec;border-radius:12px;padding:12px;font:inherit;margin:12px 0}
+#iliam-call-ui .call-user-list{display:grid;gap:7px;max-height:310px;overflow:auto}
+#iliam-call-ui .call-user{display:flex;align-items:center;gap:11px;padding:10px;background:#ffffff16;border:1px solid #ffffff40;border-radius:13px;text-align:left;color:#fff;width:100%}
+#iliam-call-ui .call-user[aria-selected="true"]{border:2px solid #4cffff;background:#14465b}
+#iliam-call-ui .call-avatar{height:40px;width:40px;flex:none;object-fit:cover;border-radius:50%;background:#142955;border:1px solid white}
+#iliam-call-ui .call-name{font-size:14px;font-weight:bold;overflow-wrap:anywhere}
+#iliam-call-ui .call-handle{font-size:12px;color:#b8d6e8}
+#iliam-call-ui .call-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+#iliam-call-ui .call-btn{padding:11px 15px;border-radius:12px;border:1px solid #6acdf0;background:#145675;color:white;font-weight:bold}
+#iliam-call-ui .call-btn.primary{background:linear-gradient(#61f69d,#098b52);border-color:#a0fbc1}
+#iliam-call-ui .call-btn.danger{background:#a61a3a;border-color:#f15f7f}
+#iliam-call-ui .call-btn:disabled{opacity:.45;cursor:not-allowed}
+#iliam-call-ui .call-status{font-size:13px;min-height:20px;color:#bfefff;margin-top:12px;line-height:1.5}
+#iliam-call-ui .call-incoming{pointer-events:auto;position:fixed;top:18px;left:50%;transform:translateX(-50%);width:min(420px,calc(100% - 24px));border:2px solid cyan;border-radius:18px;background:#071a31f5;padding:18px;box-shadow:0 8px 35px #00ffff66;text-align:left;z-index:10070}
+#iliam-call-ui .call-screen{width:min(950px,100%);max-height:96vh;overflow:auto;border:2px solid #6adfff;border-radius:22px;background:#050f21;padding:17px;text-align:center;box-shadow:0 0 36px #00ffff55}
+#iliam-call-ui .call-videos{display:grid;grid-template-columns:1fr 220px;gap:12px;margin:16px 0;align-items:stretch}
+#iliam-call-ui .call-videos video{display:block;width:100%;height:min(55vh,440px);object-fit:contain;background:#000;border-radius:15px}
+#iliam-call-ui .call-videos video.local{height:170px;object-fit:cover;transform:scaleX(-1)}
+#iliam-call-ui .call-voice{display:grid;place-items:center;height:230px;background:#112747;border-radius:15px;font-size:50px;margin:16px 0}
+#iliam-call-ui .call-center{justify-content:center}
+@media(max-width:650px){#iliam-call-ui .call-videos{grid-template-columns:1fr}#iliam-call-ui .call-videos video.local{height:130px}#iliam-call-ui .call-panel{padding:16px}#iliam-call-ui .call-screen{padding:10px}#iliam-call-ui .call-videos video{height:39vh}}
