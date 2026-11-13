@@ -6,6 +6,7 @@
 <title>Community - iLiam</title>
 <link rel="icon" type="image/png" href="images/favicon.png">
 <link rel="stylesheet" href="community-calls.css?v=4">
+<link rel="stylesheet" href="community-group-calls.css?v=1">
 
 <style>
 *{box-sizing:border-box}
@@ -97,6 +98,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
   <a class="back-btn" href="index.html">← BACK HOME</a>
   <button class="saved-posts-btn" id="savedPostsButton" type="button">★ SAVED POSTS</button>
   <button class="profile-btn" id="iliam-call-button" type="button" disabled>📞 CALL SOMEONE</button>
+  <button class="profile-btn" id="iliam-group-button" type="button" disabled>👥 GROUP CALL</button>
   <button class="profile-btn" id="iliam-call-settings-button" type="button" disabled>⚙ CALL SETTINGS</button>
   <button class="profile-btn" id="profileButton" type="button">👤 PROFILE</button>
   <button class="admin-panel-btn" id="adminButton" type="button" hidden>🛡 ADMIN</button>
@@ -921,5 +923,6 @@ async function renderSavedPosts(){
 </script>
 <script type="module" src="site-notifications.js"></script>
 <script type="module" src="community-calls.js?v=5"></script>
+<script type="module" src="community-group-calls.js?v=1"></script>
 </body>
 </html>
