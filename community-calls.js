@@ -45,7 +45,7 @@ if(launch){
   const errorName=String(err?.name||"");
   const message=String(err?.message||"");
   if(["NotAllowedError","PermissionDeniedError","SecurityError"].includes(errorName)||/permission denied|permission blocked|not allowed/i.test(message))
-   return "Access to your "+kind+" was blocked. In Opera, click the site permissions icon next to the address and allow Microphone"+(type==="video"?" and Camera":"")+". In Windows Settings → Privacy & security → "+(type==="video"?"Camera and Microphone":"Microphone")+", enable access for desktop apps, then retry.";
+   return "Access to your "+kind+" was blocked. Check your browser's site camera/microphone permissions and your device privacy settings. On iPhone/Android, allow camera access in the browser's site settings. On Windows, enable camera access for desktop apps.";
   if(errorName==="NotFoundError"||errorName==="DevicesNotFoundError")
    return "No usable "+kind+" was found. Connect a device and check Windows sound/camera settings.";
   if(errorName==="NotReadableError"||errorName==="TrackStartError")
@@ -123,7 +123,8 @@ if(launch){
  async function capture(type){
   if(!navigator.mediaDevices?.getUserMedia||typeof RTCPeerConnection==="undefined")
    throw Error("This browser cannot make WebRTC calls.");
-  const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:type==="video"});
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:type==="video"?{facingMode:"user",width:{ideal:640},height:{ideal:480}}:false});
+  if(type==="video"&&!stream.getVideoTracks().length){stream.getTracks().forEach(t=>t.stop());throw Error("No camera video track was received. Check camera permission and try again.");}
   let pc;
   try{
    pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]});
@@ -142,7 +143,12 @@ if(launch){
    else if(pc.connectionState==="failed")status("Connection failed; this network may require a TURN server.");
    else if(pc.connectionState==="disconnected")status("Connection interrupted…");
   };
-  $("call-local").srcObject=stream;$("call-remote").srcObject=remote;
+  const localVideo=$("call-local");
+  localVideo.srcObject=stream;
+  localVideo.muted=true;
+  localVideo.playsInline=true;
+  localVideo.play().catch(e=>console.warn("Local video preview:",e.name));
+  $("call-remote").srcObject=remote;
   return {pc,stream,type};
  }
  function setupCandidates(s,remoteSide){
