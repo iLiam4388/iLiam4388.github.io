@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,doc,collection,getDoc,getDocs,setDoc,addDoc,updateDoc,onSnapshot,query,where,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,doc,collection,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 // Temporary 2–4-person WebRTC mesh calls. No saved groups and no video recording.
@@ -11,13 +11,20 @@ if(launch){
  const ui=document.createElement("div");ui.id="iliam-group-ui";
  ui.innerHTML=[
   '<section class="gc-layer" id="gc-picker" hidden><div class="gc-panel" role="dialog" aria-modal="true" aria-label="Group call picker">',
-  '<div class="gc-head"><h2>Call someone</h2><button id="gc-close" class="gc-button">✕ Close</button></div>',
+  '<div class="gc-head"><h2>Call someone</h2><div class="gc-top-controls"><button id="gc-edit" class="gc-button" type="button" aria-label="Edit blocked users">✎ Edit</button><button id="gc-close" class="gc-button">✕ Close</button></div></div>',
   '<p class="gc-note">Choose 1, 2, or 3 friends. Select one person for a private call, or more for a group call.</p>',
+  '<section id="gc-block-editor" class="gc-block-editor" hidden><div class="gc-head"><h3>Blocked people</h3><button id="gc-edit-done" class="gc-button" type="button">✓ Done</button></div>',
+  '<p class="gc-note">Block or unblock iLiam accounts. Blocked users cannot call you, and you cannot call them.</p>',
+  '<input id="gc-block-search" class="gc-input" type="search" placeholder="Search users to block or unblock" aria-label="Search blocked accounts">',
+  '<div id="gc-block-list" class="gc-users"></div></section>',
+  '<div id="gc-people-section">',
   '<input id="gc-search" class="gc-input" type="search" placeholder="Search iLiam accounts" aria-label="Search iLiam accounts">',
   '<div class="gc-users" id="gc-users"></div><p class="gc-note" id="gc-count">0 of 3 selected</p>',
   '<div class="gc-actions"><button class="gc-button good" id="gc-video" disabled>📹 Video call</button>',
   '<button class="gc-button good" id="gc-audio" disabled>📞 Audio call</button></div>',
-  '<p class="gc-status" id="gc-picker-status" role="status"></p></div></section>',
+  '<p class="gc-status" id="gc-picker-status" role="status"></p></div>',
+  '<label class="gc-dnd-footer"><span><strong>🌙 Do Not Disturb</strong><small>Don’t receive incoming calls</small></span><input id="gc-dnd" type="checkbox" aria-label="Do Not Disturb"></label>',
+  '<p class="gc-status" id="gc-privacy-status" role="status"></p></div></section>',
   '<section class="gc-invite" id="gc-invite" hidden aria-live="assertive">',
   '<h2 id="gc-invite-title">Incoming group call</h2><p id="gc-invite-who"></p>',
   '<div class="gc-actions"><button class="gc-button good" id="gc-accept">Accept</button>',
@@ -38,7 +45,7 @@ if(launch){
  const displayName=p=>p?.nickname||p?.username||"iLiam user";
  const millis=t=>t?.toMillis?.()||0;
  let me=null,myProfile=null,people=[],selected=new Map(),current=null,incoming=null,working=false;
- let dnd=false,blocked=new Set(),stopSettings=null,stopBlocks=null,stopInbox=null;
+ let dnd=false,blocked=new Set(),stopSettings=null,stopBlocks=null,stopInbox=null,privacyReady=false;
  const roomSubscriptions=new Map(),inviteStates=new Map();
  launch.disabled=true;
  function avatar(p){
@@ -55,6 +62,59 @@ if(launch){
    return "An invited user may have Do Not Disturb on or may have blocked calls. Check that the updated Firestore rules are published.";
   return m||"Could not start group call.";
  }
+ function privacyStatus(message){$("gc-privacy-status").textContent=message||"";}
+ function updateDnd(){
+  $("gc-dnd").checked=dnd;
+  $("gc-dnd").disabled=!privacyReady||!me;
+ }
+ function showBlockEditor(open){
+  show("gc-block-editor",open);
+  show("gc-people-section",!open);
+  $("gc-edit").textContent=open?"✓ Done":"✎ Edit";
+  if(open)drawBlockList();
+ }
+ function drawBlockList(){
+  const list=$("gc-block-list"),q=$("gc-block-search").value.toLowerCase().trim();
+  list.replaceChildren();
+  const results=people.filter(p=>(displayName(p)+" "+p.username).toLowerCase().includes(q));
+  results.sort((a,b)=>Number(blocked.has(b.uid))-Number(blocked.has(a.uid))||displayName(a).localeCompare(displayName(b)));
+  for(const p of results.slice(0,100)){
+   const row=document.createElement("div");row.className="gc-user gc-block-row";
+   const img=document.createElement("img");img.src=avatar(p);img.alt="";
+   const name=document.createElement("span");name.className="gc-user-info";name.textContent=displayName(p)+" @"+p.username;
+   const btn=document.createElement("button");btn.type="button";btn.className="gc-button"+(blocked.has(p.uid)?"":" danger");
+   btn.textContent=blocked.has(p.uid)?"Unblock":"Block";
+   btn.onclick=async()=>{
+    if(!me||!privacyReady)return;
+    btn.disabled=true;privacyStatus("Saving block settings…");
+    try{
+     const wasBlocked=blocked.has(p.uid);
+     const ref=doc(db,"callBlocks",me.uid,"users",p.uid);
+     if(wasBlocked)await deleteDoc(ref);
+     else await setDoc(ref,{uid:p.uid,blockedAt:serverTimestamp()});
+     if(!wasBlocked&&current?.peers.has(p.uid))removePeer(current,p.uid);
+     if(!wasBlocked&&incoming?.hostId===p.uid)await declineInvite(incoming.id);
+     privacyStatus(wasBlocked?"User unblocked.":"User blocked.");
+    }catch(e){privacyStatus("Could not save block setting: "+e.message);}
+    finally{btn.disabled=false;}
+   };
+   row.append(img,name,btn);list.append(row);
+  }
+  if(!list.children.length)list.textContent="No matching users found.";
+ }
+ $("gc-edit").onclick=()=>showBlockEditor($("gc-block-editor").hidden);
+ $("gc-edit-done").onclick=()=>showBlockEditor(false);
+ $("gc-block-search").oninput=drawBlockList;
+ $("gc-dnd").onchange=async event=>{
+  if(!me||!privacyReady){updateDnd();return;}
+  const checked=event.target.checked;
+  event.target.disabled=true;privacyStatus("Saving Do Not Disturb…");
+  try{
+   await setDoc(doc(db,"callSettings",me.uid),{doNotDisturb:checked,updatedAt:serverTimestamp()});
+   privacyStatus(checked?"Do Not Disturb is on.":"Do Not Disturb is off.");
+  }catch(e){privacyStatus("Could not save Do Not Disturb: "+e.message);updateDnd();}
+  finally{event.target.disabled=false;}
+ };
  function updateButtons(){
   $("gc-count").textContent=selected.size+" of 3 selected"+(selected.size===1?" · Private call":selected.size>1?" · Group call":"");
   $("gc-video").disabled=!selected.size||working;
@@ -83,14 +143,14 @@ if(launch){
  async function openPicker(){
   if(!me||!myProfile)return alert("Sign in to Community first.");
   if(current)return;
-  selected.clear();show("gc-picker",true);$("gc-search").value="";updateButtons();
+  selected.clear();show("gc-picker",true);showBlockEditor(false);$("gc-search").value="";$("gc-block-search").value="";updateButtons();updateDnd();
   pickerStatus("Loading accounts…");
   try{
    const snap=await getDocs(query(collection(db,"profiles"),limit(200)));
    if(!me)return;
    people=snap.docs.filter(d=>d.id!==me.uid).map(d=>({uid:d.id,...d.data()}))
     .sort((a,b)=>displayName(a).localeCompare(displayName(b)));
-   drawPeople();pickerStatus("Choose friends, then select audio or video.");
+   drawPeople();drawBlockList();pickerStatus("Choose friends, then select audio or video.");
   }catch(e){pickerStatus("Could not load accounts: "+e.message);}
  }
  launch.onclick=openPicker;$("gc-close").onclick=()=>show("gc-picker",false);
@@ -395,7 +455,7 @@ if(launch){
  function clearPrivacy(){
   if(stopSettings){stopSettings();stopSettings=null;}
   if(stopBlocks){stopBlocks();stopBlocks=null;}
-  dnd=false;blocked=new Set();
+  dnd=false;blocked=new Set();privacyReady=false;updateDnd();
  }
  onAuthStateChanged(auth,async user=>{
   clearInbox();clearPrivacy();
@@ -408,16 +468,17 @@ if(launch){
    myProfile=snap.data();launch.disabled=false;
    stopSettings=onSnapshot(doc(db,"callSettings",user.uid),s=>{
     dnd=s.exists()&&s.data().doNotDisturb===true;
+    privacyReady=true;updateDnd();
     if(dnd&&incoming)declineInvite(incoming.id);
     checkInvites();
-   },e=>console.warn("DND:",e));
+   },e=>{privacyReady=false;updateDnd();privacyStatus("Could not load Do Not Disturb: "+e.message);console.warn("DND:",e);});
    stopBlocks=onSnapshot(collection(db,"callBlocks",user.uid,"users"),snap=>{
     blocked=new Set(snap.docs.map(d=>d.id));
     if(incoming&&blocked.has(incoming.hostId))declineInvite(incoming.id);
     if(current){
      for(const uid of [...current.peers.keys()])if(blocked.has(uid))removePeer(current,uid);
     }
-    drawPeople();checkInvites();
+    drawPeople();drawBlockList();checkInvites();
    },e=>console.warn("Group call blocks:",e));
    listenInbox(user.uid);
   }catch(e){console.warn("Group calls sign-in:",e);}
