@@ -585,6 +585,86 @@ service cloud.firestore {
       }
     }
 
+
+    // Private text conversations. The member list is immutable; each message
+    // can only be read by listed participants. Do not use public Firestore
+    // reads or client-side hiding as a substitute for these rules.
+    function chatMember(chatId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/chats/$(chatId))
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
+    }
+
+    function chatUsersExist(members) {
+      return exists(/databases/$(database)/documents/profiles/$(members[0]))
+        && exists(/databases/$(database)/documents/profiles/$(members[1]))
+        && (members.size() < 3
+          || exists(/databases/$(database)/documents/profiles/$(members[2])))
+        && (members.size() < 4
+          || exists(/databases/$(database)/documents/profiles/$(members[3])));
+    }
+
+    match /chats/{chatId} {
+      allow get, list: if signedIn()
+        && request.auth.uid in resource.data.members;
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly([
+          'members','kind','title','createdBy','createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'members','kind','title','createdBy','createdAt'
+        ])
+        && request.resource.data.members is list
+        && request.resource.data.members.size() >= 2
+        && request.resource.data.members.size() <= 4
+        && request.resource.data.members[0] == request.auth.uid
+        && request.resource.data.members.toSet().size() ==
+          request.resource.data.members.size()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.kind in ['direct','group']
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 60
+        && (
+          (request.resource.data.kind == 'direct'
+            && request.resource.data.members.size() == 2
+            && chatId == 'dm_' +
+              (request.resource.data.members[0] < request.resource.data.members[1]
+                ? request.resource.data.members[0] + '_' + request.resource.data.members[1]
+                : request.resource.data.members[1] + '_' + request.resource.data.members[0]))
+          ||
+          (request.resource.data.kind == 'group'
+            && request.resource.data.members.size() >= 3
+            && request.resource.data.members.size() <= 4
+            && request.resource.data.title.size() >= 1
+            && chatId.matches('^group_[A-Za-z0-9_-]+
+      allow read: if true;
+      allow create, update: if isAdmin() && validGame();
+      allow delete: if isAdmin();
+    }
+  }
+}
+))
+        )
+        && chatUsersExist(request.resource.data.members);
+      allow update, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if chatMember(chatId);
+        allow create: if chatMember(chatId)
+          && request.resource.data.keys().hasOnly(['uid','text','createdAt'])
+          && request.resource.data.keys().hasAll(['uid','text','createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if chatMember(chatId)
+          && resource.data.uid == request.auth.uid;
+      }
+    }
+
     match /games/{gameId} {
       allow read: if true;
       allow create, update: if isAdmin() && validGame();
