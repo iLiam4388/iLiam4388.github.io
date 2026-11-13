@@ -50,3 +50,11 @@
 .im-toast{z-index:11000;position:fixed;bottom:18px;right:18px;width:min(360px,calc(100% - 36px));padding:14px 17px;background:#0b344e;color:white;border:2px solid cyan;border-radius:14px;box-shadow:0 4px 28px #000b;cursor:pointer;display:flex;flex-direction:column;gap:6px;text-align:left;font:14px Verdana,Arial,sans-serif}
 .im-toast span{font-size:12px;color:#c6f0f5;overflow-wrap:anywhere}
 @media(max-width:720px){#iliam-messages-ui .im-top .im-actions{gap:5px}#iliam-messages-ui .im-top .im-btn{padding:9px 7px;font-size:12px}#iliam-messages-ui .im-chat-head .im-btn{padding:8px;font-size:11px}#iliam-messages-ui .im-chat-head h3{flex-basis:100%}}
+
+/* Group membership manager, inside Edit group */
+#iliam-messages-ui #im-member-list{max-height:265px;margin-top:8px}
+#iliam-messages-ui #im-member-list .im-entry{justify-content:space-between}
+#iliam-messages-ui #im-member-list .im-entry span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}
+#iliam-messages-ui .im-member-flag{flex:none;color:#c0effc;font-size:12px}
+#iliam-messages-ui #im-member-list .im-entry:disabled{opacity:.68;cursor:default}
+#iliam-messages-ui #im-member-count{margin:8px 0 16px}
