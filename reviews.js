@@ -1,112 +1,217 @@
-import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
-import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import {getFirestore,doc,getDoc,collection,addDoc,deleteDoc,setDoc,onSnapshot,query,orderBy,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
-import {firebaseConfig} from './firebase-config.js';
+import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import {getFirestore,doc,getDoc,collection,addDoc,deleteDoc,setDoc,updateDoc,onSnapshot,query,orderBy,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {firebaseConfig} from "./firebase-config.js";
 
-const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app);
-const root=document.getElementById('iliam-reviews');
+const root=document.getElementById("iliam-reviews");
 if(root){
- const style=document.createElement('style');style.textContent=`
- #iliam-reviews [hidden]{display:none!important} #iliam-reviews{color:#171323;text-align:left}.review-controls{display:grid;gap:10px;margin:14px 0}.review-controls textarea{width:100%;min-height:90px;padding:12px;border-radius:12px;font:inherit}.review-controls button,.review-entry button{cursor:pointer;border:0;border-radius:10px;padding:9px 14px;background:#142c56;color:white;font:inherit}
- .review-controls button:disabled{opacity:.55;cursor:wait}.review-entry{padding:16px;margin:16px 0;border-radius:15px;background:#fff;color:#171323;box-shadow:0 2px 10px #0002;overflow-wrap:anywhere}
- .review-entry .review-entry{margin:12px 0 0 18px;background:#e9f3ff}.review-entry header{display:flex;gap:9px;flex-wrap:wrap;align-items:center;font-weight:bold}.review-entry time{font-weight:normal;font-size:12px;color:#555}.review-entry p{white-space:pre-wrap;line-height:1.5}.review-actions{display:flex;gap:7px;flex-wrap:wrap}.review-compose{display:flex;gap:8px;margin-top:10px}.review-compose input{flex:1;min-width:0;padding:9px;border-radius:10px;border:1px solid #aaa}.review-hint{font-size:13px}.review-score{font-size:22px}
- `;document.head.append(style);
- let user=null,profile=null,admin=false,stopReviews=null,stops=[];
- const heading=document.createElement('p');heading.className='review-hint';heading.textContent='Sign in with your iLiam Community account to leave a review, reply, or react.';
- const controls=document.createElement('div');controls.className='review-controls';
- const rating=document.createElement('select');rating.setAttribute('aria-label','Your rating');
- for(let n=5;n>=1;n--){const o=document.createElement('option');o.value=n;o.textContent='★'.repeat(n)+'☆'.repeat(5-n);rating.append(o)}
- const message=document.createElement('textarea');message.maxLength=1200;message.placeholder='What do you think of iLiam?';
- const submit=document.createElement('button');submit.textContent='Post review';
- const status=document.createElement('p');status.className='review-hint';
- controls.append(rating,message,submit,status);
- const login=document.createElement('a');login.href='community.html';login.textContent='Log in or create an iLiam account in Community';login.style.color='#071f90';
- const list=document.createElement('div');root.replaceChildren(heading,login,controls,list);
- function note(text){status.textContent=text}
- function stopAll(){stops.forEach(s=>s());stops=[]}
- function entry(data,id,parent=null){
-  const wrap=document.createElement('article');wrap.className='review-entry';
-  const head=document.createElement('header'),name=document.createElement('span'),date=document.createElement('time');
-  name.textContent=data.nickname||data.username||'iLiam user';
-  date.textContent=data.createdAt?.toDate?.().toLocaleString()||'recently';
-  head.append(name,date);
-  if(data.featured===true){const badge=document.createElement('span');badge.textContent='★ FEATURED';head.append(badge)}
-  const text=document.createElement('p');text.textContent=data.text||'';
-  const actions=document.createElement('div');actions.className='review-actions';
-  wrap.append(head,text,actions);
-  if(!parent){
-   const score=document.createElement('div');score.className='review-score';score.textContent='★'.repeat(data.rating||0)+'☆'.repeat(5-(data.rating||0));head.append(score);
+  const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app);
+  let user=null,profile=null,isAdmin=false,rating=5,stopReviews=null,childStops=[],authSerial=0;
+  const $=id=>root.querySelector("#"+id);
+  root.innerHTML=[
+    '<div class="review-compose-card">',
+    '<div class="review-compose-head"><h2 class="review-compose-title">Share your thoughts</h2><span id="review-identity" class="review-identity">Sign in to review</span></div>',
+    '<span class="review-rating-label">Your rating</span>',
+    '<div class="review-star-row" id="review-star-row" role="group" aria-label="Star rating"></div>',
+    '<textarea id="review-input" class="review-textarea" maxlength="1200" placeholder="What did you like? What could be better?"></textarea>',
+    '<div class="review-compose-foot"><span id="review-character" class="review-character">0 / 1200</span><button id="review-submit" class="review-primary" type="button">Post review</button></div>',
+    '<p id="review-status" class="review-state" role="status"></p>',
+    '<p id="review-login-hint" class="review-login-hint" hidden>Use the Sign in button above, or <a href="community.html">visit Community</a> to manage your account.</p>',
+    '</div>',
+    '<div class="review-list-header"><h2>What people are saying</h2><span id="review-total" class="review-total">Loading…</span></div>',
+    '<div id="review-list" aria-live="polite"><div class="review-empty">Loading reviews…</div></div>'
+  ].join("");
+  const input=$("review-input"),post=$("review-submit"),status=$("review-status"),list=$("review-list");
+  const ratingLabels=["","Terrible","Not great","Okay","Good","Excellent"];
+  const stars=[],ratingHint=document.createElement("span");
+  ratingHint.className="review-rating-desc";
+  for(let i=1;i<=5;i++){
+    const b=document.createElement("button");b.className="review-star";b.textContent="★";
+    b.type="button";b.setAttribute("aria-label","Rate "+i+" star"+(i===1?"":"s"));
+    b.onclick=()=>{rating=i;drawRating()};
+    $("review-star-row").append(b);stars.push(b);
   }
-  const reactionRow=document.createElement('div');reactionRow.className='review-actions';
-  for(const [label,emoji] of [['Like','👍'],['Love','❤️'],['Laugh','😂']]){
-   const b=document.createElement('button');b.type='button';b.textContent=emoji+' '+label;
-   b.disabled=!profile;
-   b.onclick=async()=>{
-    if(!profile)return;
-    b.disabled=true;
+  $("review-star-row").append(ratingHint);
+  function drawRating(){
+    for(let i=0;i<stars.length;i++){
+      stars[i].classList.toggle("selected",i<rating);
+      stars[i].setAttribute("aria-pressed",String(i+1===rating));
+    }
+    ratingHint.textContent=ratingLabels[rating];
+  }
+  drawRating();
+  input.oninput=()=>{$("review-character").textContent=input.value.length+" / 1200";};
+  function setStatus(message,error=false){status.textContent=message;status.classList.toggle("error",error);}
+  function drawAuth(){
+    const active=Boolean(profile);
+    input.disabled=!active;post.disabled=!active;
+    $("review-identity").textContent=active?"Posting as @"+profile.username:"iLiam account required";
+    $("review-login-hint").hidden=active;
+    input.placeholder=active?"Tell everyone what you think about iLiam…":"Sign in to your iLiam account to write a review.";
+  }
+  function stopChildren(){for(const fn of childStops)fn();childStops=[];}
+  function timeLabel(v){try{return v?.toDate?.().toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"} )||"Just now";}catch{return "Just now";}}
+  function element(tag,cls,text){
+    const el=document.createElement(tag);
+    if(cls)el.className=cls;
+    if(text!==undefined)el.textContent=String(text);
+    return el;
+  }
+  function userRow(data,showRating=false){
+    const row=element("div","review-user-row");
+    const initial=String(data.nickname||data.username||"U").trim().charAt(0).toUpperCase();
+    row.append(element("div","review-avatar",initial));
+    const details=element("div","review-user-details");
+    details.append(element("div","review-name",data.nickname||data.username||"iLiam user"));
+    const meta=element("div","review-meta",timeLabel(data.createdAt)+(data.username?" · @"+data.username:""));
+    details.append(meta);row.append(details);
+    if(showRating&&Number.isInteger(data.rating)){
+      row.append(element("span","review-stars-small","★".repeat(Math.max(0,Math.min(5,data.rating)))));
+    }
+    return row;
+  }
+  function showError(){
+    list.replaceChildren();
+    const box=element("div","review-error-box");
+    box.append(element("strong","", "Reviews aren't available right now."));
+    box.append(element("p","", "The website reached Firebase, but the database did not allow the review request. The updated Firestore rules still need to be published in Firebase."));
+    const retry=element("button","review-action","Try again");retry.type="button";retry.onclick=listenReviews;
+    box.append(retry);list.append(box);$("review-total").textContent="Unavailable";
+  }
+  function reactions(parent,reviewId,replyId){
+    // One reaction marker per emoji and account. Rules enforce ownership.
+    const tools=element("div","review-actions"),buttons=new Map();
+    const emojiMap={Like:"👍",Love:"❤️",Laugh:"😂"};
+    const reactionsPath=replyId?["reviews",reviewId,"replies",replyId,"reactions"]:["reviews",reviewId,"reactions"];
+    let mine=new Set();
+    for(const [name,emoji] of Object.entries(emojiMap)){
+      const b=element("button","review-action",emoji+" 0");
+      b.type="button";b.setAttribute("aria-label",name+" reaction");
+      b.disabled=!profile;buttons.set(name,b);tools.append(b);
+      b.onclick=async()=>{
+        if(!user||!profile){setStatus("Sign in to react.");return;}
+        b.disabled=true;
+        const marker=doc(db,...reactionsPath,user.uid+"_"+name);
+        try{
+          if(mine.has(name))await deleteDoc(marker);
+          else await setDoc(marker,{uid:user.uid,emoji,createdAt:serverTimestamp()});
+        }catch(err){setStatus("Could not update reaction: "+err.message,true);}
+        finally{b.disabled=false;}
+      };
+    }
+    childStops.push(onSnapshot(collection(db,...reactionsPath),snap=>{
+      mine=new Set();const counts={Like:0,Love:0,Laugh:0};
+      snap.forEach(d=>{
+        const x=d.data();
+        const key=Object.keys(emojiMap).find(k=>emojiMap[k]===x.emoji);
+        if(key){counts[key]++;if(x.uid===user?.uid)mine.add(key);}
+      });
+      for(const [name,b] of buttons){
+        b.textContent=emojiMap[name]+" "+counts[name];
+        b.classList.toggle("active",mine.has(name));
+        b.disabled=!profile;b.setAttribute("aria-pressed",String(mine.has(name)));
+      }
+    },err=>console.warn("Review reactions:",err.code)));
+    parent.append(tools);
+  }
+  function replyItem(data,id,reviewId){
+    const box=element("div","review-reply");
+    box.append(userRow(data),element("p","review-text",data.text||""));
+    const actions=element("div","review-actions");box.append(actions);
+    reactions(actions,reviewId,id);
+    if(user&&(isAdmin||data.uid===user.uid)){
+      const del=element("button","review-action danger","Delete reply");
+      del.onclick=async()=>{if(confirm("Delete this reply?"))try{await deleteDoc(doc(db,"reviews",reviewId,"replies",id));}catch(e){setStatus(e.message,true);}};
+      actions.append(del);
+    }
+    return box;
+  }
+  function reviewItem(data,id){
+    const box=element("article","review-item"+(data.featured?" featured":""));
+    box.append(userRow(data,true));
+    if(data.featured)box.append(element("div","review-featured","★ Featured review"));
+    box.append(element("p","review-text",data.text||""));
+    const tools=element("div","review-actions");
+    box.append(tools);reactions(tools,id,null);
+    const replyToggle=element("button","review-action","💬 Show replies");
+    replyToggle.type="button";tools.append(replyToggle);
+    if(isAdmin){
+      const feature=element("button","review-action",data.featured?"Unfeature":"Feature");
+      feature.onclick=async()=>{try{await updateDoc(doc(db,"reviews",id),{featured:!data.featured});}catch(e){setStatus(e.message,true)}};
+      tools.append(feature);
+    }
+    if(user&&(isAdmin||data.uid===user.uid)){
+      const del=element("button","review-action danger","Delete");
+      del.onclick=async()=>{if(confirm("Delete this review?"))try{await deleteDoc(doc(db,"reviews",id));}catch(e){setStatus(e.message,true)}};
+      tools.append(del);
+    }
+    const replyWrap=element("section","review-replies");replyWrap.hidden=true;
+    const replies=element("div","");
+    const form=element("form","review-reply-form");
+    const field=element("input","review-reply-input");field.maxLength=500;field.placeholder=profile?"Write a reply…":"Sign in to reply";field.disabled=!profile;
+    const submit=element("button","","Reply");submit.type="submit";submit.disabled=!profile;
+    form.append(field,submit);
+    form.onsubmit=async event=>{
+      event.preventDefault();const value=field.value.trim();if(!value||!user||!profile)return;
+      submit.disabled=true;
+      try{
+        await addDoc(collection(db,"reviews",id,"replies"),{uid:user.uid,username:profile.username,nickname:profile.nickname,text:value,createdAt:serverTimestamp()});
+        field.value="";
+      }catch(e){setStatus("Couldn't post reply: "+e.message,true);}
+      finally{submit.disabled=false;}
+    };
+    replyWrap.append(replies,form);box.append(replyWrap);
+    let stopReplies=null;
+    replyToggle.onclick=()=>{
+      replyWrap.hidden=!replyWrap.hidden;
+      replyToggle.textContent=replyWrap.hidden?"💬 Show replies":"💬 Hide replies";
+      if(!replyWrap.hidden&&!stopReplies){
+        replies.replaceChildren(element("p","review-meta","Loading replies…"));
+        stopReplies=onSnapshot(query(collection(db,"reviews",id,"replies"),orderBy("createdAt","asc")),snap=>{
+          // Remove nested reactions listeners associated with the old reply elements.
+          replies.replaceChildren(...snap.docs.map(d=>replyItem(d.data(),d.id,id)));
+          if(snap.empty)replies.textContent="No replies yet.";
+        },err=>replies.textContent="Replies unavailable: "+err.message);
+        childStops.push(()=>{if(stopReplies)stopReplies();});
+      }
+    };
+    return box;
+  }
+  function listenReviews(){
+    if(stopReviews){stopReviews();stopReviews=null;}
+    stopChildren();
+    $("review-total").textContent="Loading…";
+    list.replaceChildren(element("div","review-empty","Loading reviews…"));
+    stopReviews=onSnapshot(query(collection(db,"reviews"),orderBy("createdAt","desc"),limit(40)),snap=>{
+      stopChildren();list.replaceChildren();
+      $("review-total").textContent=snap.size+" review"+(snap.size===1?"":"s");
+      if(snap.empty){list.append(element("div","review-empty","No reviews yet. Be the first to share your thoughts!"));return;}
+      for(const d of snap.docs)list.append(reviewItem(d.data(),d.id));
+    },err=>{console.error("Reviews unavailable",err);showError();});
+  }
+  onAuthStateChanged(auth,async next=>{
+    const serial=++authSerial;
+    user=next;profile=null;isAdmin=false;
+    if(next){
+      try{
+        const [p,a]=await Promise.all([getDoc(doc(db,"profiles",next.uid)),getDoc(doc(db,"admins",next.uid))]);
+        if(serial!==authSerial)return;
+        profile=p.exists()?p.data():null;isAdmin=a.exists();
+      }catch(err){console.warn("Review profile lookup:",err);}
+    }
+    drawAuth();listenReviews();
+  });
+  post.onclick=async()=>{
+    const value=input.value.trim();
+    if(!profile){setStatus("Sign in first.");return;}
+    if(!value){setStatus("Write something before posting.");return;}
+    post.disabled=true;setStatus("Posting…");
     try{
-     const path=parent?['reviews',parent,'replies',id,'reactions',user.uid+'_'+label]:['reviews',id,'reactions',user.uid+'_'+label];
-     await setDoc(doc(db,...path),{uid:user.uid,emoji,createdAt:serverTimestamp()});
-    }catch(e){note(e.message)}finally{b.disabled=false}
-   };
-   reactionRow.append(b);
-  }
-  actions.append(reactionRow);
-  const reactionsRef=parent?collection(db,'reviews',parent,'replies',id,'reactions'):collection(db,'reviews',id,'reactions');
-  stops.push(onSnapshot(reactionsRef,snap=>{
-    const totals={Like:0,Love:0,Laugh:0};
-    const mine=new Set();
-    snap.forEach(d=>{
-      const r=d.data();
-      const name=r.emoji==='👍'?'Like':r.emoji==='❤️'?'Love':r.emoji==='😂'?'Laugh':null;
-      if(name)totals[name]++;
-      if(user&&r.uid===user.uid&&name)mine.add(name);
-    });
-    [...reactionRow.children].forEach((b,i)=>{
-      const label=['Like','Love','Laugh'][i];
-      b.textContent=['👍','❤️','😂'][i]+' '+totals[label];
-      b.disabled=!profile||mine.has(label);
-      b.title=mine.has(label)?'You already reacted':label;
-    });
-  },e=>console.warn('Review reactions unavailable:',e.code)));
-  if(user&&(admin||user.uid===data.uid)){
-   const del=document.createElement('button');del.textContent='Delete';del.onclick=async()=>{if(confirm('Delete this '+(parent?'reply':'review')+'?'))try{await deleteDoc(parent?doc(db,'reviews',parent,'replies',id):doc(db,'reviews',id));}catch(e){note(e.message)}};actions.append(del);
-  }
-  if(!parent){
-   const replySection=document.createElement('div');
-   const replyForm=document.createElement('div');replyForm.className='review-compose';
-   const input=document.createElement('input');input.maxLength=500;input.placeholder=profile?'Write a reply…':'Sign in to reply';input.disabled=!profile;
-   const send=document.createElement('button');send.textContent='Reply';send.disabled=!profile;
-   send.onclick=async()=>{
-    const val=input.value.trim();if(!val||!profile)return;
-    send.disabled=true;
-    try{await addDoc(collection(db,'reviews',id,'replies'),{uid:user.uid,username:profile.username,nickname:profile.nickname,text:val,createdAt:serverTimestamp()});input.value=''}catch(e){note(e.message)}finally{send.disabled=false}
-   };
-   replyForm.append(input,send);wrap.append(replyForm,replySection);
-   stops.push(onSnapshot(query(collection(db,'reviews',id,'replies'),orderBy('createdAt','asc')),snap=>{
-    replySection.replaceChildren(...snap.docs.map(d=>entry(d.data(),d.id,id)));
-   },e=>{replySection.textContent='Replies unavailable: '+e.message}));
-  }
-  return wrap;
- }
- function watchReviews(){
-  if(stopReviews)stopReviews();stopAll();
-  stopReviews=onSnapshot(query(collection(db,'reviews'),orderBy('createdAt','desc')),snap=>{
-   stopAll();
-   list.replaceChildren(...snap.docs.map(d=>entry(d.data(),d.id)));
-   if(snap.empty)list.textContent='No reviews yet. Be the first!';
-  },e=>list.textContent='Could not load reviews: '+e.message);
- }
- onAuthStateChanged(auth,async u=>{
-  user=u;profile=null;admin=false;
-  if(u)try{const [p,a]=await Promise.all([getDoc(doc(db,'profiles',u.uid)),getDoc(doc(db,'admins',u.uid))]);if(p.exists())profile=p.data();admin=a.exists()}catch(e){note(e.message)}
-  login.hidden=Boolean(profile);controls.hidden=!profile;
-  heading.textContent=profile?'Posting as '+(profile.nickname||profile.username):'Sign in with your iLiam Community account to review, reply, and react.';
-  watchReviews();
- });
- submit.onclick=async()=>{
-  const val=message.value.trim();if(!profile||!val)return note('Write a review first.');
-  submit.disabled=true;
-  try{await addDoc(collection(db,'reviews'),{uid:user.uid,username:profile.username,nickname:profile.nickname,text:val,rating:Number(rating.value),featured:false,createdAt:serverTimestamp()});message.value='';note('Review posted!')}catch(e){note(e.message)}finally{submit.disabled=false}
- };
+      await addDoc(collection(db,"reviews"),{uid:user.uid,username:profile.username,nickname:profile.nickname,text:value,rating,featured:false,createdAt:serverTimestamp()});
+      input.value="";input.dispatchEvent(new Event("input"));setStatus("Your review was posted!");
+    }catch(err){setStatus("Couldn't post review: "+err.message,true);}
+    finally{post.disabled=!profile;}
+  };
+  drawAuth();
+  listenReviews();
 }
