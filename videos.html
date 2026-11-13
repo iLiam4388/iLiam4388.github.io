@@ -1,189 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Videos - iLiam</title>
 <link rel="icon" type="image/png" href="images/favicon.png">
-
-<style>
-body{
-  margin:0;
-  background:linear-gradient(to bottom,#001133,#000011);
-  font-family:Verdana,Arial,sans-serif;
-  color:white;
-  text-align:center;
-}
-
-.page-title{
-  font-size:64px;
-  font-weight:900;
-  letter-spacing:3px;
-  margin-top:40px;
-  text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan;
-}
-
-.back-btn{
-  display:inline-block;
-  margin:15px 0 35px;
-  padding:14px 34px;
-  border-radius:18px;
-  background:linear-gradient(to bottom,#59d7ff,#0077ff);
-  color:white;
-  text-decoration:none;
-  font-weight:bold;
-  font-size:20px;
-  box-shadow:0 0 10px cyan,0 0 25px #00aaff;
-}
-
-.divider{
-  height:4px;
-  background:cyan;
-  box-shadow:0 0 15px cyan;
-}
-
-.grid{
-  display:flex;
-  justify-content:center;
-  flex-wrap:wrap;
-  gap:24px;
-  padding:55px 25px;
-}
-
-.card{
-  width:360px;
-  background:linear-gradient(to bottom,#ff9cff,#d100ff);
-  border-radius:24px;
-  padding:22px;
-  border:3px solid white;
-  box-shadow:0 0 25px #ff66ff,0 0 50px #00ffff55;
-}
-
-.video-box{
-  position:relative;
-}
-
-video{
-  width:100%;
-  height:190px;
-  object-fit:cover;
-  border-radius:16px;
-  box-shadow:0 0 18px black;
-  background:black;
-}
-
-.file-name{
-  font-size:28px;
-  font-weight:900;
-  margin:20px 0 18px;
-  color:white;
-  text-shadow:0 0 8px white,0 0 18px #ffb3ff;
-}
-
-.download-btn{
-  display:inline-block;
-  padding:14px 30px;
-  border-radius:16px;
-  background:linear-gradient(to bottom,#66ff99,#00aa44);
-  color:white;
-  text-decoration:none;
-  font-weight:bold;
-  box-shadow:0 0 15px lime,0 0 30px cyan;
-}
-
-.footer{
-  padding:22px;
-  color:cyan;
-}
-</style>
+<link rel="stylesheet" href="gallery.css">
+<script src="gallery.js" defer></script>
 </head>
-
-<body>
-
+<body data-gallery="videos">
 <h1 class="page-title">VIDEOS</h1>
-
 <a class="back-btn" href="index.html">← BACK HOME</a>
-
 <div class="divider"></div>
-
-<div class="grid">
-  <div class="card" id="golden-sphere-card" hidden>
-    <div class="video-box">
-      <video src="videos/golden-sphere.mp4" controls preload="metadata"></video>
-    </div>
-
-    <div class="file-name">Golden Sphere Animation</div>
-
-    <a class="download-btn" href="videos/golden-sphere.mp4" download>
-      DOWNLOAD
-    </a>
-  </div>
-
-  <div class="card">
-    <div class="video-box">
-      <video src="videos/coke.mp4" controls></video>
-    </div>
-
-    <div class="file-name">PolyCoke Chaos</div>
-
-    <a class="download-btn" href="videos/coke.mp4" download>
-      DOWNLOAD
-    </a>
-  </div>
-
-<div class="card">
-    <div class="video-box">
-      <video src="videos/greenscreen.mp4" controls></video>
-    </div>
-
-    <div class="file-name">Green Screen</div>
-
-    <a class="download-btn" href="videos/greenscreen.mp4" download>
-      DOWNLOAD
-    </a>
-  </div>
-
-<div class="card">
-    <div class="video-box">
-      <video src="videos/cloth.mp4" controls></video>
-    </div>
-
-    <div class="file-name">Cloth Simuation</div>
-
-    <a class="download-btn" href="videos/cloth.mp4" download>
-      DOWNLOAD
-    </a>
-  </div>
-
-<div class="card">
-    <div class="video-box">
-      <video src="videos/jelly.mp4" controls></video>
-    </div>
-
-    <div class="file-name">Jelly</div>
-
-    <a class="download-btn" href="videos/jelly.mp4" download>
-      DOWNLOAD
-    </a>
-  </div>
-
-</div>
-
-<script>
-// Show the new video only once its MP4 has been uploaded.
-const sphereCard = document.getElementById('golden-sphere-card');
-const sphereVideo = sphereCard.querySelector('video');
-sphereVideo.addEventListener('loadedmetadata', () => {
-  sphereCard.hidden = false;
-});
-sphereVideo.addEventListener('error', () => {
-  sphereCard.hidden = true;
-});
-sphereVideo.preload = 'metadata';
-sphereVideo.load();
-</script>
-
+<main>
+<div id="gallery" class="grid" aria-label="VIDEOS gallery"></div>
+<p id="gallery-status" class="status" role="status">Loading videos...</p>
+</main>
 <div class="divider"></div>
-
 <div class="footer">© 2026 iLiam</div>
-
 </body>
 </html>
