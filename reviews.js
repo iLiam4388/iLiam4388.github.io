@@ -10,7 +10,7 @@ if(root){
   const $=id=>root.querySelector("#"+id);
   root.innerHTML=[
     '<div class="review-compose-card">',
-    '<div class="review-compose-head"><h2 class="review-compose-title">Share your thoughts</h2><span id="review-identity" class="review-identity">Sign in to review</span></div>',
+    '<div class="review-compose-head"><div class="review-compose-profile"><img id="review-my-avatar" class="review-avatar" alt="Your profile picture"><span id="review-identity" class="review-identity">Sign in to review</span></div><h2 class="review-compose-title">Leave a review</h2></div>',
     '<span class="review-rating-label">Your rating</span>',
     '<div class="review-star-row" id="review-star-row" role="group" aria-label="Star rating"></div>',
     '<textarea id="review-input" class="review-textarea" maxlength="1200" placeholder="What did you like? What could be better?"></textarea>',
@@ -18,7 +18,7 @@ if(root){
     '<p id="review-status" class="review-state" role="status"></p>',
     '<p id="review-login-hint" class="review-login-hint" hidden>Use the Sign in button above, or <a href="community.html">visit Community</a> to manage your account.</p>',
     '</div>',
-    '<div class="review-list-header"><h2>What people are saying</h2><span id="review-total" class="review-total">Loading…</span></div>',
+    '<div class="review-list-header"><h2>Recent reviews</h2><span id="review-total" class="review-total">Loading…</span></div>',
     '<div id="review-list" aria-live="polite"><div class="review-empty">Loading reviews…</div></div>'
   ].join("");
   const input=$("review-input"),post=$("review-submit"),status=$("review-status"),list=$("review-list");
@@ -45,7 +45,10 @@ if(root){
   function drawAuth(){
     const active=Boolean(profile);
     input.disabled=!active;post.disabled=!active;
-    $("review-identity").textContent=active?"Posting as @"+profile.username:"iLiam account required";
+    $("review-identity").textContent=active?(profile.nickname||profile.username)+" · @"+profile.username:"iLiam account required";
+    const mine=$("review-my-avatar");
+    mine.hidden=!active;
+    if(active){setPhoto(mine,photoCache.get(user?.uid)||profile);mine.dataset.reviewUid=user.uid;watchPhoto(user.uid);}
     $("review-login-hint").hidden=active;
     input.placeholder=active?"Tell everyone what you think about iLiam…":"Sign in to your iLiam account to write a review.";
   }
@@ -57,14 +60,65 @@ if(root){
     if(text!==undefined)el.textContent=String(text);
     return el;
   }
+  // Keep profile photos in sync with the same profiles/{uid}.photoURL used by Community.
+  // For signed-out visitors, show a letter avatar because profiles are private.
+  const photoCache=new Map(),photoListeners=new Map();
+  function avatarFallback(value){
+    const letter=Array.from(String(value?.nickname||value?.username||"U"))[0]?.toUpperCase()||"U";
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="90" height="90"><rect width="100%" height="100%" rx="45" fill="#102b52"/><text x="50%" y="56%" fill="white" font-size="38" font-family="Verdana,Arial" font-weight="bold" text-anchor="middle" dominant-baseline="central">'+letter.replace(/[<&>"']/g,"")+'</text></svg>';
+    return "data:image/svg+xml;charset=UTF-8,"+encodeURIComponent(svg);
+  }
+  function photoSource(value){
+    try{const u=new URL(String(value?.photoURL||""));return ["https:","http:"].includes(u.protocol)?u.href:null;}
+    catch{return null;}
+  }
+  function setPhoto(img,value){
+    const fallback=avatarFallback(value);
+    img.dataset.fallback=fallback;
+    const url=photoSource(value)||fallback;
+    if(img.getAttribute("src")!==url)img.src=url;
+  }
+  function watchPhoto(uid){
+    if(!user||!uid||photoListeners.has(uid))return;
+    const unsub=onSnapshot(doc(db,"profiles",uid),snap=>{
+      const fresh=snap.exists()?snap.data():null;
+      photoCache.set(uid,fresh);
+      root.querySelectorAll("img.review-avatar[data-review-uid]").forEach(img=>{
+        if(img.dataset.reviewUid===uid)setPhoto(img,fresh||{nickname:img.dataset.fallbackName});
+      });
+      if(uid===user?.uid&&fresh){
+        profile=fresh;
+        drawAuth();
+      }
+    },err=>console.warn("Could not load review profile picture:",err.code));
+    photoListeners.set(uid,unsub);
+  }
+  function clearPhotos(){
+    for(const stop of photoListeners.values())stop();
+    photoListeners.clear();photoCache.clear();
+  }
+  function makeAvatar(data){
+    const img=element("img","review-avatar");
+    img.alt=(data.nickname||data.username||"User")+"'s profile picture";
+    img.referrerPolicy="no-referrer";
+    img.loading="lazy";
+    img.dataset.fallbackName=data.nickname||data.username||"User";
+    if(data.uid)img.dataset.reviewUid=data.uid;
+    img.addEventListener("error",()=>{
+      if(img.src!==img.dataset.fallback)img.src=img.dataset.fallback;
+    });
+    const p=(data.uid&&photoCache.get(data.uid))||(data.uid===user?.uid&&profile)||data;
+    setPhoto(img,p);
+    if(data.uid)watchPhoto(data.uid);
+    return img;
+  }
   function userRow(data,showRating=false){
     const row=element("div","review-user-row");
-    const initial=String(data.nickname||data.username||"U").trim().charAt(0).toUpperCase();
-    row.append(element("div","review-avatar",initial));
+    row.append(makeAvatar(data));
     const details=element("div","review-user-details");
     details.append(element("div","review-name",data.nickname||data.username||"iLiam user"));
-    const meta=element("div","review-meta",timeLabel(data.createdAt)+(data.username?" · @"+data.username:""));
-    details.append(meta);row.append(details);
+    details.append(element("div","review-meta",timeLabel(data.createdAt)+(data.username?" · @"+data.username:"")));
+    row.append(details);
     if(showRating&&Number.isInteger(data.rating)){
       row.append(element("span","review-stars-small","★".repeat(Math.max(0,Math.min(5,data.rating)))));
     }
@@ -79,40 +133,34 @@ if(root){
     box.append(retry);list.append(box);$("review-total").textContent="Unavailable";
   }
   function reactions(parent,reviewId,replyId){
-    // One reaction marker per emoji and account. Rules enforce ownership.
-    const tools=element("div","review-actions"),buttons=new Map();
-    const emojiMap={Like:"👍",Love:"❤️",Laugh:"😂"};
-    const reactionsPath=replyId?["reviews",reviewId,"replies",replyId,"reactions"]:["reviews",reviewId,"reactions"];
-    let mine=new Set();
-    for(const [name,emoji] of Object.entries(emojiMap)){
-      const b=element("button","review-action",emoji+" 0");
-      b.type="button";b.setAttribute("aria-label",name+" reaction");
-      b.disabled=!profile;buttons.set(name,b);tools.append(b);
-      b.onclick=async()=>{
-        if(!user||!profile){setStatus("Sign in to react.");return;}
-        b.disabled=true;
-        const marker=doc(db,...reactionsPath,user.uid+"_"+name);
-        try{
-          if(mine.has(name))await deleteDoc(marker);
-          else await setDoc(marker,{uid:user.uid,emoji,createdAt:serverTimestamp()});
-        }catch(err){setStatus("Could not update reaction: "+err.message,true);}
-        finally{b.disabled=false;}
-      };
-    }
-    childStops.push(onSnapshot(collection(db,...reactionsPath),snap=>{
-      mine=new Set();const counts={Like:0,Love:0,Laugh:0};
+    // Like only, matching the simple Community post actions.
+    const row=element("div","review-actions");
+    const like=element("button","review-action","👍 Like");
+    like.type="button";like.disabled=!profile;
+    row.append(like);parent.append(row);
+    const path=replyId?["reviews",reviewId,"replies",replyId,"reactions"]:["reviews",reviewId,"reactions"];
+    let liked=false,count=0;
+    like.onclick=async()=>{
+      if(!user||!profile){setStatus("Sign in to like a review.");return;}
+      like.disabled=true;
+      const ref=doc(db,...path,user.uid+"_Like");
+      try{
+        if(liked)await deleteDoc(ref);
+        else await setDoc(ref,{uid:user.uid,emoji:"👍",createdAt:serverTimestamp()});
+      }catch(err){setStatus("Could not update like: "+err.message,true);}
+      finally{like.disabled=!profile;}
+    };
+    childStops.push(onSnapshot(collection(db,...path),snap=>{
+      count=0;liked=false;
       snap.forEach(d=>{
         const x=d.data();
-        const key=Object.keys(emojiMap).find(k=>emojiMap[k]===x.emoji);
-        if(key){counts[key]++;if(x.uid===user?.uid)mine.add(key);}
+        if(x.emoji==="👍"){count++;if(x.uid===user?.uid)liked=true;}
       });
-      for(const [name,b] of buttons){
-        b.textContent=emojiMap[name]+" "+counts[name];
-        b.classList.toggle("active",mine.has(name));
-        b.disabled=!profile;b.setAttribute("aria-pressed",String(mine.has(name)));
-      }
-    },err=>console.warn("Review reactions:",err.code)));
-    parent.append(tools);
+      like.textContent="👍 "+(count?count:"Like");
+      like.classList.toggle("active",liked);
+      like.setAttribute("aria-pressed",String(liked));
+      like.disabled=!profile;
+    },err=>console.warn("Review likes unavailable:",err.code)));
   }
   function replyItem(data,id,reviewId){
     const box=element("div","review-reply");
@@ -191,6 +239,7 @@ if(root){
   }
   onAuthStateChanged(auth,async next=>{
     const serial=++authSerial;
+    clearPhotos();
     user=next;profile=null;isAdmin=false;
     if(next){
       try{
