@@ -236,14 +236,17 @@ service cloud.firestore {
       allow create, update: if false;
     }
 
-    // Reviews are public to read; only signed-in iLiam profile owners can post.
-    // Reactions have one immutable marker per user per emoji.
+    // Reviews are publicly visible. Only a signed-in iLiam profile can write.
     function validReview() {
       return hasProfile()
-        && request.resource.data.keys().hasOnly(['uid','username','nickname','text','rating','featured','createdAt'])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'username', 'nickname', 'text', 'rating', 'featured', 'createdAt'
+        ])
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.username == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
+        && request.resource.data.username ==
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
         && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() > 0
         && request.resource.data.nickname.size() <= 24
         && request.resource.data.text is string
         && request.resource.data.text.size() >= 1
@@ -254,101 +257,71 @@ service cloud.firestore {
         && request.resource.data.featured == false
         && request.resource.data.createdAt == request.time;
     }
+
     function validReply() {
       return hasProfile()
-        && request.resource.data.keys().hasOnly(['uid','username','nickname','text','createdAt'])
+        && request.resource.data.keys().hasOnly([
+          'uid', 'username', 'nickname', 'text', 'createdAt'
+        ])
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.username == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
+        && request.resource.data.username ==
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
         && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() > 0
         && request.resource.data.nickname.size() <= 24
         && request.resource.data.text is string
         && request.resource.data.text.size() >= 1
         && request.resource.data.text.size() <= 500
         && request.resource.data.createdAt == request.time;
     }
-    function validReaction(emoji) {
+
+    function validReaction(reactionId) {
       return hasProfile()
-        && request.resource.data.keys().hasOnly(['uid','emoji','createdAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'emoji', 'createdAt'])
         && request.resource.data.uid == request.auth.uid
-        && emoji in ['👍','❤️','😂']
-        && request.resource.data.emoji == emoji
+        && (
+          (reactionId == request.auth.uid + '_Like' && request.resource.data.emoji == '👍') ||
+          (reactionId == request.auth.uid + '_Love' && request.resource.data.emoji == '❤️') ||
+          (reactionId == request.auth.uid + '_Laugh' && request.resource.data.emoji == '😂')
+        )
         && request.resource.data.createdAt == request.time;
     }
+
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if validReview();
       allow update: if isAdmin();
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      match /replies/{replyId} {
-        allow read: if true;
-        allow create: if exists(/databases/$(database)/documents/reviews/$(reviewId)) && validReply();
-        allow update: if isAdmin();
-        allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-        match /reactions/{reactionId} {
-          allow read: if true;
-          allow create: if signedIn()
-            && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
-      allow read: if true;
 
-      // Games can only be changed by genuine Firebase admins.
-      allow create, update: if isAdmin() && validGame();
-      allow delete: if isAdmin();
-    }
-  }
-}
-)
-            && validReaction(request.resource.data.emoji);
-          allow update: if false;
-          allow delete: if isAdmin() || (signedIn() && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
-      allow read: if true;
-
-      // Kept compatible with the existing games page. A password embedded
-      // in a static page cannot be securely enforced by Firestore Rules.
-      allow create, update: if validGame();
-      allow delete: if true;
-    }
-  }
-}
-));
-        }
-      }
       match /reactions/{reactionId} {
         allow read: if true;
-        allow create: if signedIn()
-          && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
-      allow read: if true;
-
-      // Kept compatible with the existing games page. A password embedded
-      // in a static page cannot be securely enforced by Firestore Rules.
-      allow create, update: if validGame();
-      allow delete: if true;
-    }
-  }
-}
-)
-          && validReaction(request.resource.data.emoji);
+        allow create: if validReaction(reactionId);
         allow update: if false;
-        allow delete: if isAdmin() || (signedIn() && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
-      allow read: if true;
+        allow delete: if isAdmin() ||
+          (signedIn() && resource.data.uid == request.auth.uid);
+      }
 
-      // Kept compatible with the existing games page. A password embedded
-      // in a static page cannot be securely enforced by Firestore Rules.
-      allow create, update: if validGame();
-      allow delete: if true;
-    }
-  }
-}
-));
+      match /replies/{replyId} {
+        allow read: if true;
+        allow create: if exists(/databases/$(database)/documents/reviews/$(reviewId))
+          && validReply();
+        allow update: if isAdmin();
+        allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+
+        match /reactions/{reactionId} {
+          allow read: if true;
+          allow create: if validReaction(reactionId);
+          allow update: if false;
+          allow delete: if isAdmin() ||
+            (signedIn() && resource.data.uid == request.auth.uid);
+        }
       }
     }
 
     match /games/{gameId} {
       allow read: if true;
-
-      // Kept compatible with the existing games page. A password embedded
-      // in a static page cannot be securely enforced by Firestore Rules.
-      allow create, update: if validGame();
-      allow delete: if true;
+      allow create, update: if isAdmin() && validGame();
+      allow delete: if isAdmin();
     }
   }
 }
