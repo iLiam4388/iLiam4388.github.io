@@ -522,7 +522,12 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time
           && (
             (resource.data.status == 'ringing'
-              && request.resource.data.status in ['accepted','declined'])
+              && (
+                request.resource.data.status == 'declined'
+                || (request.resource.data.status == 'accepted'
+                  && canReceiveCall(uid,
+                    get(/databases/$(database)/documents/groupCalls/$(roomId)).data.hostId))
+              ))
             ||
             (resource.data.status == 'accepted'
               && request.resource.data.status == 'left')
@@ -562,7 +567,8 @@ service cloud.firestore {
             && request.auth.uid == get(/databases/$(database)/documents/groupCalls/$(roomId)/connections/$(connectionId)).data.a
             && request.resource.data.keys().hasOnly(['uid','candidate','sdpMid','sdpMLineIndex','usernameFragment'])
             && request.resource.data.uid == request.auth.uid
-            && request.resource.data.candidate is string;
+            && request.resource.data.candidate is string
+          && request.resource.data.candidate.size() <= 8192;
           allow update, delete: if false;
         }
         match /bCandidates/{candidateId} {
@@ -572,7 +578,8 @@ service cloud.firestore {
             && request.auth.uid == get(/databases/$(database)/documents/groupCalls/$(roomId)/connections/$(connectionId)).data.b
             && request.resource.data.keys().hasOnly(['uid','candidate','sdpMid','sdpMLineIndex','usernameFragment'])
             && request.resource.data.uid == request.auth.uid
-            && request.resource.data.candidate is string;
+            && request.resource.data.candidate is string
+          && request.resource.data.candidate.size() <= 8192;
           allow update, delete: if false;
         }
       }
