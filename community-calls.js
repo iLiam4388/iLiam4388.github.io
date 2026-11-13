@@ -19,10 +19,12 @@ if(launch){
   '<section class="call-backdrop" id="call-settings" hidden><div class="call-panel" role="dialog" aria-modal="true" aria-label="Call settings">',
   '<div class="call-row"><h2 class="call-title">Call privacy</h2><button class="call-btn" id="call-settings-close">✕ Close</button></div>',
   '<p class="call-subtitle">Your settings are saved to Firebase and follow your iLiam account on other devices.</p>',
-  '<label class="call-dnd-row"><span><strong>🌙 Do Not Disturb</strong><small>Stop new voice and video calls from ringing.</small></span><input id="call-dnd" type="checkbox" aria-label="Do Not Disturb"></label>',
-  '<h3 class="call-settings-heading">Blocked users</h3><p class="call-subtitle">People you block cannot call you, and you cannot call them until you unblock them.</p>',
+  '<div class="call-row"><h3 class="call-settings-heading">Blocked users</h3><button class="call-btn" id="call-edit-blocks" type="button">✎ Edit</button></div>',
+  '<p class="call-subtitle" id="call-block-summary">No blocked users.</p>',
+  '<div id="call-block-editor" hidden>',
   '<input id="call-block-search" class="call-input" type="search" placeholder="Search users to block or unblock" aria-label="Find accounts to block">',
-  '<div class="call-user-list" id="call-block-users"></div>',
+  '<div class="call-user-list" id="call-block-users"></div></div>',
+  '<div class="call-settings-bottom"><label class="call-dnd-row"><span><strong>🌙 Do Not Disturb</strong><small>Stop new voice and video calls from ringing.</small></span><input id="call-dnd" type="checkbox" aria-label="Do Not Disturb"></label></div>',
   '<p class="call-status" id="call-settings-status" role="status"></p></div></section>',
   '<section class="call-incoming" id="call-incoming" hidden><h2 class="call-title" id="call-incoming-heading">Incoming call</h2>',
   '<p id="call-incoming-name"></p><div class="call-actions"><button class="call-btn primary" id="call-accept">Accept</button>',
@@ -110,6 +112,8 @@ if(launch){
  async function openPrivacy(){
   if(!me||!profile)return alert("Sign in to Community first.");
   visible("call-settings",true);
+  $("call-block-editor").hidden=true;
+  $("call-edit-blocks").textContent="✎ Edit";
   $("call-block-search").value="";
   $("call-block-users").textContent="Loading users…";
   privacyStatus("");
@@ -122,6 +126,12 @@ if(launch){
   }catch(e){privacyStatus("Could not load accounts: "+e.message);}
  }
  if(settingsButton)settingsButton.onclick=openPrivacy;
+ $("call-edit-blocks").onclick=()=>{
+  const editor=$("call-block-editor"),open=editor.hidden;
+  editor.hidden=!open;
+  $("call-edit-blocks").textContent=open?"✓ Done":"✎ Edit";
+  if(open)$("call-block-search").focus();
+ };
  $("call-settings-close").onclick=()=>visible("call-settings",false);
  $("call-block-search").oninput=renderBlockUsers;
  $("call-dnd").onchange=async event=>{
@@ -150,6 +160,7 @@ if(launch){
   },e=>{privacyStatus("Could not read call settings: "+e.message);privacyReady=false;updateDndUi();});
   stopBlocks=onSnapshot(collection(db,"callBlocks",uid,"users"),snap=>{
    blockedIds=new Set(snap.docs.map(d=>d.id));
+   $("call-block-summary").textContent=blockedIds.size?blockedIds.size+" blocked account"+(blockedIds.size===1?"":"s")+". Select Edit to manage.":"No blocked accounts. Select Edit to add someone.";
    renderBlockUsers();drawPeople();
    if(incoming&&blockedIds.has(incoming.callerId)&&!session)declinePending(incoming.id);
   },e=>privacyStatus("Could not read blocked users: "+e.message));
