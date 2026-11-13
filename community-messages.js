@@ -152,17 +152,46 @@ if(launcher){
    }else{
     ref=doc(db,"chats","dm_"+[user.uid,guests[0].uid].sort().join("_"));
    }
-   const old=await getDoc(ref);
-   if(!old.exists())await setDoc(ref,{
-    members,kind:group?"group":"direct",title:group?title:"",
-    createdBy:user.uid,createdAt:serverTimestamp()
-   });
-   else if(!old.data().members.includes(user.uid))throw Error("You cannot open this chat.");
-   const c={id:ref.id,...(old.exists()?old.data():{members,kind:group?"group":"direct",title})};
+   // A missing chat cannot be read through the member-only get rule.
+   // Create it first; if the same DM already exists, safely read/reuse it.
+   const candidate={members,kind:group?"group":"direct",title:group?title:"",
+    createdBy:user.uid,createdAt:serverTimestamp()};
+   let existing=null;
+   if(!group){
+    try{
+     const snap=await getDoc(ref);
+     if(snap.exists())existing=snap.data();
+    }catch(err){
+     if(err.code!=="permission-denied")throw err;
+     // The missing document is unreadable until the caller creates it.
+    }
+   }
+   if(!existing){
+    try{
+     await setDoc(ref,candidate);
+    }catch(err){
+     // A simultaneous DM creation can race the write. Re-read only when
+     // another member has created the exact same conversation.
+     if(group)throw err;
+     const retry=await getDoc(ref);
+     if(!retry.exists())throw err;
+     existing=retry.data();
+    }
+   }
+   if(existing && (!Array.isArray(existing.members) ||
+      existing.members.length!==members.length ||
+      !members.every(uid=>existing.members.includes(uid))))
+    throw Error("The existing chat does not match these participants.");
+   const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title})};
    profiles.set(user.uid,profile);
    for(const p of guests)profiles.set(p.uid,p);
    display("im-new",false);await showConversation(c);
-  }catch(e){newStatus("Could not create chat: "+e.message);}
+  }catch(e){
+   const denied=e?.code==="permission-denied"||/insufficient permissions/i.test(e?.message||"");
+   newStatus(denied
+     ?"Firebase denied chat creation. Publish the latest Firestore rules from GitHub (the rules must include /chats and /messages)."
+     :"Could not create chat: "+e.message);
+  }
   finally{updatePicker();}
  }
  launcher.onclick=()=>{if(!profile)return alert("Sign in to Community first.");display("im-backdrop",true);};
@@ -207,7 +236,12 @@ if(launcher){
     await ensureProfiles([...new Set(chats.flatMap(c=>c.members))]);
     if(auth.currentUser?.uid!==u.uid)return;
     drawInbox();
-   },e=>$("im-conversations").textContent="Messages unavailable: "+e.message);
+   },e=>{
+    const denied=e?.code==="permission-denied";
+    $("im-conversations").textContent=denied
+      ?"Messages unavailable: Firestore rules for /chats need to be published in Firebase."
+      :"Messages unavailable: "+e.message;
+   });
   }catch(err){console.warn("Messages account:",err);}
  });
 }
