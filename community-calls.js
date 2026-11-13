@@ -55,6 +55,8 @@ if(launch){
   const kind=type==="video"?"camera and microphone":"microphone";
   const errorName=String(err?.name||"");
   const message=String(err?.message||"");
+  if(err?.code==="permission-denied"||/missing or insufficient permissions/i.test(message))
+   return "Call not allowed. The other person might have Do Not Disturb enabled or have blocked calls, or the latest Firebase rules may not be published yet.";
   if(["NotAllowedError","PermissionDeniedError","SecurityError"].includes(errorName)||/permission denied|permission blocked|not allowed/i.test(message))
    return "Access to your "+kind+" was blocked. Check your browser's site camera/microphone permissions and your device privacy settings. On iPhone/Android, allow camera access in the browser's site settings. On Windows, enable camera access for desktop apps.";
   if(errorName==="NotFoundError"||errorName==="DevicesNotFoundError")
@@ -91,9 +93,14 @@ if(launch){
     button.disabled=true;privacyStatus("Saving block list…");
     try{
      const ref=doc(db,"callBlocks",me.uid,"users",p.uid);
-     if(blockedIds.has(p.uid))await deleteDoc(ref);
-     else await setDoc(ref,{uid:p.uid,blockedAt:serverTimestamp()});
-     privacyStatus(blockedIds.has(p.uid)?"Updating block list…":"Saved.");
+     const wasBlocked=blockedIds.has(p.uid);
+     if(wasBlocked)await deleteDoc(ref);
+     else {
+      await setDoc(ref,{uid:p.uid,blockedAt:serverTimestamp()});
+      if(session?.peerUid===p.uid)await endCall();
+      if(incoming?.callerId===p.uid)await declinePending(incoming.id);
+     }
+     privacyStatus(wasBlocked?"User unblocked.":"User blocked.");
     }catch(e){privacyStatus("Could not update block list: "+e.message);button.disabled=false;}
    };
    row.append(img,textElement,button);list.append(row);
@@ -289,7 +296,7 @@ if(launch){
   try{
    media=await capture(type);
    const ref=doc(collection(db,"calls"));
-   const s={...media,ref,answerApplied:false};session=s;showCall(s,"Calling "+name(friend)+"…");
+   const s={...media,ref,peerUid:friend.uid,answerApplied:false};session=s;showCall(s,"Calling "+name(friend)+"…");
    const queue=[];let published=false;
    media.pc.onicecandidate=e=>{
     if(!e.candidate||session!==s)return;
@@ -334,7 +341,7 @@ if(launch){
    const ref=doc(db,"calls",invite.id),snap=await getDoc(ref);
    if(!snap.exists()||snap.data().status!=="ringing")throw Error("Call is no longer available.");
    media=await capture(invite.type);
-   const s={...media,ref};session=s;incoming=null;showCall(s,invite.callerName||"iLiam Call");
+   const s={...media,ref,peerUid:invite.callerId};session=s;incoming=null;showCall(s,invite.callerName||"iLiam Call");
    const queue=[];let published=false;
    media.pc.onicecandidate=e=>{
     if(!e.candidate||session!==s)return;
