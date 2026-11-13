@@ -36,6 +36,11 @@ if(launcher){
  '<label for="im-edit-image">Group picture</label><input id="im-edit-image" type="file" accept="image/*" class="im-search">',
  '<img id="im-group-preview" class="im-group-preview" alt="Group picture preview" hidden>',
  '<p class="im-hint">Choose an image from your device. It will be resized and stored in the group chat; your personal profile picture is unchanged.</p>',
+ '<h4>Group members</h4>',
+ '<p class="im-hint" id="im-members-hint">Only the group creator can add or remove members (2–4 members total). New members can see previous group messages.</p>',
+ '<input id="im-member-search" class="im-search" type="search" placeholder="Search people to add" aria-label="Search group members">',
+ '<div id="im-member-list" class="im-people"></div>',
+ '<p id="im-member-count" class="im-hint">Loading members…</p>',
  '<div class="im-actions"><button class="im-btn primary" id="im-save-group">Save changes</button><button class="im-btn" id="im-remove-group-photo">Remove picture</button></div>',
  '<p class="im-status" id="im-group-status" role="status"></p></div></section>',
  '<section class="im-modal" id="im-settings" hidden><div class="im-panel" role="dialog" aria-modal="true" aria-label="Message settings">',
@@ -53,7 +58,7 @@ if(launcher){
  let hiddenChats=new Set(),messageBlocks=new Set(),messageDnd=false;
  let stopHidden=null,stopBlocked=null,stopMessageDnd=null;
  let inboxWatchers=new Map(),seenMessageIds=new Map();
- let pendingGroupImage=undefined;
+ let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
  launcher.disabled=true;
  const label=p=>p?.nickname||p?.username||"iLiam user";
  const time=t=>t?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
@@ -187,6 +192,63 @@ if(launcher){
    image.src=url;
   });
  }
+ function drawGroupMembers(){
+  if(!current||current.kind!=="group")return;
+  const area=$("im-member-list"),term=$("im-member-search").value.trim().toLowerCase();
+  const creator=current.createdBy;
+  const allowedToEdit=user?.uid===creator;
+  $("im-member-search").disabled=!allowedToEdit;
+  $("im-members-hint").textContent=allowedToEdit
+   ?"Choose the people in your group (2–4 members total). New members can read earlier group messages. The creator cannot be removed."
+   :"Only the person who created this group can change its members.";
+  area.replaceChildren();
+  const options=groupMemberCandidates
+   .filter(p=>pendingGroupMembers.has(p.uid)||(label(p)+" "+p.username).toLowerCase().includes(term))
+   .sort((a,b)=>Number(pendingGroupMembers.has(b.uid))-Number(pendingGroupMembers.has(a.uid))||label(a).localeCompare(label(b)));
+  for(const p of options.slice(0,120)){
+   const chosen=pendingGroupMembers.has(p.uid);
+   const row=document.createElement("button");row.type="button";
+   row.className="im-entry"+(chosen?" selected":"");
+   row.setAttribute("aria-pressed",String(chosen));
+   const title=document.createElement("span");title.textContent=(chosen?"☑ ":"☐ ")+label(p)+" @"+p.username;
+   const flag=document.createElement("span");flag.className="im-member-flag";
+   flag.textContent=p.uid===creator?"Creator":chosen?"Member":"+ Add";
+   row.append(title,flag);
+   row.disabled=!allowedToEdit||p.uid===creator;
+   row.onclick=()=>{
+    if(pendingGroupMembers.has(p.uid)){
+     if(pendingGroupMembers.size<=2)return $("im-group-status").textContent="A group must have at least two members.";
+     pendingGroupMembers.delete(p.uid);
+    }else{
+     if(pendingGroupMembers.size>=4)return $("im-group-status").textContent="Groups can have no more than four people.";
+     pendingGroupMembers.add(p.uid);
+    }
+    $("im-group-status").textContent="";
+    drawGroupMembers();
+   };
+   area.append(row);
+  }
+  if(!area.children.length)area.textContent="No matching accounts.";
+  $("im-member-count").textContent=pendingGroupMembers.size+" of 4 group members selected.";
+ }
+ async function loadGroupMembers(){
+  if(!current||current.kind!=="group"||!user)return;
+  const c=current;
+  pendingGroupMembers=new Set(c.members);
+  $("im-member-list").textContent="Loading iLiam accounts…";
+  $("im-member-search").value="";
+  try{
+   const snap=await getDocs(query(collection(db,"profiles"),limit(200)));
+   if(current?.id!==c.id)return;
+   groupMemberCandidates=snap.docs.map(d=>({uid:d.id,...d.data()}));
+   await ensureProfiles(c.members);
+   const known=new Set(groupMemberCandidates.map(p=>p.uid));
+   for(const uid of c.members)if(!known.has(uid))
+    groupMemberCandidates.push({uid,...profileOf(uid),username:profileOf(uid).username||"unknown"});
+   drawGroupMembers();
+  }catch(e){$("im-group-status").textContent="Could not load members: "+e.message;}
+ }
+ $("im-member-search").oninput=drawGroupMembers;
  async function saveGroup(){
   if(!current||current.kind!=="group"||!user)return;
   const c=current,title=$("im-edit-title").value.trim();
@@ -195,6 +257,16 @@ if(launcher){
   try{
    const data={title};
    if(pendingGroupImage!==undefined)data.imageUrl=pendingGroupImage;
+   const changedMembers=c.members.length!==pendingGroupMembers.size ||
+     c.members.some(uid=>!pendingGroupMembers.has(uid));
+   if(changedMembers){
+    if(user.uid!==c.createdBy)throw Error("Only the group creator can edit members.");
+    if(pendingGroupMembers.size<2||pendingGroupMembers.size>4)throw Error("A group needs 2–4 members.");
+    if(!pendingGroupMembers.has(c.createdBy))throw Error("You cannot remove the group creator.");
+    if(!confirm("Save updated group members? New members will be able to read earlier messages in this group."))return;
+    // Keep the creator first and preserve other member order.
+    data.members=[c.createdBy,...[...pendingGroupMembers].filter(uid=>uid!==c.createdBy)];
+   }
    await updateDoc(doc(db,"chats",c.id),data);
    Object.assign(c,data);
    updateConversationControls();drawInbox();
@@ -229,6 +301,7 @@ if(launcher){
   if(current.imageUrl)preview.src=current.imageUrl;
   $("im-group-status").textContent="";
   display("im-group-edit",true);
+  loadGroupMembers();
  };
  $("im-group-close").onclick=()=>display("im-group-edit",false);
  $("im-edit-image").onchange=async e=>{
@@ -468,7 +541,14 @@ if(launcher){
     if(auth.currentUser?.uid!==u.uid)return;
     if(current){
      const updated=chats.find(c=>c.id===current.id);
-     if(updated){current=updated;updateConversationControls();}
+     if(updated){
+      const membershipChanged=updated.members.join("|")!==current.members.join("|");
+      current=updated;updateConversationControls();
+      if(membershipChanged){
+       ensureProfiles(updated.members).then(()=>{if(current?.id===updated.id)updateConversationControls();drawInbox();});
+       if(!$("im-group-edit").hidden)loadGroupMembers();
+      }
+     }else resetCurrent(); // Removed members lose access immediately.
     }
     drawInbox();watchMessageNotices();
    },e=>{
