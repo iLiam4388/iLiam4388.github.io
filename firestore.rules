@@ -628,10 +628,48 @@ service cloud.firestore {
         && (
           (request.resource.data.kind == 'direct'
             && request.resource.data.members.size() == 2
-            && chatId == 'dm_' +
-              (request.resource.data.members[0] < request.resource.data.members[1]
-                ? request.resource.data.members[0] + '_' + request.resource.data.members[1]
-                : request.resource.data.members[1] + '_' + request.resource.data.members[0]))
+            && chatId.matches('^dm_[A-Za-z0-9_-]+
+          ||
+          (request.resource.data.kind == 'group'
+            && request.resource.data.members.size() >= 3
+            && request.resource.data.members.size() <= 4
+            && request.resource.data.title.size() >= 1
+            && chatId.matches('^group_[A-Za-z0-9_-]+
+      allow read: if true;
+      allow create, update: if isAdmin() && validGame();
+      allow delete: if isAdmin();
+    }
+  }
+}
+))
+        )
+        && chatUsersExist(request.resource.data.members);
+      allow update, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if chatMember(chatId);
+        allow create: if chatMember(chatId)
+          && request.resource.data.keys().hasOnly(['uid','text','createdAt'])
+          && request.resource.data.keys().hasAll(['uid','text','createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if chatMember(chatId)
+          && resource.data.uid == request.auth.uid;
+      }
+    }
+
+    match /games/{gameId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && validGame();
+      allow delete: if isAdmin();
+    }
+  }
+}
+))
           ||
           (request.resource.data.kind == 'group'
             && request.resource.data.members.size() >= 3
