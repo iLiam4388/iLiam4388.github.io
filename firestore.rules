@@ -458,6 +458,126 @@ service cloud.firestore {
       }
     }
 
+
+    // Temporary group calls (2-4 accounts total). The host invites each
+    // person separately so DND/block checks apply to every invitation.
+    function groupMember(roomId, uid) {
+      return exists(/databases/$(database)/documents/groupCalls/$(roomId)/members/$(uid))
+        && get(/databases/$(database)/documents/groupCalls/$(roomId)/members/$(uid)).data.status == 'accepted';
+    }
+    function groupParticipant(roomId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/groupCalls/$(roomId))
+        && request.auth.uid in get(/databases/$(database)/documents/groupCalls/$(roomId)).data.participants;
+    }
+    function groupRoomOpen(roomId) {
+      return groupParticipant(roomId)
+        && get(/databases/$(database)/documents/groupCalls/$(roomId)).data.status == 'open';
+    }
+    match /groupCalls/{roomId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly(['hostId','hostName','participants','type','status','createdAt'])
+        && request.resource.data.keys().hasAll(['hostId','hostName','participants','type','status','createdAt'])
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.hostName ==
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.nickname
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() >= 2
+        && request.resource.data.participants.size() <= 4
+        && request.resource.data.participants[0] == request.auth.uid
+        && request.resource.data.participants.toSet().size() ==
+          request.resource.data.participants.size()
+        && request.resource.data.type in ['audio','video']
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && resource.data.hostId == request.auth.uid
+        && resource.data.status == 'open'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'ended';
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if groupParticipant(roomId);
+        allow create: if groupRoomOpen(roomId)
+          && uid in get(/databases/$(database)/documents/groupCalls/$(roomId)).data.participants
+          && request.resource.data.keys().hasOnly(['uid','status','updatedAt'])
+          && request.resource.data.keys().hasAll(['uid','status','updatedAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.updatedAt == request.time
+          && (
+            (uid == request.auth.uid
+              && uid == get(/databases/$(database)/documents/groupCalls/$(roomId)).data.hostId
+              && request.resource.data.status == 'accepted')
+            ||
+            (request.auth.uid == get(/databases/$(database)/documents/groupCalls/$(roomId)).data.hostId
+              && uid != request.auth.uid
+              && request.resource.data.status == 'ringing'
+              && exists(/databases/$(database)/documents/profiles/$(uid))
+              && canReceiveCall(uid, request.auth.uid))
+          );
+        allow update: if groupRoomOpen(roomId) && uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.updatedAt == request.time
+          && (
+            (resource.data.status == 'ringing'
+              && request.resource.data.status in ['accepted','declined'])
+            ||
+            (resource.data.status == 'accepted'
+              && request.resource.data.status == 'left')
+          );
+        allow delete: if false;
+      }
+
+      match /connections/{connectionId} {
+        allow read: if groupParticipant(roomId);
+        allow create: if groupRoomOpen(roomId)
+          && request.resource.data.keys().hasOnly(['a','b','offer','createdAt'])
+          && request.resource.data.keys().hasAll(['a','b','offer','createdAt'])
+          && request.resource.data.a == request.auth.uid
+          && request.resource.data.a is string
+          && request.resource.data.b is string
+          && request.resource.data.a != request.resource.data.b
+          && connectionId == request.resource.data.a + '__' + request.resource.data.b
+          && request.resource.data.b in get(/databases/$(database)/documents/groupCalls/$(roomId)).data.participants
+          && groupMember(roomId, request.resource.data.a)
+          && groupMember(roomId, request.resource.data.b)
+          && !exists(/databases/$(database)/documents/callBlocks/$(request.resource.data.a)/users/$(request.resource.data.b))
+          && !exists(/databases/$(database)/documents/callBlocks/$(request.resource.data.b)/users/$(request.resource.data.a))
+          && validCallOffer(request.resource.data.offer)
+          && request.resource.data.createdAt == request.time;
+        allow update: if groupRoomOpen(roomId)
+          && request.auth.uid == resource.data.b
+          && groupMember(roomId, resource.data.b)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answer'])
+          && !('answer' in resource.data)
+          && validCallAnswer(request.resource.data.answer);
+        allow delete: if false;
+
+        match /aCandidates/{candidateId} {
+          allow read: if groupParticipant(roomId);
+          allow create: if groupRoomOpen(roomId)
+            && exists(/databases/$(database)/documents/groupCalls/$(roomId)/connections/$(connectionId))
+            && request.auth.uid == get(/databases/$(database)/documents/groupCalls/$(roomId)/connections/$(connectionId)).data.a
+            && request.resource.data.keys().hasOnly(['uid','candidate','sdpMid','sdpMLineIndex','usernameFragment'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.candidate is string;
+          allow update, delete: if false;
+        }
+        match /bCandidates/{candidateId} {
+          allow read: if groupParticipant(roomId);
+          allow create: if groupRoomOpen(roomId)
+            && exists(/databases/$(database)/documents/groupCalls/$(roomId)/connections/$(connectionId))
+            && request.auth.uid == get(/databases/$(database)/documents/groupCalls/$(roomId)/connections/$(connectionId)).data.b
+            && request.resource.data.keys().hasOnly(['uid','candidate','sdpMid','sdpMLineIndex','usernameFragment'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.candidate is string;
+          allow update, delete: if false;
+        }
+      }
+    }
+
     match /games/{gameId} {
       allow read: if true;
       allow create, update: if isAdmin() && validGame();
