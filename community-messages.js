@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 // Messages is separate from Community posts and from the Calls screen.
@@ -11,10 +11,10 @@ if(launcher){
  const ui=document.createElement("div");ui.id="iliam-messages-ui";
  ui.innerHTML=[
  '<section class="im-backdrop" id="im-backdrop" hidden><div class="im-shell" role="dialog" aria-modal="true" aria-label="iLiam Messages">',
- '<header class="im-top"><h2>✉ iLiam Messages</h2><div class="im-actions"><button type="button" class="im-btn primary" id="im-add">＋ Add user</button><button type="button" class="im-btn" id="im-close">✕ Close</button></div></header>',
+ '<header class="im-top"><h2>✉ iLiam Messages</h2><div class="im-actions"><button type="button" class="im-btn primary" id="im-add">＋ Add user</button><button type="button" class="im-btn" id="im-settings-open">⚙ Settings</button><button type="button" class="im-btn" id="im-close">✕ Close</button></div></header>',
  '<div class="im-main"><aside class="im-sidebar"><div id="im-conversations" class="im-list"><p class="im-empty">Loading…</p></div></aside>',
  '<section class="im-chat"><header class="im-chat-head"><h3 id="im-title">Choose a conversation</h3>',
- '<div class="im-actions"><button type="button" class="im-btn" id="im-call" hidden>📞 Call</button></div></header>',
+ '<div class="im-actions"><button type="button" class="im-btn" id="im-edit-group" hidden>✎ Edit group</button><button type="button" class="im-btn danger" id="im-delete" hidden>🗑 Delete chat</button><button type="button" class="im-btn" id="im-call" hidden>📞 Call</button></div></header>',
  '<div id="im-call-menu" class="im-call-menu" hidden><button type="button" class="im-btn" id="im-voice">📞 Audio call</button>',
  '<button type="button" class="im-btn" id="im-video">📹 Video call</button></div>',
  '<div id="im-messages" class="im-bubbles"><p class="im-empty">Choose a chat or add someone.</p></div>',
@@ -29,11 +29,31 @@ if(launcher){
  '<input id="im-group-name" class="im-search" maxlength="60" placeholder="Group name (for group chats)" hidden>',
  '<div class="im-actions"><button class="im-btn primary" id="im-create" disabled>Create chat</button>',
  '<button class="im-btn" id="im-cancel">Cancel</button></div>',
- '<p class="im-status" id="im-new-status" role="status"></p></div></section>'
+ '<p class="im-status" id="im-new-status" role="status"></p></div></section>',
+ '<section class="im-modal" id="im-group-edit" hidden><div class="im-panel" role="dialog" aria-modal="true" aria-label="Edit group">',
+ '<div class="im-actions" style="justify-content:space-between"><h3>Edit group</h3><button class="im-btn" id="im-group-close">✕ Close</button></div>',
+ '<label for="im-edit-title">Group name</label><input id="im-edit-title" maxlength="60" class="im-search" placeholder="Group name">',
+ '<label for="im-edit-image">Group picture</label><input id="im-edit-image" type="file" accept="image/*" class="im-search">',
+ '<img id="im-group-preview" class="im-group-preview" alt="Group picture preview" hidden>',
+ '<p class="im-hint">Choose an image from your device. It will be resized and stored in the group chat; your personal profile picture is unchanged.</p>',
+ '<div class="im-actions"><button class="im-btn primary" id="im-save-group">Save changes</button><button class="im-btn" id="im-remove-group-photo">Remove picture</button></div>',
+ '<p class="im-status" id="im-group-status" role="status"></p></div></section>',
+ '<section class="im-modal" id="im-settings" hidden><div class="im-panel" role="dialog" aria-modal="true" aria-label="Message settings">',
+ '<div class="im-actions" style="justify-content:space-between"><h3>Message settings</h3><button class="im-btn" id="im-settings-close">✕ Close</button></div>',
+ '<button class="im-btn primary" id="im-enable-alerts">🔔 Enable browser notifications</button>',
+ '<p class="im-hint">Message and call notifications work while Community is open. The browser may require your permission.</p>',
+ '<h4>Blocked messages</h4><input id="im-block-search" class="im-search" type="search" placeholder="Search accounts to block">',
+ '<div id="im-block-users" class="im-people"></div>',
+ '<label class="im-dnd-row"><span>🌙 Do Not Disturb for messages</span><input id="im-dnd" type="checkbox"></label>',
+ '<p class="im-status" id="im-settings-status" role="status"></p></div></section>'
  ].join("");
  document.body.append(ui);
  const $=id=>ui.querySelector("#"+id),display=(id,yes)=>{$(id).hidden=!yes;};
  let user=null,profile=null,people=[],profiles=new Map(),picked=new Map(),chats=[],current=null,stopInbox=null,stopMessages=null;
+ let hiddenChats=new Set(),messageBlocks=new Set(),messageDnd=false;
+ let stopHidden=null,stopBlocked=null,stopMessageDnd=null;
+ let inboxWatchers=new Map(),seenMessageIds=new Map();
+ let pendingGroupImage=undefined;
  launcher.disabled=true;
  const label=p=>p?.nickname||p?.username||"iLiam user";
  const time=t=>t?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
