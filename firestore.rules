@@ -319,6 +319,38 @@ service cloud.firestore {
     }
 
 
+    // User-controlled call settings. Only the account owner can read/write.
+    match /callSettings/{uid} {
+      allow read: if isSelf(uid);
+      allow create, update: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['doNotDisturb','updatedAt'])
+        && request.resource.data.keys().hasAll(['doNotDisturb','updatedAt'])
+        && request.resource.data.doNotDisturb is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isSelf(uid);
+    }
+
+    // Private block list owned by the callee. A caller cannot read it,
+    // but the calls creation rule can enforce it server-side.
+    match /callBlocks/{ownerUid}/users/{blockedUid} {
+      allow read: if isSelf(ownerUid);
+      allow create: if isSelf(ownerUid)
+        && blockedUid != ownerUid
+        && request.resource.data.keys().hasOnly(['uid','blockedAt'])
+        && request.resource.data.keys().hasAll(['uid','blockedAt'])
+        && request.resource.data.uid == blockedUid
+        && request.resource.data.blockedAt == request.time
+        && exists(/databases/$(database)/documents/profiles/$(blockedUid));
+      allow delete: if isSelf(ownerUid);
+      allow update: if false;
+    }
+
+    function canReceiveCall(calleeUid, callerUid) {
+      return !exists(/databases/$(database)/documents/callBlocks/$(calleeUid)/users/$(callerUid))
+        && (!exists(/databases/$(database)/documents/callSettings/$(calleeUid))
+          || get(/databases/$(database)/documents/callSettings/$(calleeUid)).data.doNotDisturb == false);
+    }
+
     // Private one-to-one WebRTC signaling. Camera/microphone media never
     // goes into Firestore. A caller may invite a real iLiam profile.
     function callParticipant(callId) {
@@ -381,6 +413,7 @@ service cloud.firestore {
         && request.resource.data.calleeId is string
         && request.resource.data.calleeId != request.auth.uid
         && exists(/databases/$(database)/documents/profiles/$(request.resource.data.calleeId))
+        && canReceiveCall(request.resource.data.calleeId, request.auth.uid)
         && request.resource.data.callerName ==
           get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.nickname
         && request.resource.data.type in ['audio','video']
@@ -397,6 +430,7 @@ service cloud.firestore {
           (request.auth.uid == resource.data.calleeId
            && resource.data.status == 'ringing'
            && request.resource.data.status == 'accepted'
+           && canReceiveCall(resource.data.calleeId, resource.data.callerId)
            && request.resource.data.keys().hasAll(['answer'])
            && validCallAnswer(request.resource.data.answer))
           ||
