@@ -44,6 +44,22 @@ if(launch){
  const $=id=>ui.querySelector("#"+id);
  let me=null,profile=null,people=[],chosen=null,incoming=null,session=null;
  let stopInbox=null,stopCall=null,stopCandidates=null,working=false;
+ let legacyLastNotified=null;
+ function notifyLegacyCall(invite){
+  if(!invite||legacyLastNotified===invite.id)return;
+  legacyLastNotified=invite.id;
+  const title=invite.type==="video"?"📹 Incoming video call":"📞 Incoming audio call";
+  const body=(invite.callerName||"Someone")+" is calling you.";
+  if("Notification" in window&&Notification.permission==="granted"&&document.hidden){
+   try{const n=new Notification(title,{body,tag:"iliam-legacy-"+invite.id});n.onclick=()=>{window.focus();n.close();};}
+   catch(e){console.warn("Incoming call notification:",e);}
+  }
+  const toast=document.createElement("button");toast.type="button";toast.className="im-toast";
+  const head=document.createElement("strong");head.textContent=title;
+  const message=document.createElement("span");message.textContent=body;toast.append(head,message);
+  toast.onclick=()=>{toast.remove();$("call-accept").focus();};
+  document.body.append(toast);setTimeout(()=>toast.remove(),6500);
+ }
  let stopSettings=null,stopBlocks=null,doNotDisturb=false,blockedIds=new Set(),settingsPeople=[],privacyReady=false;
  const settingsButton=document.getElementById("iliam-call-settings-button");
  if(settingsButton)settingsButton.disabled=true;
@@ -336,6 +352,7 @@ if(launch){
   $("call-incoming-name").textContent=(incoming.callerName||"Someone")+" is calling you.";
   $("call-incoming-error").textContent="";
   visible("call-incoming",true);
+  notifyLegacyCall(incoming);
  }
  $("call-decline").onclick=async()=>{
   if(!incoming)return;
@@ -384,7 +401,7 @@ if(launch){
  }
  onAuthStateChanged(auth,async user=>{
   if(stopInbox){stopInbox();stopInbox=null;}
-  me=user;profile=null;launch.disabled=true;
+  me=user;profile=null;launch.disabled=true;legacyLastNotified=null;
   stopPrivacyListeners();
   if(settingsButton)settingsButton.disabled=true;
   if(!user){incoming=null;visible("call-incoming",false);if(session)cleanup();return;}
