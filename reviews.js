@@ -52,6 +52,23 @@ if(root){
    reactionRow.append(b);
   }
   actions.append(reactionRow);
+  const reactionsRef=parent?collection(db,'reviews',parent,'replies',id,'reactions'):collection(db,'reviews',id,'reactions');
+  stops.push(onSnapshot(reactionsRef,snap=>{
+    const totals={Like:0,Love:0,Laugh:0};
+    const mine=new Set();
+    snap.forEach(d=>{
+      const r=d.data();
+      const name=r.emoji==='👍'?'Like':r.emoji==='❤️'?'Love':r.emoji==='😂'?'Laugh':null;
+      if(name)totals[name]++;
+      if(user&&r.uid===user.uid&&name)mine.add(name);
+    });
+    [...reactionRow.children].forEach((b,i)=>{
+      const label=['Like','Love','Laugh'][i];
+      b.textContent=['👍','❤️','😂'][i]+' '+totals[label];
+      b.disabled=!profile||mine.has(label);
+      b.title=mine.has(label)?'You already reacted':label;
+    });
+  },e=>console.warn('Review reactions unavailable:',e.code)));
   if(user&&(admin||user.uid===data.uid)){
    const del=document.createElement('button');del.textContent='Delete';del.onclick=async()=>{if(confirm('Delete this '+(parent?'reply':'review')+'?'))try{await deleteDoc(parent?doc(db,'reviews',parent,'replies',id):doc(db,'reviews',id));}catch(e){note(e.message)}};actions.append(del);
   }
