@@ -121,7 +121,8 @@ service cloud.firestore {
     }
 
     match /announcements/{announcementId} {
-      allow read: if signedIn();
+      // Sitewide announcements appear to visitors before login.
+      allow read: if true;
     }
 
     match /profiles/{uid} {
