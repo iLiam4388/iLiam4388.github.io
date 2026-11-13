@@ -42,3 +42,9 @@
 #iliam-call-ui .call-block-row{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:12px;background:#ffffff12;border:1px solid #ffffff33}
 #iliam-call-ui .call-block-name{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px;font-weight:650}
 #iliam-call-ui .call-block-row .call-btn{flex:none;font-size:12px;padding:8px 11px}
+
+#iliam-call-ui .call-settings-bottom{border-top:1px solid #5b9fbd66;margin-top:18px;padding-top:13px}
+#iliam-call-ui .call-settings-bottom .call-dnd-row{margin:2px 0 10px}
+#iliam-call-ui #call-block-editor[hidden]{display:none!important}
+#iliam-call-ui #call-block-editor{margin:8px 0 13px}
+#iliam-call-ui #call-edit-blocks{padding:8px 15px;font-size:13px}
