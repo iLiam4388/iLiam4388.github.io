@@ -169,11 +169,6 @@ body{
     font-size:28px;
   }
 
-.giscus-wrapper {
-  width: 100%;
-  max-width: 850px;
-  margin: 0 auto;
-  overflow: visible;
 }
 
 </style>
@@ -226,9 +221,10 @@ body{
 </div>
 
 <section class="review-section">
-  <h1>REVIEWS</h1>
+  <div class="reviews-header"><div><h1>REVIEWS</h1><p class="reviews-subtitle">Real feedback from the iLiam community.</p></div><div id="iliam-account" aria-label="Your iLiam account"></div></div>
   <div id="iliam-reviews">Loading Firebase reviews…</div>
 </section>
+<script type="module" src="account-widget.js"></script>
 <script type="module" src="reviews.js"></script>
 <script type="module" src="site-notifications.js"></script>
 </body>
