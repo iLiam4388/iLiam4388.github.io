@@ -1,0 +1,39 @@
+#iliam-messages-button{background:linear-gradient(#8098ff,#4c48ce);box-shadow:0 0 13px #aab0ff88}
+#iliam-messages-ui[hidden],#iliam-messages-ui [hidden]{display:none!important}
+#iliam-messages-ui{position:fixed;inset:0;z-index:10100;pointer-events:none;color:#fff;font:15px Verdana,Arial,sans-serif;text-align:left}
+#iliam-messages-ui *{box-sizing:border-box}
+#iliam-messages-ui button{font:inherit;cursor:pointer}
+#iliam-messages-ui .im-backdrop{position:absolute;inset:0;display:grid;place-items:center;padding:15px;background:#000b;backdrop-filter:blur(10px);pointer-events:auto}
+#iliam-messages-ui .im-shell{width:min(1050px,100%);height:min(800px,94vh);background:#071b31;border:2px solid #6be6ff;box-shadow:0 0 35px #00eaff55;border-radius:20px;display:flex;flex-direction:column;overflow:hidden}
+#iliam-messages-ui .im-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #2b637e;background:#092540}
+#iliam-messages-ui .im-top h2{font-size:21px;margin:0;text-shadow:0 0 9px cyan}
+#iliam-messages-ui .im-btn{padding:10px 12px;border:1px solid #56bfdc;background:#17506b;color:#fff;border-radius:10px;white-space:nowrap}
+#iliam-messages-ui .im-btn.primary{background:linear-gradient(#62eaaa,#0d875f)}
+#iliam-messages-ui .im-btn.danger{background:#912744;border-color:#ce5574}
+#iliam-messages-ui .im-btn:disabled{opacity:.5;cursor:not-allowed}
+#iliam-messages-ui .im-main{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:0;flex:1}
+#iliam-messages-ui .im-sidebar{border-right:1px solid #32617a;overflow:auto}
+#iliam-messages-ui .im-list{display:grid;gap:7px;padding:13px}
+#iliam-messages-ui .im-entry{display:flex;align-items:center;gap:10px;border:1px solid #315a74;background:#0e2d48;border-radius:11px;color:white;padding:12px;text-align:left;width:100%;overflow-wrap:anywhere}
+#iliam-messages-ui .im-entry.selected{background:#17617c;border-color:cyan}
+#iliam-messages-ui .im-chat{display:flex;flex-direction:column;min-height:0;min-width:0}
+#iliam-messages-ui .im-chat-head{padding:11px 14px;border-bottom:1px solid #396783;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#iliam-messages-ui .im-chat-head h3{margin:0;font-size:15px}
+#iliam-messages-ui .im-bubbles{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:16px}
+#iliam-messages-ui .im-bubble{max-width:82%;align-self:flex-start;background:#244360;border:1px solid #477a9e;border-radius:15px;padding:10px 13px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:14px}
+#iliam-messages-ui .im-bubble.mine{align-self:flex-end;background:#15615e;border-color:#4cc9b9}
+#iliam-messages-ui .im-sender{display:block;font-size:11px;color:#aceef7;font-weight:700;margin-bottom:5px}
+#iliam-messages-ui .im-time{display:block;text-align:right;opacity:.7;font-size:10px;margin-top:4px}
+#iliam-messages-ui .im-send{display:flex;gap:8px;border-top:1px solid #33617b;padding:12px}
+#iliam-messages-ui .im-input{min-width:0;flex:1;border:1px solid #85c3d5;border-radius:10px;padding:11px;background:#fff;color:#16283b;font:inherit}
+#iliam-messages-ui .im-empty{text-align:center;color:#b7d2e2;padding:25px 14px;font-size:14px}
+#iliam-messages-ui .im-modal{position:absolute;inset:0;display:grid;place-items:center;background:#000c;pointer-events:auto;padding:16px}
+#iliam-messages-ui .im-panel{width:min(530px,100%);max-height:90vh;overflow:auto;padding:20px;border:2px solid cyan;border-radius:17px;background:#08233d;box-shadow:0 0 26px #00ffff55}
+#iliam-messages-ui .im-panel h3{margin:0 0 12px}
+#iliam-messages-ui .im-search{width:100%;padding:12px;color:#121b2d;border:1px solid #8addff;border-radius:12px;margin:12px 0;font:inherit}
+#iliam-messages-ui .im-people{max-height:310px;overflow:auto;display:grid;gap:7px;margin-bottom:10px}
+#iliam-messages-ui .im-hint{color:#add9e7;font-size:12px;line-height:1.5}
+#iliam-messages-ui .im-status{color:#bfffe5;font-size:12px;min-height:16px}
+#iliam-messages-ui .im-actions{display:flex;gap:8px;flex-wrap:wrap}
+#iliam-messages-ui .im-call-menu{position:absolute;right:18px;top:68px;z-index:2;background:#0b3653;border:2px solid cyan;border-radius:13px;padding:10px;display:grid;gap:7px;box-shadow:0 9px 30px #0009}
+@media(max-width:720px){#iliam-messages-ui .im-shell{height:96vh}#iliam-messages-ui .im-main{grid-template-columns:1fr}#iliam-messages-ui .im-sidebar{max-height:150px;overflow:auto;border-right:0;border-bottom:1px solid #32617a}#iliam-messages-ui .im-list{display:flex;overflow:auto}#iliam-messages-ui .im-entry{min-width:160px;max-width:220px}#iliam-messages-ui .im-top{padding:11px}#iliam-messages-ui .im-chat-head{padding:9px}#iliam-messages-ui .im-bubbles{padding:12px}}
