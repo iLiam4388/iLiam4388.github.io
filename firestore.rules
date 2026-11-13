@@ -318,6 +318,111 @@ service cloud.firestore {
       }
     }
 
+
+    // Private one-to-one WebRTC signaling. Camera/microphone media never
+    // goes into Firestore. A caller may invite a real iLiam profile.
+    function callParticipant(callId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/calls/$(callId))
+        && (
+          get(/databases/$(database)/documents/calls/$(callId)).data.callerId == request.auth.uid
+          || get(/databases/$(database)/documents/calls/$(callId)).data.calleeId == request.auth.uid
+        );
+    }
+
+    function validCallOffer(value) {
+      return value is map
+        && value.keys().hasOnly(['type','sdp'])
+        && value.type == 'offer'
+        && value.sdp is string
+        && value.sdp.size() > 0
+        && value.sdp.size() <= 50000;
+    }
+
+    function validCallAnswer(value) {
+      return value is map
+        && value.keys().hasOnly(['type','sdp'])
+        && value.type == 'answer'
+        && value.sdp is string
+        && value.sdp.size() > 0
+        && value.sdp.size() <= 50000;
+    }
+
+    function validCallCandidate(callId, side) {
+      return callParticipant(callId)
+        && request.resource.data.keys().hasOnly([
+          'uid','candidate','sdpMid','sdpMLineIndex','usernameFragment'
+        ])
+        && request.resource.data.keys().hasAll(['uid','candidate'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.uid == (
+          side == 'caller'
+          ? get(/databases/$(database)/documents/calls/$(callId)).data.callerId
+          : get(/databases/$(database)/documents/calls/$(callId)).data.calleeId
+        )
+        && request.resource.data.candidate is string
+        && request.resource.data.candidate.size() <= 8192
+        && get(/databases/$(database)/documents/calls/$(callId)).data.status in ['ringing','accepted'];
+    }
+
+    match /calls/{callId} {
+      allow get, list: if signedIn()
+        && (resource.data.callerId == request.auth.uid
+          || resource.data.calleeId == request.auth.uid);
+
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly([
+          'callerId','calleeId','callerName','type','status','offer','createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'callerId','calleeId','callerName','type','status','offer','createdAt'
+        ])
+        && request.resource.data.callerId == request.auth.uid
+        && request.resource.data.calleeId is string
+        && request.resource.data.calleeId != request.auth.uid
+        && exists(/databases/$(database)/documents/profiles/$(request.resource.data.calleeId))
+        && request.resource.data.callerName ==
+          get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.nickname
+        && request.resource.data.type in ['audio','video']
+        && request.resource.data.status == 'ringing'
+        && validCallOffer(request.resource.data.offer)
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn()
+        && (resource.data.callerId == request.auth.uid
+          || resource.data.calleeId == request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','answer'])
+        && (
+          // Only the recipient can accept with an answer.
+          (request.auth.uid == resource.data.calleeId
+           && resource.data.status == 'ringing'
+           && request.resource.data.status == 'accepted'
+           && request.resource.data.keys().hasAll(['answer'])
+           && validCallAnswer(request.resource.data.answer))
+          ||
+          (request.auth.uid == resource.data.calleeId
+           && resource.data.status == 'ringing'
+           && request.resource.data.status == 'declined'
+           && !('answer' in request.resource.data))
+          ||
+          (resource.data.status in ['ringing','accepted']
+           && request.resource.data.status == 'ended'
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        );
+      allow delete: if false;
+
+      match /callerCandidates/{candidateId} {
+        allow read: if callParticipant(callId);
+        allow create: if validCallCandidate(callId,'caller');
+        allow update, delete: if false;
+      }
+      match /calleeCandidates/{candidateId} {
+        allow read: if callParticipant(callId);
+        allow create: if validCallCandidate(callId,'callee');
+        allow update, delete: if false;
+      }
+    }
+
     match /games/{gameId} {
       allow read: if true;
       allow create, update: if isAdmin() && validGame();
