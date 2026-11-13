@@ -94,6 +94,23 @@ if(launch){
   }catch(e){pickerStatus("Could not load accounts: "+e.message);}
  }
  launch.onclick=openPicker;$("gc-close").onclick=()=>show("gc-picker",false);
+ // Start the existing call flow from a private or group chat.
+ window.addEventListener("iliam:call-from-chat",async event=>{
+  if(!me||!myProfile||current)return;
+  const uids=[...new Set(event.detail?.uids||[])].filter(uid=>uid!==me.uid).slice(0,3);
+  if(!uids.length)return;
+  await openPicker();
+  if(!me||current)return;
+  selected.clear();
+  for(const uid of uids){
+   const p=people.find(x=>x.uid===uid&&!blocked.has(uid));
+   if(p)selected.set(uid,p);
+  }
+  updateButtons();drawPeople();
+  if(selected.size!==uids.length){pickerStatus("Some members cannot be called. They may be blocked or unavailable.");return;}
+  if(event.detail?.type==="video"||event.detail?.type==="audio")startGroup(event.detail.type);
+ });
+
  $("gc-search").oninput=drawPeople;
  function teardown(){
   const s=current;current=null;
