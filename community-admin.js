@@ -23,6 +23,11 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
     <section class="control-section"><h3>Announcements</h3>
       <label for="adminAnnTitle">Title</label><input id="adminAnnTitle" maxlength="100">
       <label for="adminAnnText">Message</label><textarea id="adminAnnText" maxlength="2000"></textarea>
+      <label><input id="adminAnnTemporary" type="checkbox" style="width:auto"> Temporary announcement</label>
+      <label for="adminAnnDuration">Duration</label>
+      <div style="display:flex;gap:8px"><input id="adminAnnDuration" type="number" min="1" value="30" style="flex:1"><select id="adminAnnUnit" style="flex:1"><option value="seconds">Seconds</option><option value="minutes">Minutes</option><option value="hours">Hours</option></select></div>
+      <label for="adminAnnEnd">Or choose an exact end time (local)</label><input id="adminAnnEnd" type="datetime-local">
+      <p class="hint">For temporary announcements, the exact end time takes priority over duration. The banner fades out when expired, disabled, or deleted.</p>
       <div class="control-actions"><button class="small-btn" id="adminPublish">Publish announcement</button><button class="small-btn" id="adminBrowseAnnouncements">Manage announcements</button></div>
       <p class="hint">Edit an announcement below to change title/text or set enabled to false. Disabled announcements remain readable database records, not private drafts.</p>
     </section>
@@ -36,13 +41,13 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
       <p class="hint">Edit upvotes/likes, username/nickname snapshots, text, media URLs, featured, profile photoURL/bio/fakeAdmin, or custom fields. Counters are independent of vote/like records. Timestamp values use {"$timestamp":{"seconds":0,"nanoseconds":0}}. Replace removes omitted fields; merge keeps them. Deleting a document does NOT delete its subcollections. Use Delete Post for a complete post cleanup. Following/follower documents are mirrored: update both sides.</p>
     </section><p id="adminNotice" role="status" aria-live="polite"></p>`;
   $('adminModal').querySelector('.modal-head').after(panel);
-  const notices=document.createElement('section');notices.id='communityAnnouncements';$('status').after(notices);
+  // All pages use the shared, fixed viewport announcement overlay.
   let role=false,users=[],stops=[],session=0;
   const profileBadges=new Map(),realAdmins=new Set(),badgeStops=new Map();
   function notify(message){$('adminNotice').textContent=message;}
   async function requireAdmin(){const user=getUser();if(!user||!(await getDoc(doc(db,'admins',user.uid))).exists())throw Error('Real administrator access required.');return user;}
   function action(id,fn){$(id).onclick=async()=>{const button=$(id);button.disabled=true;try{await requireAdmin();await fn();}catch(error){notify(error.message);}finally{button.disabled=false;}};}
-  function pathParts(value,documentPath=true){const parts=value.trim().split('/');if(parts.some(p=>!p)||parts.length%2!==(documentPath?0:1))throw Error('Invalid '+(documentPath?'document':'collection')+' path.');if(!['profiles','posts','admins','announcements','usernames'].includes(parts[0]))throw Error('This editor is scoped to community collections.');return parts;}
+  function pathParts(value,documentPath=true){const parts=value.trim().split('/');if(parts.some(p=>!p)||parts.length%2!==(documentPath?0:1))throw Error('Invalid '+(documentPath?'document':'collection')+' path.');if(!['profiles','posts','admins','announcements','usernames','reviews','games'].includes(parts[0]))throw Error('This editor is scoped to community collections.');return parts;}
   function targetUID(){const uid=$('adminUID').value.trim();if(!uid||uid.includes('/'))throw Error('Select a valid Firebase UID.');return uid;}
   function encode(value){
     if(value instanceof Timestamp)return {$timestamp:{seconds:value.seconds,nanoseconds:value.nanoseconds}};
@@ -75,7 +80,27 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
   for(const [id,value] of [['adminFakeOn',true],['adminFakeOff',false]])action(id,async()=>{const ref=doc(db,'profiles',targetUID());await runTransaction(db,async tx=>{if(!(await tx.get(ref)).exists())throw Error('Profile not found.');tx.update(ref,{fakeAdmin:value});});notify('Cosmetic badge '+(value?'added':'removed')+'. No permissions changed.');});
   action('adminPromote',async()=>{const uid=targetUID();if(!confirm('Give '+uid+' full community control, including promoting and removing other admins?'))return;if(!(await getDoc(doc(db,'profiles',uid))).exists())throw Error('Profile not found.');await setDoc(doc(db,'admins',uid),{grantedBy:getUser().uid,grantedAt:serverTimestamp()},{merge:true});notify('Real admin granted.');});
   action('adminDemote',async()=>{const uid=targetUID();if(uid===getUser().uid)throw Error('Self-removal is blocked to prevent lockout.');if(!confirm('Revoke real admin for '+uid+'?'))return;await deleteDoc(doc(db,'admins',uid));notify('Admin revoked. Cosmetic badges are separate.');});
-  action('adminPublish',async()=>{const title=$('adminAnnTitle').value.trim(),text=$('adminAnnText').value.trim();if(!title||!text)throw Error('Enter a title and message.');const ref=doc(collection(db,'announcements'));await setDoc(ref,{title,text,enabled:true,createdAt:serverTimestamp(),createdBy:getUser().uid});$('adminAnnTitle').value='';$('adminAnnText').value='';notify('Announcement published.');});
+  action('adminPublish',async()=>{
+    const title=$('adminAnnTitle').value.trim(),text=$('adminAnnText').value.trim();
+    if(!title||!text)throw Error('Enter a title and message.');
+    const temporary=$('adminAnnTemporary').checked;
+    let endsAt=null;
+    if(temporary){
+      const end=$('adminAnnEnd').value;
+      if(end)endsAt=Timestamp.fromDate(new Date(end));
+      else{
+        const duration=Number($('adminAnnDuration').value);
+        const units={seconds:1000,minutes:60000,hours:3600000};
+        if(!Number.isFinite(duration)||duration<=0)throw Error('Enter a positive duration.');
+        endsAt=Timestamp.fromDate(new Date(Date.now()+duration*units[$('adminAnnUnit').value]));
+      }
+      if(!endsAt||endsAt.toMillis()<=Date.now())throw Error('End time must be in the future.');
+    }
+    const ref=doc(collection(db,'announcements'));
+    await setDoc(ref,{title,text,enabled:true,startsAt:serverTimestamp(),endsAt,createdAt:serverTimestamp(),createdBy:getUser().uid});
+    $('adminAnnTitle').value='';$('adminAnnText').value='';$('adminAnnEnd').value='';
+    notify('Announcement published.');
+  });
   async function browse(){const parts=pathParts($('adminCollection').value,false),snap=await getDocs(query(collection(db,...parts),limit(200)));$('adminDocuments').replaceChildren();for(const d of snap.docs){const row=document.createElement('div');row.className='control-item';row.append(button(d.ref.path,()=>openDocument(d.ref.path)));$('adminDocuments').append(row);}notify('Loaded '+snap.size+' documents (maximum 200).');}
   action('adminBrowse',browse);action('adminBrowseAnnouncements',async()=>{$('adminCollection').value='announcements';await browse();});
   action('adminRead',()=>openDocument($('adminPath').value));
@@ -89,11 +114,11 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
     }drawBadge(el);
   });}
   function decorate(root,path){if(!role)return;const actions=root.querySelector('.actions,.comment-actions');if(actions)actions.append(button('Admin edit',()=>openDocument(path)));}
-  function stop(){session++;stops.forEach(fn=>fn());stops=[];badgeStops.forEach(fn=>fn());badgeStops.clear();profileBadges.clear();realAdmins.clear();notices.replaceChildren();role=false;users=[];$('adminUsers').replaceChildren();$('adminDocuments').replaceChildren();$('adminJSON').value='{}';$('adminUID').value='';$('adminModal').classList.remove('show');}
+  function stop(){session++;stops.forEach(fn=>fn());stops=[];badgeStops.forEach(fn=>fn());badgeStops.clear();profileBadges.clear();realAdmins.clear();role=false;users=[];$('adminUsers').replaceChildren();$('adminDocuments').replaceChildren();$('adminJSON').value='{}';$('adminUID').value='';$('adminModal').classList.remove('show');}
   function start(uid){stop();const active=session;
     stops.push(onSnapshot(doc(db,'admins',uid),snap=>{if(active!==session)return;role=snap.exists();onRole(role);if(!role)$('adminModal').classList.remove('show');},e=>{role=false;onRole(false);notify(e.message);}));
     stops.push(onSnapshot(collection(db,'admins'),snap=>{realAdmins.clear();snap.forEach(d=>realAdmins.add(d.id));badges();renderUsers();},()=>{}));
-    stops.push(onSnapshot(query(collection(db,'announcements'),orderBy('createdAt','desc'),limit(50)),snap=>{notices.replaceChildren();snap.forEach(d=>{const a=d.data();if(a.enabled===false)return;const card=document.createElement('article');card.className='announcement-card';card.innerHTML='<h3>📢 '+escapeHtml(a.title||'Announcement')+'</h3>'+richText(String(a.text||''));notices.append(card);});},e=>{notices.textContent='Announcements unavailable: '+e.message;}));
+
     badges();
   }
   return {start,stop,badges,decorate,openDocument};
