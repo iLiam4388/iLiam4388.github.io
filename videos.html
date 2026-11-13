@@ -43,6 +43,8 @@ body{
 .grid{
   display:flex;
   justify-content:center;
+  flex-wrap:wrap;
+  gap:24px;
   padding:55px 25px;
 }
 
@@ -103,6 +105,18 @@ video{
 <div class="divider"></div>
 
 <div class="grid">
+  <div class="card" id="golden-sphere-card" hidden>
+    <div class="video-box">
+      <video src="videos/golden-sphere.mp4" controls preload="metadata"></video>
+    </div>
+
+    <div class="file-name">Golden Sphere Animation</div>
+
+    <a class="download-btn" href="videos/golden-sphere.mp4" download>
+      DOWNLOAD
+    </a>
+  </div>
+
   <div class="card">
     <div class="video-box">
       <video src="videos/coke.mp4" controls></video>
@@ -152,6 +166,20 @@ video{
   </div>
 
 </div>
+
+<script>
+// Show the new video only once its MP4 has been uploaded.
+const sphereCard = document.getElementById('golden-sphere-card');
+const sphereVideo = sphereCard.querySelector('video');
+sphereVideo.addEventListener('loadedmetadata', () => {
+  sphereCard.hidden = false;
+});
+sphereVideo.addEventListener('error', () => {
+  sphereCard.hidden = true;
+});
+sphereVideo.preload = 'metadata';
+sphereVideo.load();
+</script>
 
 <div class="divider"></div>
 
