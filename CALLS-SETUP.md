@@ -27,3 +27,21 @@ The Community page includes account-to-account **Audio Call** and **Video Call**
 - **Camera doesn't work:** Use HTTPS and allow browser camera permissions.
 
 This is an initial one-to-one calling feature, not a production-grade FaceTime replacement. It has not been end-to-end tested with two real accounts/devices yet.
+
+## Temporary group calls (up to four people)
+
+The Community **GROUP CALL** button lets the caller select up to three other accounts and choose **Group Audio** or **Group Video**. These are one-time call rooms; there are no persistent named groups.
+
+Every invitee sees an invitation in Community, and must accept before microphone/camera streams begin. WebRTC forms separate peer-to-peer links among accepted participants. An invitee can decline without ending the call for everybody; the host can end the whole room.
+
+The `groupCalls` collection, `members`, `connections`, and ICE candidate subcollections require the newest `firestore.rules` file to be published in Firebase. Both the ordinary **CALL SOMEONE** button and group calls coexist.
+
+Limits and cautions:
+- This first release is **four people total maximum**, including the caller; larger calls would need a media server/SFU.
+- Camera/microphone permissions are requested for each participating device.
+- Browsers must keep the Community page open; no push notifications when the page is closed.
+- Group calls use STUN and a peer-to-peer mesh without a TURN relay; some carrier and school networks may not connect reliably.
+- Calls use secure connections, but this has not yet been verified with a real four-person group test.
+- Firestore call-room and signaling records are not automatically deleted after calls finish. Add Firebase TTL cleanup or a scheduled backend job if usage grows.
+
+**Test:** Publish updated rules; use two different accounts on two devices to start a group call (then add a third and fourth). Confirm accept, decline, mute, camera off, and host end work as expected.
