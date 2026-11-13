@@ -1,75 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Photos - iLiam</title>
 <link rel="icon" type="image/png" href="images/favicon.png">
-<style>
-body{margin:0;background:linear-gradient(to bottom,#001133,#000011);font-family:Verdana,Arial;color:white;text-align:center}
-.page-title{font-size:64px;font-weight:900;letter-spacing:2px;margin-top:40px;text-shadow:0 0 10px cyan,0 0 25px cyan,0 0 50px cyan}
-.back-btn{display:inline-block;margin:15px 0 35px;padding:14px 34px;border-radius:18px;background:linear-gradient(to bottom,#59d7ff,#0077ff);color:white;text-decoration:none;font-weight:bold;font-size:20px;box-shadow:0 0 10px cyan,0 0 25px #00aaff}
-.divider{height:4px;background:cyan;box-shadow:0 0 15px cyan}
-.grid{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;padding:45px}
-.card{width:280px;background:linear-gradient(to bottom,#ff9cff,#d100ff);border-radius:24px;padding:20px;border:3px solid white;box-shadow:0 0 25px #ff66ff,0 0 50px #00ffff55}
-.card img{width:100%;border-radius:16px;box-shadow:0 0 18px black}
-.file-name{font-size:26px;font-weight:900;margin:18px 0;color:white;text-shadow:0 0 8px white,0 0 18px #ffb3ff}
-.download-btn{display:inline-block;padding:14px 28px;border-radius:16px;background:linear-gradient(to bottom,#66ff99,#00aa44);color:white;text-decoration:none;font-weight:bold;box-shadow:0 0 15px lime,0 0 30px cyan}
-.footer{padding:22px;color:cyan}
-</style>
+<link rel="stylesheet" href="gallery.css">
+<script src="gallery.js" defer></script>
 </head>
-<body>
-
+<body data-gallery="photos">
 <h1 class="page-title">PHOTOS</h1>
 <a class="back-btn" href="index.html">← BACK HOME</a>
 <div class="divider"></div>
-
-<div class="grid">
-
-<div class="card">
-<img src="images/tpu.png">
-<div class="file-name">Tpu Model Cover</div>
-<a class="download-btn" href="images/tpu.png" download>DOWNLOAD</a>
-</div>
-
-<div class="card">
-<img src="images/mat.png">
-<div class="file-name">Material Pack Cover</div>
-<a class="download-btn" href="images/mat.png" download>DOWNLOAD</a>
-</div>
-
-<div class="card">
-<img src="images/uda.png">
-<div class="file-name">Ufo Dragonfruit Apple</div>
-<a class="download-btn" href="images/uda.png" download>DOWNLOAD</a>
-</div>
-
-<div class="card">
-<img src="images/sbt.png">
-<div class="file-name">Solar BlueBerry Tangerene</div>
-<a class="download-btn" href="images/sbt.png" download>DOWNLOAD</a>
-</div>
-
-<div class="card">
-<img src="images/sc.png">
-<div class="file-name">Cgi Coke</div>
-<a class="download-btn" href="images/sc.png" download>DOWNLOAD</a>
-</div>
-
-<div class="card">
-<img src="images/drimg.jpg">
-<div class="file-name">2K Drone Image</div>
-<a class="download-btn" href="images/drimg.jpg" download>DOWNLOAD</a>
-</div>
-</div>
-
-<div class="card">
-<img src="images/tear.gif">
-<div class="file-name">Tear Loop</div>
-<a class="download-btn" href="images/tear.gif" download>DOWNLOAD</a>
-</div>
-</div>
-
+<main>
+<div id="gallery" class="grid" aria-label="PHOTOS gallery"></div>
+<p id="gallery-status" class="status" role="status">Loading photos...</p>
+</main>
 <div class="divider"></div>
 <div class="footer">© 2026 iLiam</div>
-
 </body>
 </html>
