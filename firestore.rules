@@ -117,7 +117,7 @@ service cloud.firestore {
     // admins is intentionally excluded so self-removal cannot bypass its rule.
     match /{root}/{document=**} {
       allow read, write: if isAdmin()
-        && root in ['profiles', 'posts', 'announcements', 'usernames'];
+        && root in ['profiles', 'posts', 'announcements', 'usernames', 'reviews'];
     }
 
     match /announcements/{announcementId} {
@@ -233,6 +233,112 @@ service cloud.firestore {
     match /usernames/{username} {
       allow read, delete: if isAdmin();
       allow create, update: if false;
+    }
+
+    // Reviews are public to read; only signed-in iLiam profile owners can post.
+    // Reactions have one immutable marker per user per emoji.
+    function validReview() {
+      return hasProfile()
+        && request.resource.data.keys().hasOnly(['uid','username','nickname','text','rating','featured','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() <= 24
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 1200
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.featured == false
+        && request.resource.data.createdAt == request.time;
+    }
+    function validReply() {
+      return hasProfile()
+        && request.resource.data.keys().hasOnly(['uid','username','nickname','text','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.username == get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.username
+        && request.resource.data.nickname is string
+        && request.resource.data.nickname.size() <= 24
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.createdAt == request.time;
+    }
+    function validReaction(emoji) {
+      return hasProfile()
+        && request.resource.data.keys().hasOnly(['uid','emoji','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && emoji in ['👍','❤️','😂']
+        && request.resource.data.emoji == emoji
+        && request.resource.data.createdAt == request.time;
+    }
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if validReview();
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      match /replies/{replyId} {
+        allow read: if true;
+        allow create: if exists(/databases/$(database)/documents/reviews/$(reviewId)) && validReply();
+        allow update: if isAdmin();
+        allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+        match /reactions/{reactionId} {
+          allow read: if true;
+          allow create: if signedIn()
+            && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
+      allow read: if true;
+
+      // Games can only be changed by genuine Firebase admins.
+      allow create, update: if isAdmin() && validGame();
+      allow delete: if isAdmin();
+    }
+  }
+}
+)
+            && validReaction(request.resource.data.emoji);
+          allow update: if false;
+          allow delete: if isAdmin() || (signedIn() && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
+      allow read: if true;
+
+      // Kept compatible with the existing games page. A password embedded
+      // in a static page cannot be securely enforced by Firestore Rules.
+      allow create, update: if validGame();
+      allow delete: if true;
+    }
+  }
+}
+));
+        }
+      }
+      match /reactions/{reactionId} {
+        allow read: if true;
+        allow create: if signedIn()
+          && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
+      allow read: if true;
+
+      // Kept compatible with the existing games page. A password embedded
+      // in a static page cannot be securely enforced by Firestore Rules.
+      allow create, update: if validGame();
+      allow delete: if true;
+    }
+  }
+}
+)
+          && validReaction(request.resource.data.emoji);
+        allow update: if false;
+        allow delete: if isAdmin() || (signedIn() && reactionId.matches('^' + request.auth.uid + '_(Like|Love|Laugh)
+      allow read: if true;
+
+      // Kept compatible with the existing games page. A password embedded
+      // in a static page cannot be securely enforced by Firestore Rules.
+      allow create, update: if validGame();
+      allow delete: if true;
+    }
+  }
+}
+));
+      }
     }
 
     match /games/{gameId} {
