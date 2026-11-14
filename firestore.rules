@@ -795,7 +795,12 @@ service cloud.firestore {
     }
     match /whiteboards/{boardId} {
       allow get: if boardViewAccess(resource.data);
-      allow list: if false;
+      // Only owner/invitee queries can list boards. Public-link rooms
+      // remain unlisted, even when anyone with their URL can view them.
+      allow list: if signedIn() && (
+        resource.data.ownerId == request.auth.uid
+        || request.auth.uid in resource.data.get('invitedUids', [])
+      );
       allow create: if hasProfile()
         && boardId.matches('^[0-9a-f]{32}$')
         && request.resource.data.keys().hasOnly([
@@ -817,7 +822,13 @@ service cloud.firestore {
           .affectedKeys().hasOnly(['title','paperColor','accessMode','invitedUids'])
         && validWhiteboardTitle(request.resource.data.title)
         && validWhiteboardColor(request.resource.data.paperColor)
-        && validBoardSharing(request.resource.data);
+        && (
+          // Preserve edits to existing legacy boards without silently
+          // changing their access permissions.
+          (!('accessMode' in request.resource.data)
+            && !('invitedUids' in request.resource.data))
+          || validBoardSharing(request.resource.data)
+        );
       allow delete: if false;
       match /elements/{elementId} {
         allow get, list: if canSeeBoard(boardId);
