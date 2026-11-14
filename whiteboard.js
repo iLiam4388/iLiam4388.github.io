@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,setDoc,updateDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc,deleteDoc,onSnapshot,query,orderBy,limit,arrayUnion,arrayRemove,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
@@ -12,9 +12,33 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v)),validHex=s=>/^#[0-9a-fA-F]{6}$/.t
 let tool="pen",color="#2360e7",width=4,grid=true,paper="#ffffff";
 let items=[],preview=null,active=null,spaceDown=false,cam={x:0,y:0,z:1},localDraft=null;
 let history=[],future=[],user=null,profile=null,room=null,stopItems=null,stopRoom=null;
-let saveTimer=null,busy=false,frame=0;
+let saveTimer=null,busy=false,frame=0,sharingBusy=false;
+let inviteAccounts=[];
 const status=s=>{$("save-state").textContent=s;};
 const roomStatus=s=>{$("room-status").textContent=s;};
+function accessMode(data=room){return data?.accessMode||"legacy";}
+function invitedUids(data=room){return Array.isArray(data?.invitedUids)?data.invitedUids:[];}
+function isBoardOwner(){return !!room && !!user && room.ownerId===user.uid;}
+function canEditBoard(){
+ if(!room)return true;
+ if(!user||!profile)return false;
+ return isBoardOwner()||["link","legacy"].includes(accessMode())||invitedUids().includes(user.uid);
+}
+function canViewBoard(){
+ if(!room)return true;
+ return accessMode()==="link" ||
+  (Boolean(user&&profile) && (accessMode()==="legacy"||isBoardOwner()||invitedUids().includes(user.uid)));
+}
+function renderBoardPermissions(){
+ const edit=canEditBoard(),owner=isBoardOwner();
+ document.querySelectorAll(".tool").forEach(b=>{b.disabled=!!room&&!edit&&b.dataset.tool!=="hand";});
+ if(room&&!edit&&tool!=="hand")setTool("hand");
+ $("paper-color").disabled=Boolean(room&&!owner);
+ $("board-title").readOnly=Boolean(room&&!owner);
+ $("clear-board").disabled=Boolean(room&&!owner);
+ $("undo").disabled=!history.length||!edit;
+ $("redo").disabled=!future.length||!edit;
+}
 function newId(){
  const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
  return [...bytes].map(x=>x.toString(16).padStart(2,"0")).join("");
@@ -142,7 +166,7 @@ function paint(){
  $("item-count").textContent=items.length+" objects";
  $("empty-hint").hidden=items.length>0||Boolean(preview);
  $("zoom-value").textContent=Math.round(cam.z*100)+"%";
- $("undo").disabled=!history.length;$("redo").disabled=!future.length;
+ $("undo").disabled=!history.length||!canEditBoard();$("redo").disabled=!future.length||!canEditBoard();
 }
 function setTool(next){
  if(!types.has(next))return;tool=next;
@@ -175,6 +199,7 @@ function hitTest(e,p){
 }
 async function publish(action,undo=false){
  if(!room){saveLocalSoon();return;}
+ if(!canEditBoard()){status("View only — sign in or ask the owner for access.");return;}
  try{
   const r=doc(db,"whiteboards",room.id,"elements",action.item?.id||"");
   if(action.kind==="add"){
@@ -209,7 +234,7 @@ function eraseAt(p){
  historyPush({kind:"delete",item});publish({kind:"delete",item});
 }
 async function undo(){
- if(!history.length)return;
+ if(!canEditBoard()||!history.length)return;
  const action=history.pop();
  if(action.kind==="add")items=items.filter(e=>e.id!==action.item.id);
  else if(action.kind==="delete")items.push(action.item);
@@ -217,7 +242,7 @@ async function undo(){
  future.push(action);schedule();await publish(action,true);
 }
 async function redo(){
- if(!future.length)return;
+ if(!canEditBoard()||!future.length)return;
  const action=future.pop();
  if(action.kind==="add")items.push(action.item);
  else if(action.kind==="delete")items=items.filter(e=>e.id!==action.item.id);
@@ -231,6 +256,7 @@ function addText(p,sticky){
 }
 function onDown(e){
  if(e.button!==0&&e.pointerType==="mouse")return;
+ if(room&&!canEditBoard()&&!spaceDown&&tool!=="hand"){status("View only — sign in or ask the owner for access.");return;}
  wrap.focus({preventScroll:true});
  const p=toWorld(e.clientX,e.clientY);
  $("cursor-coordinates").textContent="x: "+Math.round(p.x)+" · y: "+Math.round(p.y);
@@ -444,7 +470,7 @@ async function createRoom(){
  const source=items.map(e=>({...e}));
  const code=newId();
  try{
-  await setDoc(doc(db,"whiteboards",code),{ownerId:user.uid,title:safeTitle($("board-title").value),paperColor:paper,createdAt:serverTimestamp()});
+  await setDoc(doc(db,"whiteboards",code),{ownerId:user.uid,title:safeTitle($("board-title").value),paperColor:paper,accessMode:"restricted",invitedUids:[],createdAt:serverTimestamp()});
   if(source.length){
    const batch=writeBatch(db);
    for(const e of source.slice(-400))
@@ -465,6 +491,7 @@ async function updateRoomMeta(patch){
 }
 async function clearAll(){
  if(!items.length)return;
+ if(room&&!canEditBoard())return alert("You have view-only access.");
  if(room&&room.ownerId!==user?.uid){alert("Only the shared board creator can clear every item.");return;}
  if(!confirm(room?"Clear the shared whiteboard for everyone?":"Clear everything from your whiteboard?"))return;
  const old=[...items];items=[];historyPush({kind:"clear",items:old});
