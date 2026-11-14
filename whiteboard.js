@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc,deleteDoc,onSnapshot,query,orderBy,limit,arrayUnion,arrayRemove,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc,deleteDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
@@ -13,7 +13,7 @@ let tool="pen",color="#2360e7",width=4,grid=true,paper="#ffffff";
 let items=[],preview=null,active=null,spaceDown=false,cam={x:0,y:0,z:1},localDraft=null;
 let history=[],future=[],user=null,profile=null,room=null,stopItems=null,stopRoom=null;
 let saveTimer=null,busy=false,frame=0,sharingBusy=false;
-let inviteAccounts=[];
+let inviteAccounts=[],libraryRequest=0;
 const status=s=>{$("save-state").textContent=s;};
 const roomStatus=s=>{$("room-status").textContent=s;};
 function accessMode(data=room){return data?.accessMode||"legacy";}
@@ -412,9 +412,46 @@ async function openProject(file){
   history=[];future=[];fit();saveLocalSoon();schedule();
  }catch(e){alert("Unable to open project: "+e.message);}
 }
+function renderBoardList(area,boards,emptyText){
+ area.replaceChildren();
+ if(!boards.length){area.textContent=emptyText;area.classList.add("invite-empty");return;}
+ area.classList.remove("invite-empty");
+ boards.sort((a,b)=>(a.title||"").localeCompare(b.title||""));
+ for(const board of boards){
+  const button=document.createElement("button");button.type="button";button.className="board-link";
+  const title=document.createElement("strong");title.textContent=safeTitle(board.title);
+  const meta=document.createElement("small");
+  meta.textContent=board.accessMode==="restricted"?"🔒 Restricted":"🔗 Link";
+  button.append(title,meta);
+  button.onclick=()=>joinRoom(board.id);
+  area.append(button);
+ }
+}
+async function refreshBoardLibrary(){
+ $("board-library").hidden=!profile;
+ if(!user||!profile)return;
+ const request=++libraryRequest,uid=user.uid;
+ $("owned-boards").textContent="Loading your boards…";
+ $("invited-boards").textContent="Loading invitations…";
+ try{
+  const boards=collection(db,"whiteboards");
+  const [mine,shared]=await Promise.all([
+   getDocs(query(boards,where("ownerId","==",uid),limit(25))),
+   getDocs(query(boards,where("invitedUids","array-contains",uid),limit(25)))
+  ]);
+  if(request!==libraryRequest||auth.currentUser?.uid!==uid)return;
+  renderBoardList($("owned-boards"),mine.docs.map(d=>({id:d.id,...d.data()})),"No shared boards created yet.");
+  renderBoardList($("invited-boards"),shared.docs.map(d=>({id:d.id,...d.data()})),"No boards have been shared with your account yet.");
+ }catch(e){
+  if(request!==libraryRequest)return;
+  $("owned-boards").textContent="Could not load boards: "+e.message;
+  $("invited-boards").textContent="Publish the latest Firestore rules to enable invited-board lists.";
+ }
+}
 function showRoomModal(on){
  $("room-modal").hidden=!on;updateRoomInfo();
  if(on&&room&&isBoardOwner())loadInviteAccounts();
+ if(on&&profile)refreshBoardLibrary();
 }
 function inviteIdentity(uid){
  const p=inviteAccounts.find(v=>v.uid===uid);
@@ -506,6 +543,7 @@ function updateRoomInfo(){
  $("room-controls").hidden=false;
  $("create-room").disabled=!profile||Boolean(room);
  $("room-info").hidden=!room;
+ $("board-library").hidden=!profile;
  $("leave-room").disabled=!room;
  if(!room){
   $("board-mode").textContent="● Local board";renderBoardPermissions();return;
@@ -595,6 +633,7 @@ async function createRoom(){
   }
   busy=false;
   await joinRoom(code);
+  refreshBoardLibrary();
   roomStatus("Invite link ready.");
  }catch(e){roomStatus("Could not create board: "+e.message+". Check Firebase rules.");}
  finally{busy=false;}
@@ -667,6 +706,7 @@ function setupUI(){
  $("room-modal").onclick=e=>{if(e.target===$("room-modal"))showRoomModal(false);};
  $("create-room").onclick=createRoom;
  $("room-access").onchange=e=>changeAccess(e.target.value);
+ $("refresh-boards").onclick=refreshBoardLibrary;
  $("invite-search").oninput=renderInviteSearch;
  $("join-room").onclick=()=>joinRoom($("room-code").value);
  $("room-code").onkeydown=e=>{if(e.key==="Enter")joinRoom(e.target.value);};
