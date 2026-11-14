@@ -30,3 +30,12 @@ button,input{font:inherit}button{cursor:pointer;color:inherit;background:var(--b
 #invite-controls[hidden]{display:none!important}
 #invite-search{margin:0 0 9px}
 #room-access-detail{margin-bottom:12px}
+
+.board-library{margin:18px 0;padding:13px 0;border-block:1px solid #315979}
+.library-head{display:flex;justify-content:space-between;align-items:center;gap:9px}
+.board-library h3{font-size:14px;margin:12px 0}
+.library-head button{font-size:12px;padding:7px 10px}
+.board-links{display:grid;gap:7px;max-height:145px;overflow:auto}
+.board-link{width:100%;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left}
+.board-link strong{font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.board-link small{font-size:11px;color:#b2d6e8;white-space:nowrap}
