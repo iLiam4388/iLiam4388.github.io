@@ -10,3 +10,23 @@ button,input{font:inherit}button{cursor:pointer;color:inherit;background:var(--b
 @media(max-width:1050px){.topbar{gap:9px}.project{order:3;width:100%;flex-basis:100%;justify-content:flex-start}.project input{max-width:400px}.brand-title small{display:none}}
 @media(max-width:700px){.brand-title strong{font-size:17px}.brand-title .brand-icon{display:none}.topbar{padding:9px 12px}.top-actions button{padding:9px 10px;font-size:12px}.toolbar{width:65px;min-width:65px;padding:9px 6px}.tool small{font-size:9px}.tool span{font-size:19px}.options{gap:12px;min-height:56px;padding:7px}.statusbar span:last-child{display:none}.statusbar{font-size:10px}.canvas-zoom{right:8px;bottom:8px}.coordinates{left:8px;bottom:8px}.modal-card{padding:17px}}
 @media(max-height:500px){.toolbar{gap:0}.group-label{padding-top:6px}.tool{padding:5px}.topbar{min-height:45px}.options{min-height:50px}}
+
+/* Google Docs-style access sharing */
+.share-section{border-top:1px solid #315979;margin-top:16px;padding-top:10px}
+.share-section label{margin:12px 0 8px!important}
+.share-section select,.share-section input{width:100%;border:1px solid #69b9dc;border-radius:10px;padding:12px;background:#092946;color:white;outline-offset:3px}
+.share-section select:disabled{opacity:.7}
+.share-section input{background:#fff;color:#12283d}
+.share-section h3{margin:23px 0 12px;font-size:16px}
+.share-detail{font-size:12px;line-height:1.55;color:#a9c9da}
+.invite-people{display:grid;gap:7px;max-height:220px;overflow:auto}
+.invite-row{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#09253f;border:1px solid #2d6786;border-radius:10px;padding:10px}
+.invite-row .identity{display:flex;gap:4px;flex-direction:column;min-width:0;overflow-wrap:anywhere}
+.invite-row .identity strong{font-size:13px}
+.invite-row .identity small{color:#9dbad5;font-size:11px}
+.invite-row button{font-size:12px;padding:8px 11px;flex:none}
+.invite-row .role{color:#9ce5eb;font-size:11px}
+.invite-empty{font-size:12px;color:#a2bdd0;padding:9px}
+#invite-controls[hidden]{display:none!important}
+#invite-search{margin:0 0 9px}
+#room-access-detail{margin-bottom:12px}
