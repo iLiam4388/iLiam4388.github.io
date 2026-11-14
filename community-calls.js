@@ -37,6 +37,7 @@ if(launch){
   '<div class="call-voice" id="call-voice" hidden><span>📞</span><span style="font-size:17px">Voice call</span></div>',
   '<div class="call-actions call-center"><button class="call-btn" id="call-mute">🎙 Mute</button>',
   '<button class="call-btn" id="call-camera">📷 Camera off</button>',
+  '<button class="call-btn" id="call-share">🖥 Share screen</button>',
   '<button class="call-btn" id="call-play">🔊 Play sound</button>',
   '<button class="call-btn danger" id="call-end">☎ End call</button></div></div></section>'
  ].join("");
@@ -221,9 +222,11 @@ if(launch){
   if(stopCandidates){stopCandidates();stopCandidates=null;}
   const old=session;session=null;
   if(old){
+   old.screenStream?.getTracks().forEach(t=>t.stop());
    old.stream?.getTracks().forEach(t=>t.stop());
    old.pc?.close();
   }
+  $("call-share").textContent="🖥 Share screen";
   $("call-local").srcObject=null;$("call-remote").srcObject=null;
   visible("call-active",false);
   working=false;
@@ -242,10 +245,64 @@ if(launch){
   t.enabled=!t.enabled;$("call-camera").textContent=t.enabled?"📷 Camera off":"📷 Camera on";
  };
  $("call-play").onclick=()=>$("call-remote").play().catch(e=>status("Audio playback failed: "+e.message));
+ async function restoreCamera(s){
+  if(session!==s||!s.screenStream||s.screenUpdating)return;
+  s.screenUpdating=true;const old=s.screenStream;
+  try{
+   const sender=s.pc.getSenders().find(x=>x.track?.kind==="video");
+   if(!sender)throw Error("No video sender is available.");
+   await sender.replaceTrack(s.cameraTrack);
+   if(session!==s)return;
+   s.screenStream=null;s.screenTrack=null;
+   $("call-local").srcObject=s.stream;
+   $("call-local").play().catch(()=>{});
+   $("call-share").textContent="🖥 Share screen";
+   status("Screen sharing stopped. Camera restored.");
+   old.getTracks().forEach(t=>t.stop());
+  }catch(e){status("Unable to restore camera: "+e.message);}
+  finally{s.screenUpdating=false;}
+ }
+ $("call-share").onclick=async()=>{
+  const s=session;
+  if(!s||s.type!=="video"||s.screenUpdating)return;
+  if(s.screenStream){await restoreCamera(s);return;}
+  if(!navigator.mediaDevices?.getDisplayMedia){
+   status("Screen sharing is unavailable in this browser. Try a desktop browser.");
+   return;
+  }
+  let displayStream;
+  try{displayStream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:15},audio:false});}
+  catch(e){
+   if(e.name!=="NotAllowedError"&&e.name!=="AbortError")status("Could not share screen: "+e.message);
+   return;
+  }
+  if(session!==s){displayStream.getTracks().forEach(t=>t.stop());return;}
+  const video=displayStream.getVideoTracks()[0];
+  if(!video){displayStream.getTracks().forEach(t=>t.stop());status("No screen track available.");return;}
+  video.contentHint="detail";
+  s.screenUpdating=true;
+  try{
+   const sender=s.pc.getSenders().find(x=>x.track?.kind==="video");
+   if(!sender)throw Error("No video sender available.");
+   await sender.replaceTrack(video);
+   if(session!==s){displayStream.getTracks().forEach(t=>t.stop());return;}
+   s.screenTrack=video;s.screenStream=displayStream;
+   $("call-local").srcObject=new MediaStream([video]);
+   $("call-local").play().catch(()=>{});
+   $("call-share").textContent="⏹ Stop sharing";
+   status("Screen sharing is on. Select Stop sharing to restore your camera.");
+   video.addEventListener("ended",()=>{if(session===s&&s.screenStream===displayStream)restoreCamera(s);},{once:true});
+  }catch(e){
+   displayStream.getTracks().forEach(t=>t.stop());
+   status("Could not share screen: "+e.message);
+  }finally{s.screenUpdating=false;}
+ };
  function showCall(s,peer){
   $("call-peer").textContent=peer;$("call-type").textContent=s.type==="video"?"📹 Video":"📞 Audio";
   visible("call-videos",s.type==="video");visible("call-voice",s.type==="audio");
-  visible("call-camera",s.type==="video");visible("call-picker",false);visible("call-incoming",false);
+  visible("call-camera",s.type==="video");visible("call-share",s.type==="video");
+  $("call-share").textContent="🖥 Share screen";
+  visible("call-picker",false);visible("call-incoming",false);
   visible("call-active",true);
   $("call-mute").textContent="🎙 Mute";$("call-camera").textContent="📷 Camera off";
   status("Connecting…");
@@ -279,7 +336,8 @@ if(launch){
   localVideo.playsInline=true;
   localVideo.play().catch(e=>console.warn("Local video preview:",e.name));
   $("call-remote").srcObject=remote;
-  return {pc,stream,type};
+  return {pc,stream,type,cameraTrack:stream.getVideoTracks()[0]||null,
+   screenStream:null,screenTrack:null,screenUpdating:false};
  }
  function setupCandidates(s,remoteSide){
   const queue=[];
