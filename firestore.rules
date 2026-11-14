@@ -761,39 +761,71 @@ service cloud.firestore {
         && request.resource.data.text.size() <= 250;
     }
 
+    // Shared whiteboards: invite-only or link access. Pre-existing rooms
+    // without accessMode retain their old signed-in-by-link behavior.
+    function boardViewAccess(data) {
+      return data.get('accessMode','legacy') == 'link'
+        || (signedIn() && (
+          data.get('accessMode','legacy') == 'legacy'
+          || data.ownerId == request.auth.uid
+          || request.auth.uid in data.get('invitedUids', [])
+        ));
+    }
+    function boardEditAccess(data) {
+      return hasProfile() && (
+        data.get('accessMode','legacy') in ['link','legacy']
+        || data.ownerId == request.auth.uid
+        || request.auth.uid in data.get('invitedUids', [])
+      );
+    }
+    function validBoardSharing(data) {
+      return data.get('accessMode','') in ['restricted','link']
+        && data.get('invitedUids',null) is list
+        && data.invitedUids.size() <= 20
+        && data.invitedUids.toSet().size() == data.invitedUids.size()
+        && !(data.ownerId in data.invitedUids);
+    }
+    function canSeeBoard(boardId) {
+      return exists(/databases/$(database)/documents/whiteboards/$(boardId))
+        && boardViewAccess(get(/databases/$(database)/documents/whiteboards/$(boardId)).data);
+    }
+    function canEditBoard(boardId) {
+      return exists(/databases/$(database)/documents/whiteboards/$(boardId))
+        && boardEditAccess(get(/databases/$(database)/documents/whiteboards/$(boardId)).data);
+    }
     match /whiteboards/{boardId} {
-      allow get: if hasProfile();
+      allow get: if boardViewAccess(resource.data);
       allow list: if false;
       allow create: if hasProfile()
         && boardId.matches('^[0-9a-f]{32}$')
         && request.resource.data.keys().hasOnly([
-          'ownerId','title','paperColor','createdAt'
+          'ownerId','title','paperColor','createdAt','accessMode','invitedUids'
         ])
         && request.resource.data.keys().hasAll([
-          'ownerId','title','paperColor','createdAt'
+          'ownerId','title','paperColor','createdAt','accessMode','invitedUids'
         ])
         && request.resource.data.ownerId == request.auth.uid
         && validWhiteboardTitle(request.resource.data.title)
         && validWhiteboardColor(request.resource.data.paperColor)
+        && validBoardSharing(request.resource.data)
         && request.resource.data.createdAt == request.time;
       allow update: if hasProfile()
         && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['title','paperColor'])
+          .affectedKeys().hasOnly(['title','paperColor','accessMode','invitedUids'])
         && validWhiteboardTitle(request.resource.data.title)
-        && validWhiteboardColor(request.resource.data.paperColor);
+        && validWhiteboardColor(request.resource.data.paperColor)
+        && validBoardSharing(request.resource.data);
       allow delete: if false;
-
       match /elements/{elementId} {
-        allow get, list: if hasProfile()
-          && exists(/databases/$(database)/documents/whiteboards/$(boardId));
-        allow create: if hasProfile()
+        allow get, list: if canSeeBoard(boardId);
+        allow create: if canEditBoard(boardId)
           && elementId.matches('^[0-9a-f]{32}$')
-          && exists(/databases/$(database)/documents/whiteboards/$(boardId))
           && validWhiteboardElement();
         allow update: if false;
-        allow delete: if hasProfile()
-          && exists(/databases/$(database)/documents/whiteboards/$(boardId));
+        allow delete: if canEditBoard(boardId);
       }
     }
 
