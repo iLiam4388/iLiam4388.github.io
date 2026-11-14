@@ -55,3 +55,19 @@ During an **iLiam video call**, choose **🖥 Share screen**, then select a desk
 - **Video calls only** for this version: audio-only calls do not negotiate a video sender. Screen audio and system audio are not shared.
 - Desktop browsers with Screen Capture API support (such as current Chromium-based Chrome, Edge or Opera) are the primary targets. Many mobile browsers do not offer web screen sharing.
 - If an existing network/browser cannot replace the outgoing video track, the UI shows an error. Screen sharing has not yet been verified in a live multi-device call.
+
+
+## Ringtones, actionable notifications, and Picture-in-Picture
+
+The **Call Someone** panel now has **🔔 Enable call notifications**. This requests browser notification permission and registers `iliam-call-sw.js` for actionable notifications on supported desktop browsers.
+
+When an incoming call arrives, a simple two-tone ringtone plays if the browser has permitted audio playback after a user interaction. An on-page call banner provides **Accept** and **Decline**. If browser notifications are granted and the tab is in the background, a system notification is requested with Accept and Decline actions (display of action buttons depends on browser/OS support). The browser notification opens or focuses Community; accepting tries to join the call there. Permissions may still be needed.
+
+**Across iLiam pages:** `iliam-sitewide-calls.js` is loaded on the Home, Videos, Photos, Downloads, Games, Store, Other, 2D Rider, and 3D Rider pages. Calls can ring there without navigating to Community first. The original page can stay open while accepting in a separate Community tab. Incoming calls also ring when an iLiam page is open in a background browser tab and the user is viewing another website.
+
+**Important limits:**
+- This is **not full background web push**. When every iLiam tab is closed, JavaScript and Firestore listeners are no longer running. True closed-site notifications require configuring Firebase Cloud Messaging/Web Push, a VAPID key, storing permitted device tokens, and a trusted server/Cloud Function that sends push notifications. GitHub Pages alone cannot securely send that push.
+- Browsers may prevent automatic audio until the user has clicked or pressed a key on the site. The ringtone may therefore be silent the first time.
+- **▣ Picture in Picture** is available during video calls where the browser supports it. This floats a video above other tabs/windows while the Community tab remains open; audio calls keep playing in the background but have no video PiP window. The call ends if the Community call tab closes.
+- Browser support for system-notification buttons and Picture-in-Picture differs. Try Opera GX on Windows first; if a feature isn't supported, use the visible in-page controls.
+- No additional Firestore rules are required for these UI changes. End-to-end acceptance, ringtone playback and system-notification action handling have not been live-tested across two devices.
