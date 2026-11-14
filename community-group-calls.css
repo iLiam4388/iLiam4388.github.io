@@ -44,3 +44,8 @@
 #iliam-group-ui .gc-dnd-footer small{color:#add9e9;font-size:12px}
 #iliam-group-ui .gc-dnd-footer input{width:23px;height:23px;flex:none;accent-color:#41e5ae;cursor:pointer}
 #iliam-group-ui #gc-privacy-status:empty{min-height:0;margin:0}
+
+/* Screen sharing */
+#iliam-group-ui #gc-share{background:#1a5686;border-color:#80d5ff}
+#iliam-group-ui .gc-screen-tile video{object-fit:contain;transform:none!important}
+#iliam-group-ui .gc-screen-tile{border-color:#5bfbc7;box-shadow:inset 0 0 0 2px #59fbbb55}
