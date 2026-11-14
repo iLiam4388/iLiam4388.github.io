@@ -48,3 +48,6 @@
 #iliam-call-ui #call-block-editor[hidden]{display:none!important}
 #iliam-call-ui #call-block-editor{margin:8px 0 13px}
 #iliam-call-ui #call-edit-blocks{padding:8px 15px;font-size:13px}
+
+/* Screen sharing on older one-to-one calls */
+#iliam-call-ui #call-share{background:#195789;border-color:#87cfff}
