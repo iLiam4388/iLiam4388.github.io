@@ -613,7 +613,7 @@ async function joinRoom(raw){
   updateRoomInfo();showRoomModal(false);
   status(canEditBoard()?"Live collaboration":"View only — sign in to edit");
   const url=new URL(location.href);url.searchParams.set("board",code);window.history.replaceState(null,"",url);
- }catch(e){roomStatus(e?.code==="permission-denied"?"This board is private. Sign in with an invited iLiam account, or ask the owner to change General access.":"Could not open board: "+e.message);showRoomModal(true);}
+ }catch(e){roomStatus(e?.code==="permission-denied"?"This board may be private. Sign in with an invited iLiam account, or ask the owner to share it. If this is a new feature, publish the latest Firestore rules.":"Could not open board: "+e.message);showRoomModal(true);}
  finally{busy=false;}
 }
 async function createRoom(){
@@ -633,8 +633,10 @@ async function createRoom(){
   }
   busy=false;
   await joinRoom(code);
-  refreshBoardLibrary();
-  roomStatus("Invite link ready.");
+  if(room?.id===code){
+   refreshBoardLibrary();
+   roomStatus("Board created with Restricted access. Invite friends or select Anyone with the link.");
+  }
  }catch(e){roomStatus("Could not create board: "+e.message+". Check Firebase rules.");}
  finally{busy=false;}
 }
