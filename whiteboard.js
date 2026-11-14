@@ -412,15 +412,120 @@ async function openProject(file){
   history=[];future=[];fit();saveLocalSoon();schedule();
  }catch(e){alert("Unable to open project: "+e.message);}
 }
-function showRoomModal(on){$("room-modal").hidden=!on;updateRoomInfo();}
+function showRoomModal(on){
+ $("room-modal").hidden=!on;updateRoomInfo();
+ if(on&&room&&isBoardOwner())loadInviteAccounts();
+}
+function inviteIdentity(uid){
+ const p=inviteAccounts.find(v=>v.uid===uid);
+ return {name:p?.nickname||p?.username||"iLiam member",username:p?.username||uid.slice(0,8)+"…"};
+}
+function inviteRow(uid,role,removable=false){
+ const p=inviteIdentity(uid),row=document.createElement("div");row.className="invite-row";
+ const identity=document.createElement("span");identity.className="identity";
+ const name=document.createElement("strong");name.textContent=p.name;
+ const sub=document.createElement("small");sub.textContent="@"+p.username;identity.append(name,sub);
+ const action=document.createElement("span");action.className="role";action.textContent=role;
+ row.append(identity,action);
+ if(removable){
+  const button=document.createElement("button");button.type="button";button.textContent="Remove";
+  button.disabled=sharingBusy;
+  button.onclick=()=>changeInvite(uid,false);
+  row.replaceChild(button,action);
+ }
+ return row;
+}
+function renderInvites(){
+ const list=$("invite-members");list.replaceChildren();
+ if(!room)return;
+ list.append(inviteRow(room.ownerId,"Owner"));
+ for(const uid of invitedUids())list.append(inviteRow(uid,"Can edit",isBoardOwner()));
+ if(isBoardOwner())renderInviteSearch();
+}
+function renderInviteSearch(){
+ const area=$("invite-results");area.replaceChildren();
+ if(!room||!isBoardOwner())return;
+ const queryText=$("invite-search").value.trim().toLowerCase();
+ if(!queryText){area.textContent="Search for an iLiam username to invite.";area.className="invite-people invite-empty";return;}
+ area.className="invite-people";
+ const found=inviteAccounts.filter(p=>p.uid!==room.ownerId
+  && !invitedUids().includes(p.uid)
+  && (p.username+" "+(p.nickname||"")).toLowerCase().includes(queryText)).slice(0,20);
+ for(const p of found){
+  const row=inviteRow(p.uid,"");
+  const button=document.createElement("button");button.type="button";button.textContent="＋ Invite";
+  button.disabled=sharingBusy||invitedUids().length>=20;
+  button.onclick=()=>changeInvite(p.uid,true);
+  row.lastElementChild.replaceWith(button);area.append(row);
+ }
+ if(!area.children.length)area.textContent=inviteAccounts.length
+  ?"No matching accounts found.":"No accounts loaded. Try opening Share again.";
+}
+async function loadInviteAccounts(){
+ if(!profile||!isBoardOwner())return;
+ try{
+  const snap=await getDocs(query(collection(db,"profiles"),limit(200)));
+  if(!isBoardOwner())return;
+  inviteAccounts=snap.docs.map(d=>({uid:d.id,...d.data()}));
+  renderInvites();
+ }catch(e){roomStatus("Could not load iLiam accounts: "+e.message);}
+}
+async function changeInvite(uid,add){
+ if(!isBoardOwner()||sharingBusy||!user)return;
+ if(uid===room.ownerId)return;
+ if(add&&invitedUids().length>=20)return roomStatus("Maximum 20 invited accounts.");
+ sharingBusy=true;roomStatus((add?"Inviting":"Removing")+" account…");
+ try{
+  const ref=doc(db,"whiteboards",room.id);
+  // Explicitly upgrade legacy rooms to private sharing when an invite is added.
+  const patch=add?{invitedUids:arrayUnion(uid)}:{invitedUids:arrayRemove(uid)};
+  if(accessMode()==="legacy"){patch.accessMode="restricted";patch.invitedUids=add?[uid]:[];}
+  await updateDoc(ref,patch);
+  roomStatus(add?"Account invited. They can open and edit this board.":"Account removed.");
+  $("invite-search").value="";
+ }catch(e){roomStatus("Could not change invitation: "+e.message);}
+ finally{sharingBusy=false;renderInvites();}
+}
+async function changeAccess(mode){
+ if(!isBoardOwner()||sharingBusy)return;
+ if(!["restricted","link"].includes(mode))return;
+ const before=accessMode();
+ if(mode==="link"&&before!=="link"&&!confirm("Anyone with this link will be able to view the board. Signed-in iLiam accounts with the link will also be able to edit. Continue?")){
+  $("room-access").value=before;return;
+ }
+ sharingBusy=true;$("room-access").disabled=true;roomStatus("Saving sharing settings…");
+ try{
+  const patch={accessMode:mode,invitedUids:invitedUids()};
+  await updateDoc(doc(db,"whiteboards",room.id),patch);
+  roomStatus(mode==="restricted"?"Restricted sharing enabled. Only invited accounts can open.":"Anyone with the link can now view. Signed-in iLiam accounts can edit.");
+ }catch(e){roomStatus("Could not change sharing mode: "+e.message);$("room-access").value=before;}
+ finally{sharingBusy=false;updateRoomInfo();}
+}
 function updateRoomInfo(){
- $("auth-note").hidden=Boolean(user);
- $("room-controls").hidden=!user;
+ $("auth-note").hidden=Boolean(profile);
+ $("room-controls").hidden=false;
+ $("create-room").disabled=!profile||Boolean(room);
  $("room-info").hidden=!room;
  $("leave-room").disabled=!room;
- if(room)$("current-code").textContent=room.id;
- $("board-mode").textContent=room?"🟢 Shared: "+room.id.slice(0,7)+"…":"● Local board";
- $("board-title").readOnly=Boolean(room&&room.ownerId!==user?.uid);
+ if(!room){
+  $("board-mode").textContent="● Local board";renderBoardPermissions();return;
+ }
+ $("current-code").textContent=room.id;
+ const mode=accessMode();
+ const owner=isBoardOwner(),canEdit=canEditBoard();
+ $("board-mode").textContent=(canEdit?"🟢":"🔎")+" Shared "+(canEdit?"":"(view only) · ")+room.id.slice(0,7)+"…";
+ $("room-access").value=mode;
+ $("room-access").disabled=!owner||sharingBusy;
+ $("invite-controls").hidden=!owner;
+ $("room-access-detail").textContent=mode==="restricted"
+  ?"Restricted: only the owner and invited iLiam accounts can open or edit this whiteboard."
+  :mode==="link"
+   ?"Anyone with the link can view, even without an account. Signed-in iLiam accounts with the link can edit."
+   :"Existing link sharing: anyone signed in to iLiam with this code can open and edit. The owner can change this setting.";
+ $("share-description").textContent=mode==="restricted"
+  ?"This link works only for the people you invite below."
+  :"Anyone with this link can open the board under its sharing permissions.";
+ renderInvites();renderBoardPermissions();
 }
 function stopShared(){
  if(stopItems){stopItems();stopItems=null;}
