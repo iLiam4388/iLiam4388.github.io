@@ -310,15 +310,16 @@ function toSvg(){
 }
 function extent(){
  if(!items.length)return {x:0,y:0,w:1200,h:750};
- const xs=[],ys=[];
+ let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+ const include=(x,y)=>{minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);};
  for(const e of items){
-  xs.push(e.x,e.x2);ys.push(e.y,e.y2);
-  if(e.kind==="pen"||e.kind==="highlighter")for(const p of e.points){xs.push(p.x);ys.push(p.y);}
-  if(e.kind==="sticky"){xs.push(e.x+200);ys.push(e.y+145);}
-  if(e.kind==="text"){xs.push(e.x+Math.min(1200,e.text.length*14));ys.push(e.y+100);}
+  include(e.x,e.y);include(e.x2,e.y2);
+  if(e.kind==="pen"||e.kind==="highlighter")for(const p of e.points)include(p.x,p.y);
+  if(e.kind==="sticky")include(e.x+200,e.y+145);
+  if(e.kind==="text")include(e.x+Math.min(1200,e.text.length*14),e.y+100);
  }
- const x=Math.min(...xs)-50,y=Math.min(...ys)-50,w=clamp(Math.max(...xs)-x+50,200,5000),h=clamp(Math.max(...ys)-y+50,200,5000);
- return {x,y,w,h};
+ const x=minX-50,y=minY-50;
+ return {x,y,w:clamp(maxX-x+50,200,5000),h:clamp(maxY-y+50,200,5000)};
 }
 function download(blob,filename){
  const url=URL.createObjectURL(blob),link=document.createElement("a");
@@ -439,6 +440,7 @@ async function createRoom(){
  if(!user||!profile){showRoomModal(true);roomStatus("Sign in to iLiam Community before sharing.");return;}
  if(busy)return;
  busy=true;roomStatus("Creating board…");
+ if(!room)writeLocal(); // Keep the original local board intact if the user leaves the shared room later.
  const source=items.map(e=>({...e}));
  const code=newId();
  try{
