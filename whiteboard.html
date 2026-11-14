@@ -76,6 +76,12 @@
     <div id="auth-note" class="auth-note" hidden><strong>Sign in with iLiam to create or edit shared boards.</strong><p>Anyone with a public link can view the board, but editing requires an iLiam account.</p><a href="community.html">Open Community sign-in</a></div>
     <div id="room-controls">
       <div class="modal-actions"><button id="create-room" class="primary">＋ Create shared board</button><button id="leave-room">Leave shared room</button></div>
+      <div id="board-library" class="board-library" hidden>
+        <div class="library-head"><h3>Your shared boards</h3><button id="refresh-boards" type="button">↻ Refresh</button></div>
+        <div id="owned-boards" class="board-links"><span class="invite-empty">Loading…</span></div>
+        <h3>Shared with me</h3>
+        <div id="invited-boards" class="board-links"><span class="invite-empty">Loading…</span></div>
+      </div>
       <label for="room-code">Join with a room code or shared link</label>
       <div class="join-row"><input id="room-code" placeholder="Paste the room code or link" autocomplete="off"><button id="join-room" class="primary">Join</button></div>
       <div id="room-info" class="room-info" hidden>
@@ -87,7 +93,7 @@
     <select id="room-access" aria-label="Who can access this board">
       <option value="restricted">🔒 Restricted — invited iLiam accounts only</option>
       <option value="link">🌍 Anyone with the link</option>
-      <option value="legacy">🔗 Existing link sharing (signed-in accounts)</option>
+      <option value="legacy" disabled>🔗 Existing link sharing (signed-in accounts)</option>
     </select>
     <p class="share-detail" id="room-access-detail">Restricted: only you and accounts you invite can open and edit this whiteboard.</p>
     <div class="share-invitations">
