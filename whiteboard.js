@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,setDoc,updateDoc,deleteDoc,onSnapshot,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,setDoc,updateDoc,deleteDoc,onSnapshot,query,orderBy,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
@@ -421,7 +421,7 @@ async function joinRoom(raw){
   room={id:code,...snap.data()};
   items=[];history=[];future=[];
   $("board-title").value=safeTitle(room.title);paper=validHex(room.paperColor)?room.paperColor:"#ffffff";$("paper-color").value=paper;
-  stopItems=onSnapshot(collection(db,"whiteboards",code,"elements"),snap=>{
+  stopItems=onSnapshot(query(collection(db,"whiteboards",code,"elements"),orderBy("createdAt","asc")),snap=>{
    items=snap.docs.map(d=>({...normalizeElement(d.data()),id:d.id})).filter(e=>drawKinds.has(e.kind)).slice(-500);
    status("Synced · "+items.length+" objects");schedule();
   },e=>status("Shared board unavailable: "+e.message));
