@@ -470,7 +470,7 @@ if(launch){
     const p=new URLSearchParams(location.search);
     if(p.get("incomingKind")==="legacy"&&p.get("incomingId")===incoming.id){
      if(p.get("incomingAction")==="decline")$("call-decline").click();
-     else $("call-accept").focus();
+     else $("call-accept").click();
      history.replaceState(null,"",location.pathname);
     }
    }
@@ -492,7 +492,7 @@ if(launch){
   const a=e.data;if(a?.type!=="iliam-call-action"||a.kind!=="legacy")return;
   if(incoming?.id!==a.id)return;
   if(a.action==="decline")$("call-decline").click();
-  else $("call-accept").focus();
+  else $("call-accept").click();
  });
  window.addEventListener("pagehide",()=>{
   session?.stream?.getTracks().forEach(t=>t.stop());session?.pc?.close();
