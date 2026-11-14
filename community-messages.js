@@ -19,6 +19,7 @@ if(launcher){
  '<button type="button" class="im-btn" id="im-video">📹 Video call</button></div>',
  '<div id="im-messages" class="im-bubbles"><p class="im-empty">Choose a chat or add someone.</p></div>',
  '<form id="im-form" class="im-send"><input class="im-input" id="im-input" maxlength="2000" placeholder="Type a private message…" aria-label="Message" disabled>',
+ '<button class="im-btn" id="im-link" type="button" disabled title="Insert clickable link">🔗 Link</button>',
  '<button class="im-btn primary" id="im-send" type="submit" disabled>Send</button></form></section></div>',
  '</div></section>',
  '<section class="im-modal" id="im-new" hidden><div class="im-panel" role="dialog" aria-modal="true" aria-label="New conversation">',
@@ -30,6 +31,13 @@ if(launcher){
  '<div class="im-actions"><button class="im-btn primary" id="im-create" disabled>Create chat</button>',
  '<button class="im-btn" id="im-cancel">Cancel</button></div>',
  '<p class="im-status" id="im-new-status" role="status"></p></div></section>',
+ '<section class="im-modal" id="im-link-modal" hidden><div class="im-panel" role="dialog" aria-modal="true" aria-label="Add a message link">',
+ '<div class="im-actions" style="justify-content:space-between"><h3>🔗 Add a link</h3><button class="im-btn" id="im-link-close" type="button">✕ Close</button></div>',
+ '<label for="im-link-text">Link text</label><input id="im-link-text" class="im-search" maxlength="120" placeholder="Example: My video">',
+ '<label for="im-link-url">Website URL</label><input id="im-link-url" class="im-search" type="url" placeholder="https://example.com">',
+ '<p class="im-hint">In your message, the link looks like [My video](https://example.com). After sending, it becomes clickable.</p>',
+ '<div class="im-actions"><button class="im-btn primary" id="im-insert-link">Insert link</button><button class="im-btn" id="im-link-cancel">Cancel</button></div>',
+ '<p id="im-link-error" class="im-status" role="status"></p></div></section>',
  '<section class="im-modal" id="im-group-edit" hidden><div class="im-panel" role="dialog" aria-modal="true" aria-label="Edit group">',
  '<div class="im-actions" style="justify-content:space-between"><h3>Edit group</h3><button class="im-btn" id="im-group-close">✕ Close</button></div>',
  '<label for="im-edit-title">Group name</label><input id="im-edit-title" maxlength="60" class="im-search" placeholder="Group name">',
@@ -327,13 +335,59 @@ if(launcher){
    hiddenChats.add(c.id);resetCurrent();drawInbox();watchMessageNotices();
   }catch(e){alert("Could not hide conversation: "+e.message);}
  };
+ function safeMessageUrl(raw){
+  try{
+   const url=new URL(raw);
+   return url.protocol==="https:"||url.protocol==="http:"?url.href:null;
+  }catch{return null;}
+ }
+ function renderMessageLinks(element,message){
+  // Append only safe text nodes and safe HTTP(S) anchors. Never inject HTML.
+  const pattern=/\[([^\]\r\n]{1,120})\]\((https?:\/\/[^\s)]+)\)/gi;
+  let at=0,m;
+  while((m=pattern.exec(message))){
+   const href=safeMessageUrl(m[2]);if(!href)continue;
+   if(m.index>at)element.append(document.createTextNode(message.slice(at,m.index)));
+   const link=document.createElement("a");
+   link.textContent=m[1];link.href=href;link.target="_blank";link.rel="noopener noreferrer";
+   link.title=href;element.append(link);at=pattern.lastIndex;
+  }
+  if(at<message.length)element.append(document.createTextNode(message.slice(at)));
+ }
+ let linkCursor={start:0,end:0};
+ function openLinkEditor(){
+  if(!current||!user)return;
+  const field=$("im-input");
+  linkCursor={start:field.selectionStart??field.value.length,end:field.selectionEnd??field.value.length};
+  $("im-link-text").value=field.value.slice(linkCursor.start,linkCursor.end).trim().slice(0,120);
+  $("im-link-url").value="";$("im-link-error").textContent="";
+  display("im-link-modal",true);$("im-link-text").focus();
+ }
+ function insertLink(){
+  const text=$("im-link-text").value.trim();
+  const raw=$("im-link-url").value.trim(),url=safeMessageUrl(raw);
+  if(!text||/[\[\]\r\n]/.test(text))return $("im-link-error").textContent="Enter link text without square brackets.";
+  if(!url||/[\s()]/.test(raw))return $("im-link-error").textContent="Enter a valid http:// or https:// URL without spaces or parentheses.";
+  const field=$("im-input"),{start,end}=linkCursor;
+  const mark="["+text+"]("+url+")";
+  const spacer=start&&field.value[start-1]!==" "?" ":"";
+  const result=field.value.slice(0,start)+spacer+mark+field.value.slice(end);
+  if(result.length>2000)return $("im-link-error").textContent="Message exceeds the 2,000-character limit.";
+  field.value=result;display("im-link-modal",false);field.focus();
+  const caret=start+spacer.length+mark.length;field.setSelectionRange(caret,caret);
+ }
+ $("im-link").onclick=openLinkEditor;
+ $("im-link-close").onclick=()=>display("im-link-modal",false);
+ $("im-link-cancel").onclick=()=>display("im-link-modal",false);
+ $("im-insert-link").onclick=insertLink;
+ $("im-link-url").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();insertLink();}});
  function resetCurrent(){
   if(stopMessages){stopMessages();stopMessages=null;}
   current=null;
   $("im-title").textContent="Choose a conversation";
   $("im-messages").replaceChildren();
   $("im-messages").textContent="Choose a chat or add someone.";
-  $("im-input").disabled=true;$("im-send").disabled=true;
+  $("im-input").disabled=true;$("im-send").disabled=true;$("im-link").disabled=true;
   display("im-call",false);display("im-edit-group",false);display("im-delete",false);display("im-call-menu",false);
  }
  async function showConversation(c){
@@ -343,7 +397,7 @@ if(launcher){
   await ensureProfiles(c.members);
   if(current?.id!==c.id)return;
   $("im-title").textContent=chatName(c);
-  $("im-input").disabled=false;$("im-send").disabled=false;
+  $("im-input").disabled=false;$("im-send").disabled=false;$("im-link").disabled=false;
   updateConversationControls();display("im-call-menu",false);
   drawInbox();
   $("im-messages").textContent="Loading messages…";
@@ -357,7 +411,7 @@ if(launcher){
     if(c.kind==="group"){
      const who=document.createElement("span");who.className="im-sender";who.textContent=m.uid===user.uid?"You":label(profileOf(m.uid));bubble.append(who);
     }
-    const content=document.createElement("div");content.textContent=m.text; // Never inject message HTML.
+    const content=document.createElement("div");renderMessageLinks(content,m.text); // Safe text and validated links.
     const stamp=document.createElement("span");stamp.className="im-time";stamp.textContent=time(m.createdAt);
     bubble.append(content,stamp);board.append(bubble);
    }
