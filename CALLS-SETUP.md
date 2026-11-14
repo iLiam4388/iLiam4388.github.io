@@ -45,3 +45,13 @@ Limits and cautions:
 - Firestore call-room and signaling records are not automatically deleted after calls finish. Add Firebase TTL cleanup or a scheduled backend job if usage grows.
 
 **Test:** Publish updated rules; use two different accounts on two devices to start a group call (then add a third and fourth). Confirm accept, decline, mute, camera off, and host end work as expected.
+
+## Screen sharing (desktop video calls)
+
+During an **iLiam video call**, choose **🖥 Share screen**, then select a desktop screen, browser tab or application window in your browser's permission chooser. The outgoing camera video is temporarily replaced by the chosen screen for the other participant(s). Choose **⏹ Stop sharing** or use the browser's native **Stop sharing** control to return to your camera. Hanging up also releases screen capture.
+
+- Works in the main 1–4-person WebRTC video-call interface and legacy one-to-one video calls.
+- It uses `navigator.mediaDevices.getDisplayMedia()` and WebRTC `RTCRtpSender.replaceTrack()`. The browser prompts every time; no Firebase rules or extra database fields are required.
+- **Video calls only** for this version: audio-only calls do not negotiate a video sender. Screen audio and system audio are not shared.
+- Desktop browsers with Screen Capture API support (such as current Chromium-based Chrome, Edge or Opera) are the primary targets. Many mobile browsers do not offer web screen sharing.
+- If an existing network/browser cannot replace the outgoing video track, the UI shows an error. Screen sharing has not yet been verified in a live multi-device call.
