@@ -34,6 +34,7 @@ if(launch){
   '<div class="gc-grid" id="gc-grid"></div><p class="gc-status" id="gc-active-status"></p>',
   '<div class="gc-actions"><button class="gc-button" id="gc-mute">🎙 Mute</button>',
   '<button class="gc-button" id="gc-camera">📷 Camera off</button>',
+  '<button class="gc-button" id="gc-share">🖥 Share screen</button>',
   '<button class="gc-button" id="gc-play">🔊 Play audio</button>',
   '<button class="gc-button danger" id="gc-end">☎ Leave call</button></div></div></section>'
  ].join("");
@@ -196,8 +197,12 @@ if(launch){
   if(s){
    s.unsubs.forEach(fn=>fn());
    stopPeersFor(s);
+   s.screenStream?.getTracks().forEach(t=>t.stop());
    s.stream.getTracks().forEach(t=>t.stop());
+   s.previewStream=null;
   }
+  $("gc-share").textContent="🖥 Share screen";
+  $("gc-share").disabled=false;
   $("gc-grid").replaceChildren();
   show("gc-active",false);
   working=false;
@@ -231,6 +236,79 @@ if(launch){
  $("gc-play").onclick=()=>{
   if(!current)return;
   for(const p of current.peers.values())p.media?.play().catch(()=>{});
+ };
+ function previewScreen(s,track){
+  if(current!==s)return;
+  const tile=$("gc-grid").querySelector(".gc-tile");
+  const video=tile?.querySelector("video");
+  if(video){
+   video.srcObject=track?new MediaStream([track]):s.stream;
+   video.play().catch(()=>{});
+  }
+  if(tile)tile.classList.toggle("gc-screen-tile",!!track);
+ }
+ async function stopScreenShare(s){
+  if(current!==s||!s.screenStream||s.screenUpdating)return;
+  s.screenUpdating=true;
+  const oldStream=s.screenStream;
+  try{
+   const replacements=[...s.peers.values()].map(p=>{
+    const sender=p.pc.getSenders().find(x=>x.track?.kind==="video");
+    return sender?sender.replaceTrack(s.cameraTrack):Promise.resolve();
+   });
+   await Promise.all(replacements);
+   s.screenStream=null;
+   s.screenTrack=null;
+   previewScreen(s,null);
+   $("gc-share").textContent="🖥 Share screen";
+   status("Screen sharing stopped. Camera restored.");
+  }catch(e){status("Unable to restore the camera: "+e.message);}
+  finally{
+   // Do not end an active share if restoring the camera failed.
+   if(s.screenStream!==oldStream)oldStream.getTracks().forEach(t=>t.stop());
+   s.screenUpdating=false;
+  }
+ }
+ $("gc-share").onclick=async()=>{
+  const s=current;
+  if(!s||s.type!=="video"||s.screenUpdating)return;
+  if(s.screenStream){await stopScreenShare(s);return;}
+  if(!navigator.mediaDevices?.getDisplayMedia){
+   status("This browser cannot share its screen. Try desktop Chrome, Edge or Opera.");
+   return;
+  }
+  // getDisplayMedia must run directly in a click handler for user permission.
+  let displayStream;
+  try{displayStream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:15},audio:false});}
+  catch(e){
+   if(e.name!=="NotAllowedError"&&e.name!=="AbortError")status("Unable to share screen: "+e.message);
+   return;
+  }
+  if(current!==s){displayStream.getTracks().forEach(t=>t.stop());return;}
+  const screenTrack=displayStream.getVideoTracks()[0];
+  if(!screenTrack){displayStream.getTracks().forEach(t=>t.stop());status("No screen video track was provided.");return;}
+  screenTrack.contentHint="detail";
+  s.screenUpdating=true;
+  try{
+   await Promise.all([...s.peers.values()].map(p=>{
+    const sender=p.pc.getSenders().find(x=>x.track?.kind==="video");
+    if(!sender)throw Error("A participant has no video sender.");
+    return sender.replaceTrack(screenTrack);
+   }));
+   if(current!==s){displayStream.getTracks().forEach(t=>t.stop());return;}
+   s.screenStream=displayStream;s.screenTrack=screenTrack;
+   previewScreen(s,screenTrack);
+   $("gc-share").textContent="⏹ Stop sharing";
+   status("You are sharing your screen. Stop sharing to return to the camera.");
+   screenTrack.addEventListener("ended",()=>{if(current===s&&s.screenStream===displayStream)stopScreenShare(s);},{once:true});
+  }catch(e){
+   await Promise.allSettled([...s.peers.values()].map(p=>{
+    const sender=p.pc.getSenders().find(x=>x.track?.kind==="video");
+    return sender?.replaceTrack(s.cameraTrack);
+   }));
+   displayStream.getTracks().forEach(t=>t.stop());
+   status("Unable to share screen: "+e.message);
+  }finally{s.screenUpdating=false;}
  };
  async function capture(type){
   if(!navigator.mediaDevices?.getUserMedia||typeof RTCPeerConnection==="undefined")
@@ -272,7 +350,10 @@ if(launch){
   const a=[me.uid,uid].sort()[0],b=[me.uid,uid].sort()[1],offerer=me.uid===a;
   const connectionRef=doc(s.ref,"connections",a+"__"+b);
   const pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]});
-  for(const track of s.stream.getTracks())pc.addTrack(track,s.stream);
+  for(const track of s.stream.getTracks()){
+   const outgoing=track.kind==="video"&&s.screenTrack?s.screenTrack:track;
+   pc.addTrack(outgoing,s.stream);
+  }
   const remote=new MediaStream(),label=await peerName(uid);
   if(current!==s){pc.close();s.pending.delete(uid);return;}
   const view=addTile(s,uid,label+" · Connecting",remote);
@@ -351,7 +432,11 @@ if(launch){
   const label=s.participantCount===2?"Call":"Group call";
   $("gc-active-title").textContent=(s.type==="video"?"📹 Video ":"📞 Audio ")+label;
   show("gc-camera",s.type==="video");
+  show("gc-share",s.type==="video");
+  $("gc-share").textContent="🖥 Share screen";
   $("gc-mute").textContent="🎙 Mute";$("gc-camera").textContent="📷 Camera off";
+  s.cameraTrack=s.stream.getVideoTracks()[0]||null;
+  s.screenTrack=null;s.screenStream=null;s.screenUpdating=false;
   $("gc-grid").replaceChildren();addTile(s,me.uid,"You",s.stream,true);
   refreshCount(s);status("Waiting for invited people to join…");
   s.unsubs.push(onSnapshot(s.ref,snap=>{
