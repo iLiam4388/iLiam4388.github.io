@@ -73,12 +73,35 @@
 <section id="room-modal" class="modal" hidden aria-label="Whiteboard collaboration">
   <div class="modal-card">
     <div class="modal-head"><div><h2>👥 Collaborate</h2><p>Work on the same whiteboard with friends using your iLiam account.</p></div><button class="close" id="room-close" title="Close">✕</button></div>
-    <div id="auth-note" class="auth-note" hidden><strong>Sign in required for shared rooms.</strong><p>Use your iLiam account in Community first, then return here.</p><a href="community.html">Open Community sign-in</a></div>
+    <div id="auth-note" class="auth-note" hidden><strong>Sign in with iLiam to create or edit shared boards.</strong><p>Anyone with a public link can view the board, but editing requires an iLiam account.</p><a href="community.html">Open Community sign-in</a></div>
     <div id="room-controls">
       <div class="modal-actions"><button id="create-room" class="primary">＋ Create shared board</button><button id="leave-room">Leave shared room</button></div>
       <label for="room-code">Join with a room code or shared link</label>
       <div class="join-row"><input id="room-code" placeholder="Paste the room code or link" autocomplete="off"><button id="join-room" class="primary">Join</button></div>
-      <div id="room-info" class="room-info" hidden><strong>Current shared room</strong><code id="current-code"></code><div class="modal-actions"><button id="copy-link">🔗 Copy invite link</button><button id="copy-code">Copy code</button></div><p>Anyone signed in with an iLiam account who has this code can see and edit the board. Only share it with people you trust.</p></div>
+      <div id="room-info" class="room-info" hidden>
+  <strong>Current shared board</strong><code id="current-code"></code>
+  <div class="modal-actions"><button id="copy-link">🔗 Copy link</button><button id="copy-code">Copy code</button></div>
+  <p id="share-description">Choose who can access your whiteboard below.</p>
+  <div class="share-section">
+    <label for="room-access">General access</label>
+    <select id="room-access" aria-label="Who can access this board">
+      <option value="restricted">🔒 Restricted — invited iLiam accounts only</option>
+      <option value="link">🌍 Anyone with the link</option>
+      <option value="legacy">🔗 Existing link sharing (signed-in accounts)</option>
+    </select>
+    <p class="share-detail" id="room-access-detail">Restricted: only you and accounts you invite can open and edit this whiteboard.</p>
+    <div class="share-invitations">
+      <h3>People with access</h3>
+      <div id="invite-members" class="invite-people"></div>
+      <div id="invite-controls">
+        <label for="invite-search">Invite an iLiam account</label>
+        <input id="invite-search" type="search" autocomplete="off" placeholder="Search username or display name">
+        <div id="invite-results" class="invite-people"></div>
+        <p class="share-detail">Invited accounts can view and edit even when the link is restricted. Up to 20 invitees.</p>
+      </div>
+    </div>
+  </div>
+</div>
     </div>
     <p id="room-status" class="room-status" role="status"></p>
   </div>
