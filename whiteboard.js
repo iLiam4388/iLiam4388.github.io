@@ -368,7 +368,7 @@ function drawExportItem(target,e){
  }
  target.restore();
 }
-function filename(ext){return safeTitle($("board-title").value).replace(/[^a-z0-9-_ ]/gi,"").replace(/\s+/g,"-")||"whiteboard"+"."+ext;}
+function filename(ext){const name=safeTitle($("board-title").value).replace(/[^a-z0-9-_ ]/gi,"").replace(/\s+/g,"-")||"whiteboard";return name+"."+ext;}
 function saveProject(){
  const snapshot={format:"iliamboard",version:1,title:safeTitle($("board-title").value),paper,items:items.map(e=>({...normalizeElement(e),id:e.id}))};
  download(new Blob([JSON.stringify(snapshot,null,2)],{type:"application/json"}),filename("iliamboard"));
@@ -431,7 +431,7 @@ async function joinRoom(raw){
    paper=validHex(room.paperColor)?room.paperColor:"#ffffff";$("paper-color").value=paper;updateRoomInfo();schedule();
   },e=>console.warn("Room settings:",e));
   updateRoomInfo();showRoomModal(false);status("Live collaboration");
-  const url=new URL(location.href);url.searchParams.set("board",code);history.replaceState(null,"",url);
+  const url=new URL(location.href);url.searchParams.set("board",code);window.history.replaceState(null,"",url);
  }catch(e){roomStatus("Could not join: "+e.message+". Publish the latest Firestore rules if needed.");showRoomModal(true);}
  finally{busy=false;}
 }
@@ -449,6 +449,7 @@ async function createRoom(){
     batch.set(doc(db,"whiteboards",code,"elements",newId()),{...normalizeElement(e),createdBy:user.uid,createdAt:serverTimestamp()});
    await batch.commit();
   }
+  busy=false;
   await joinRoom(code);
   roomStatus("Invite link ready.");
  }catch(e){roomStatus("Could not create board: "+e.message+". Check Firebase rules.");}
@@ -524,7 +525,7 @@ function setupUI(){
  $("room-code").onkeydown=e=>{if(e.key==="Enter")joinRoom(e.target.value);};
  $("leave-room").onclick=()=>{
   if(!room)return;stopShared();
-  const url=new URL(location.href);url.searchParams.delete("board");history.replaceState(null,"",url);
+  const url=new URL(location.href);url.searchParams.delete("board");window.history.replaceState(null,"",url);
   roomStatus("Left the shared board. Your local board has been restored.");
  };
  $("copy-code").onclick=()=>copy(room?.id||"");
