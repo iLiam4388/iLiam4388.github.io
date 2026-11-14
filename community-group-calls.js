@@ -24,6 +24,7 @@ if(launch){
   '<div class="gc-actions"><button class="gc-button good" id="gc-video" disabled>📹 Video call</button>',
   '<button class="gc-button good" id="gc-audio" disabled>📞 Audio call</button></div>',
   '<p class="gc-status" id="gc-picker-status" role="status"></p></div>',
+  '<button id="gc-allow-notifications" class="gc-button" type="button">🔔 Enable call notifications</button>',
   '<label class="gc-dnd-footer"><span><strong>🌙 Do Not Disturb</strong><small>Don’t receive incoming calls</small></span><input id="gc-dnd" type="checkbox" aria-label="Do Not Disturb"></label>',
   '<p class="gc-status" id="gc-privacy-status" role="status"></p></div></section>',
   '<section class="gc-invite" id="gc-invite" hidden aria-live="assertive">',
@@ -217,6 +218,14 @@ if(launch){
    else await updateDoc(doc(s.ref,"members",me.uid),{status:"left",updatedAt:serverTimestamp()});
   }catch(e){console.warn("Could not mark group call left:",e);}
  }
+ $("gc-allow-notifications").onclick=async()=>{
+  if(!("Notification" in window)){privacyStatus("Browser notifications are unavailable here. In-page alerts will still appear.");return;}
+  try{
+   const result=await Notification.requestPermission();
+   privacyStatus(result==="granted"?"Call notifications enabled while an iLiam page is open.":"Notifications weren't enabled. Check your browser's permission settings.");
+   if(result==="granted"&&"serviceWorker" in navigator)navigator.serviceWorker.register("./iliam-call-sw.js").catch(console.warn);
+  }catch(e){privacyStatus("Could not enable notifications: "+e.message);}
+ };
  $("gc-pip").onclick=async()=>{
   const s=current;if(!s||s.type!=="video")return;
   if(!document.pictureInPictureEnabled){
