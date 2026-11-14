@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07162b">
+<meta name="description" content="Draw, sketch, and collaborate with friends on iLiam Whiteboard.">
+<title>iLiam Whiteboard</title>
+<link rel="icon" type="image/png" href="images/favicon.png">
+<link rel="stylesheet" href="whiteboard.css?v=1">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><a href="other.html" class="back" title="Back to Other">← Other</a><div class="brand-title"><span class="brand-icon">✦</span><strong>iLiam Whiteboard</strong><small>DRAW · CREATE · SHARE</small></div></div>
+  <div class="project"><input id="board-title" maxlength="60" value="Untitled Whiteboard" aria-label="Whiteboard title" title="Whiteboard title"><span id="save-state" role="status">Saved locally</span></div>
+  <div class="top-actions">
+    <button id="new-board" title="Start a new local board">＋ New</button>
+    <button id="open-rooms" class="accent" title="Collaborative rooms">👥 Collaborate</button>
+    <button id="export-png" title="Download whiteboard image">↓ PNG</button>
+    <button id="more-actions" title="File options" aria-expanded="false" aria-controls="file-menu">⋯</button>
+    <div id="file-menu" class="dropdown" hidden>
+      <button id="download-project">↓ Save .iliamboard file</button>
+      <button id="upload-project">↑ Open .iliamboard file</button>
+      <button id="export-svg">↓ Export SVG</button>
+      <button id="clear-board">🗑 Clear board</button>
+    </div>
+    <input type="file" id="project-file" accept=".iliamboard,.json,application/json" hidden>
+  </div>
+</header>
+<div class="app">
+  <aside class="toolbar" aria-label="Drawing tools">
+    <span class="group-label">DRAW</span>
+    <button class="tool active" data-tool="pen" title="Pen (P)" aria-pressed="true"><span>✎</span><small>Pen</small></button>
+    <button class="tool" data-tool="highlighter" title="Highlighter (H)" aria-pressed="false"><span>▰</span><small>Marker</small></button>
+    <button class="tool" data-tool="eraser" title="Eraser (E)" aria-pressed="false"><span>⌫</span><small>Eraser</small></button>
+    <span class="group-label">SHAPES</span>
+    <button class="tool" data-tool="line" title="Line (L)" aria-pressed="false"><span>╱</span><small>Line</small></button>
+    <button class="tool" data-tool="arrow" title="Arrow (A)" aria-pressed="false"><span>↗</span><small>Arrow</small></button>
+    <button class="tool" data-tool="rect" title="Rectangle (R)" aria-pressed="false"><span>▭</span><small>Box</small></button>
+    <button class="tool" data-tool="ellipse" title="Circle (C)" aria-pressed="false"><span>◯</span><small>Circle</small></button>
+    <span class="group-label">ADD</span>
+    <button class="tool" data-tool="text" title="Text (T)" aria-pressed="false"><span>𝑇</span><small>Text</small></button>
+    <button class="tool" data-tool="sticky" title="Sticky note (N)" aria-pressed="false"><span>▣</span><small>Note</small></button>
+    <button class="tool" data-tool="hand" title="Pan (Space)" aria-pressed="false"><span>✋</span><small>Move</small></button>
+  </aside>
+  <main class="workspace">
+    <div class="options">
+      <label for="ink-color">Color <input id="ink-color" type="color" value="#2360e7"></label>
+      <div class="swatches" aria-label="Quick colors">
+        <button class="swatch" data-color="#2360e7" style="--swatch:#2360e7" title="Blue"></button>
+        <button class="swatch" data-color="#0f172a" style="--swatch:#0f172a" title="Black"></button>
+        <button class="swatch" data-color="#ed4a86" style="--swatch:#ed4a86" title="Pink"></button>
+        <button class="swatch" data-color="#18a58a" style="--swatch:#18a58a" title="Green"></button>
+        <button class="swatch" data-color="#f59e0b" style="--swatch:#f59e0b" title="Orange"></button>
+        <button class="swatch" data-color="#8b5cf6" style="--swatch:#8b5cf6" title="Purple"></button>
+      </div>
+      <label for="brush-size">Size <input id="brush-size" type="range" min="1" max="28" value="4"><output id="size-label">4 px</output></label>
+      <span class="options-divider"></span>
+      <button id="undo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+      <button id="redo" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+      <label class="small-option"><input id="show-grid" type="checkbox" checked> Grid</label>
+      <label for="paper-color">Paper <input id="paper-color" type="color" value="#ffffff"></label>
+    </div>
+    <div id="canvas-wrap" class="canvas-wrap" tabindex="0" aria-label="Whiteboard drawing surface">
+      <canvas id="board" aria-label="Draw on the whiteboard using mouse, touch or stylus"></canvas>
+      <div id="empty-hint" class="empty-hint">Draw something amazing <span>✎</span><small>Choose a tool and start drawing</small></div>
+      <div class="canvas-zoom"><button id="zoom-out" title="Zoom out">−</button><span id="zoom-value">100%</span><button id="zoom-in" title="Zoom in">＋</button><button id="zoom-fit" title="Reset view">Fit</button></div>
+      <p id="cursor-coordinates" class="coordinates">x: 0 · y: 0</p>
+    </div>
+    <footer class="statusbar"><span id="board-mode">● Local board</span><span id="item-count">0 objects</span><span>Scroll to zoom · Hold Space to pan · Ctrl+Z to undo</span></footer>
+  </main>
+</div>
+<section id="room-modal" class="modal" hidden aria-label="Whiteboard collaboration">
+  <div class="modal-card">
+    <div class="modal-head"><div><h2>👥 Collaborate</h2><p>Work on the same whiteboard with friends using your iLiam account.</p></div><button class="close" id="room-close" title="Close">✕</button></div>
+    <div id="auth-note" class="auth-note" hidden><strong>Sign in required for shared rooms.</strong><p>Use your iLiam account in Community first, then return here.</p><a href="community.html">Open Community sign-in</a></div>
+    <div id="room-controls">
+      <div class="modal-actions"><button id="create-room" class="primary">＋ Create shared board</button><button id="leave-room">Leave shared room</button></div>
+      <label for="room-code">Join with a room code or shared link</label>
+      <div class="join-row"><input id="room-code" placeholder="Paste the room code or link" autocomplete="off"><button id="join-room" class="primary">Join</button></div>
+      <div id="room-info" class="room-info" hidden><strong>Current shared room</strong><code id="current-code"></code><div class="modal-actions"><button id="copy-link">🔗 Copy invite link</button><button id="copy-code">Copy code</button></div><p>Anyone signed in with an iLiam account who has this code can see and edit the board. Only share it with people you trust.</p></div>
+    </div>
+    <p id="room-status" class="room-status" role="status"></p>
+  </div>
+</section>
+<script type="module" src="whiteboard.js?v=1"></script>
+<script type="module" src="iliam-sitewide-calls.js?v=1"></script>
+</body>
+</html>
