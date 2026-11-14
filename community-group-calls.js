@@ -552,7 +552,7 @@ if(launch){
    const params=new URLSearchParams(location.search);
    if(params.get("incomingKind")==="group"&&params.get("incomingId")===incoming.id){
     if(params.get("incomingAction")==="decline")$("gc-decline").click();
-    else $("gc-accept").focus();
+    else $("gc-accept").click();
     history.replaceState(null,"",location.pathname);
    }
   }
@@ -621,7 +621,7 @@ if(launch){
   if(a?.type!=="iliam-call-action"||a.kind!=="group")return;
   if(incoming?.id!==a.id)return;
   if(a.action==="decline")$("gc-decline").click();
-  else $("gc-accept").focus();
+  else $("gc-accept").click();
  });
  window.addEventListener("pagehide",()=>{
   if(current){
