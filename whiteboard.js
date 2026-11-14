@@ -511,6 +511,7 @@ async function changeInvite(uid,add){
  if(!isBoardOwner()||sharingBusy||!user)return;
  if(uid===room.ownerId)return;
  if(add&&invitedUids().length>=20)return roomStatus("Maximum 20 invited accounts.");
+ if(add&&accessMode()==="legacy"&&!confirm("This older board currently allows any signed-in iLiam account with its link. Inviting this person will switch the board to Restricted, so other link users will lose access unless invited. Continue?"))return;
  sharingBusy=true;roomStatus((add?"Inviting":"Removing")+" account…");
  try{
   const ref=doc(db,"whiteboards",room.id);
