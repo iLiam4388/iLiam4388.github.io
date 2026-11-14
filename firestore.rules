@@ -720,6 +720,83 @@ service cloud.firestore {
       }
     }
 
+    // Shared iLiam Whiteboard rooms use unguessable 128-bit invite codes.
+    // Only signed-in iLiam accounts can read/edit a known room. Board
+    // discovery/listing is disabled; anyone with a shared code may edit.
+    function validWhiteboardColor(c) {
+      return c is string && c.matches('^#[0-9a-fA-F]{6}$');
+    }
+    function validWhiteboardTitle(t) {
+      return t is string && t.size() >= 1 && t.size() <= 60;
+    }
+    function validWhiteboardElement() {
+      return hasProfile()
+        && request.resource.data.keys().hasOnly([
+          'kind','x','y','x2','y2','color','width','opacity',
+          'points','text','createdBy','createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'kind','x','y','x2','y2','color','width','opacity',
+          'points','text','createdBy','createdAt'
+        ])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.kind in [
+          'pen','highlighter','line','rect','ellipse','arrow','text','sticky'
+        ]
+        && validWhiteboardColor(request.resource.data.color)
+        && request.resource.data.width is number
+        && request.resource.data.width >= 1
+        && request.resource.data.width <= 40
+        && request.resource.data.opacity is number
+        && request.resource.data.opacity >= 0.05
+        && request.resource.data.opacity <= 1
+        && request.resource.data.x is number
+        && request.resource.data.y is number
+        && request.resource.data.x2 is number
+        && request.resource.data.y2 is number
+        && request.resource.data.points is list
+        && request.resource.data.points.size() <= 240
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 250;
+    }
+
+    match /whiteboards/{boardId} {
+      allow get: if hasProfile();
+      allow list: if false;
+      allow create: if hasProfile()
+        && boardId.matches('^[0-9a-f]{32}$')
+        && request.resource.data.keys().hasOnly([
+          'ownerId','title','paperColor','createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'ownerId','title','paperColor','createdAt'
+        ])
+        && request.resource.data.ownerId == request.auth.uid
+        && validWhiteboardTitle(request.resource.data.title)
+        && validWhiteboardColor(request.resource.data.paperColor)
+        && request.resource.data.createdAt == request.time;
+      allow update: if hasProfile()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['title','paperColor'])
+        && validWhiteboardTitle(request.resource.data.title)
+        && validWhiteboardColor(request.resource.data.paperColor);
+      allow delete: if false;
+
+      match /elements/{elementId} {
+        allow get, list: if hasProfile()
+          && exists(/databases/$(database)/documents/whiteboards/$(boardId));
+        allow create: if hasProfile()
+          && elementId.matches('^[0-9a-f]{32}$')
+          && exists(/databases/$(database)/documents/whiteboards/$(boardId))
+          && validWhiteboardElement();
+        allow update: if false;
+        allow delete: if hasProfile()
+          && exists(/databases/$(database)/documents/whiteboards/$(boardId));
+      }
+    }
+
     match /games/{gameId} {
       allow read: if true;
       allow create, update: if isAdmin() && validGame();
