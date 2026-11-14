@@ -2,6 +2,7 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,query,where,limit,onSnapshot,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
+import {showIncomingCall,dismissIncomingCall} from "./iliam-call-alerts.js";
 
 // iLiam Community voice/video calling. Firestore carries signaling only, not media.
 const launch=document.getElementById("iliam-call-button");
@@ -39,6 +40,7 @@ if(launch){
   '<button class="call-btn" id="call-camera">📷 Camera off</button>',
   '<button class="call-btn" id="call-share">🖥 Share screen</button>',
   '<button class="call-btn" id="call-play">🔊 Play sound</button>',
+  '<button class="call-btn" id="call-pip">▣ Picture in Picture</button>',
   '<button class="call-btn danger" id="call-end">☎ End call</button></div></div></section>'
  ].join("");
  document.body.append(ui);
@@ -49,17 +51,10 @@ if(launch){
  function notifyLegacyCall(invite){
   if(!invite||legacyLastNotified===invite.id)return;
   legacyLastNotified=invite.id;
-  const title=invite.type==="video"?"📹 Incoming video call":"📞 Incoming audio call";
-  const body=(invite.callerName||"Someone")+" is calling you.";
-  if("Notification" in window&&Notification.permission==="granted"&&document.hidden){
-   try{const n=new Notification(title,{body,tag:"iliam-legacy-"+invite.id});n.onclick=()=>{window.focus();n.close();};}
-   catch(e){console.warn("Incoming call notification:",e);}
-  }
-  const toast=document.createElement("button");toast.type="button";toast.className="im-toast";
-  const head=document.createElement("strong");head.textContent=title;
-  const message=document.createElement("span");message.textContent=body;toast.append(head,message);
-  toast.onclick=()=>{toast.remove();$("call-accept").focus();};
-  document.body.append(toast);setTimeout(()=>toast.remove(),6500);
+  showIncomingCall({kind:"legacy",id:invite.id,name:invite.callerName,type:invite.type,
+   accept:()=>{$("call-accept").click();},
+   decline:()=>{$("call-decline").click();}
+  });
  }
  let stopSettings=null,stopBlocks=null,doNotDisturb=false,blockedIds=new Set(),settingsPeople=[],privacyReady=false;
  const settingsButton=document.getElementById("iliam-call-settings-button");
@@ -227,6 +222,7 @@ if(launch){
    old.pc?.close();
   }
   $("call-share").textContent="🖥 Share screen";
+  if(document.pictureInPictureElement)document.exitPictureInPicture().catch(()=>{});
   $("call-local").srcObject=null;$("call-remote").srcObject=null;
   visible("call-active",false);
   working=false;
@@ -235,6 +231,18 @@ if(launch){
   const old=session;cleanup();
   if(old?.ref)try{await updateDoc(old.ref,{status:value});}catch(e){console.warn("Call status:",e);}
  }
+ $("call-pip").onclick=async()=>{
+  const s=session;if(!s||s.type!=="video")return;
+  if(!document.pictureInPictureEnabled){status("Picture-in-Picture is unavailable in this browser.");return;}
+  try{
+   if(document.pictureInPictureElement){await document.exitPictureInPicture();return;}
+   const remote=$("call-remote"),local=$("call-local");
+   const chosen=remote.readyState>=2?remote:(local.readyState>=2?local:null);
+   if(!chosen){status("Wait for video to load before opening Picture-in-Picture.");return;}
+   await chosen.requestPictureInPicture();
+   status("Picture-in-Picture is on. You can switch tabs while the call continues.");
+  }catch(e){status("Could not open Picture-in-Picture: "+e.message);}
+ };
  $("call-end").onclick=()=>endCall();
  $("call-mute").onclick=()=>{
   const t=session?.stream?.getAudioTracks()[0];if(!t)return;
@@ -300,7 +308,7 @@ if(launch){
  function showCall(s,peer){
   $("call-peer").textContent=peer;$("call-type").textContent=s.type==="video"?"📹 Video":"📞 Audio";
   visible("call-videos",s.type==="video");visible("call-voice",s.type==="audio");
-  visible("call-camera",s.type==="video");visible("call-share",s.type==="video");
+  visible("call-camera",s.type==="video");visible("call-share",s.type==="video");visible("call-pip",s.type==="video");
   $("call-share").textContent="🖥 Share screen";
   visible("call-picker",false);visible("call-incoming",false);
   visible("call-active",true);
@@ -415,7 +423,7 @@ if(launch){
  $("call-decline").onclick=async()=>{
   if(!incoming)return;
   const ref=doc(db,"calls",incoming.id);
-  incoming=null;visible("call-incoming",false);
+  incoming=null;visible("call-incoming",false);dismissIncomingCall("legacy",ref.id);
   try{await updateDoc(ref,{status:"declined"});}catch(e){console.warn(e);}
  };
  $("call-accept").onclick=async()=>{
@@ -427,7 +435,7 @@ if(launch){
    const ref=doc(db,"calls",invite.id),snap=await getDoc(ref);
    if(!snap.exists()||snap.data().status!=="ringing")throw Error("Call is no longer available.");
    media=await capture(invite.type);
-   const s={...media,ref,peerUid:invite.callerId};session=s;incoming=null;showCall(s,invite.callerName||"iLiam Call");
+   const s={...media,ref,peerUid:invite.callerId};session=s;incoming=null;dismissIncomingCall("legacy",invite.id);showCall(s,invite.callerName||"iLiam Call");
    const queue=[];let published=false;
    media.pc.onicecandidate=e=>{
     if(!e.candidate||session!==s)return;
@@ -454,7 +462,18 @@ if(launch){
    const list=snap.docs.map(d=>({id:d.id,...d.data()}))
     .filter(d=>d.status==="ringing"&&now-when(d.createdAt)<120000)
     .sort((a,b)=>when(b.createdAt)-when(a.createdAt));
-   incoming=list[0]||null;displayIncoming();
+   const previous=incoming?.id;
+   incoming=list[0]||null;
+   if(previous&&previous!==incoming?.id){dismissIncomingCall("legacy",previous);legacyLastNotified=null;}
+   displayIncoming();
+   if(incoming){
+    const p=new URLSearchParams(location.search);
+    if(p.get("incomingKind")==="legacy"&&p.get("incomingId")===incoming.id){
+     if(p.get("incomingAction")==="decline")$("call-decline").click();
+     else $("call-accept").focus();
+     history.replaceState(null,"",location.pathname);
+    }
+   }
   },e=>console.warn("Incoming calls unavailable:",e));
  }
  onAuthStateChanged(auth,async user=>{
@@ -468,6 +487,12 @@ if(launch){
    if(auth.currentUser?.uid!==user.uid)return;
    if(snap.exists()){profile=snap.data();launch.disabled=false;subscribePrivacy(user.uid);subscribeInbox(user.uid);}
   }catch(e){console.warn("Call sign-in:",e);}
+ });
+ navigator.serviceWorker?.addEventListener("message",e=>{
+  const a=e.data;if(a?.type!=="iliam-call-action"||a.kind!=="legacy")return;
+  if(incoming?.id!==a.id)return;
+  if(a.action==="decline")$("call-decline").click();
+  else $("call-accept").focus();
  });
  window.addEventListener("pagehide",()=>{
   session?.stream?.getTracks().forEach(t=>t.stop());session?.pc?.close();
