@@ -8,22 +8,29 @@ The whiteboard itself works locally, including pen, highlighter, eraser, line, a
 
 **Export options**: PNG image, SVG vector graphic, and editable `.iliamboard` JSON project file. Import `.iliamboard` files through the file menu. These are whiteboard files, not Google Docs, Microsoft Word, or Adobe formats.
 
-## Shared whiteboard rooms
+## Shared whiteboard rooms and privacy
 
-1. Sign in using your iLiam account in Community.
-2. Return to the Whiteboard and click **👥 Collaborate**.
-3. Click **Create shared board**. Any existing local shapes and strokes are copied into the new room.
-4. Use **Copy invite link** or **Copy code** to invite friends.
-5. Friends sign in with their own iLiam accounts, open the link or paste the code, and edit the same board.
-6. Strokes and shapes sync across devices **when a stroke is finished**. It is not a full live-cursor system.
+1. Sign in with your iLiam account through Community.
+2. Open **Other → Whiteboard → Collaborate → Create shared board**. New boards start **Restricted**.
+3. Under **General access**, choose:
+   - **Restricted** — only the board owner and specifically invited iLiam accounts can view and edit.
+   - **Anyone with the link** — anyone who knows the link can **view**, even without signing in; anyone signed in with an iLiam account and the link can **edit**.
+4. To invite an iLiam account, type their username or nickname in **Invite an iLiam account**, choose **Invite**, and optionally send them the link. You can **Remove** an invited account later. Up to 20 invitees.
+5. Invited users can open Whiteboard → **Collaborate → Shared with me** to discover boards shared directly with them. Board owners can find their rooms under **Your shared boards**.
+6. Click **Copy link** to share `whiteboard.html?board=<32-character-code>`. A restricted board *cannot* be opened with the link alone by uninvited users.
+7. Pens and shapes sync after each completed stroke; multiple participants can collaborate.
 
-The URL contains the room code: `whiteboard.html?board=<code>`. The code uses 128 random bits (32 lowercase hex characters). Share it privately. Any signed-in iLiam account *with the code* can view, add to, and erase the shared board; the code itself is the access mechanism. The creator alone can change the shared title, paper color, and clear all drawings. The room is not publicly listed. Persistent room data is stored in the Firestore `whiteboards/{roomId}` collection and each drawing in `whiteboards/{roomId}/elements`. The whiteboard does **not** upload camera data or media.
+**Privacy:** Firestore rules enforce access separately on board documents and their drawing elements. Simply hiding the board in the interface does not grant privacy, so the latest rules must be published. The code is a random 128-bit value; publicly sharing it gives people access under the board's public-link settings.
+
+The board owner alone can change General access, invite/remove accounts, rename the shared board, change its paper color, and clear all drawings. Old shared boards without an access-mode field retain the previous *signed-in users with the link* behavior until the owner chooses Restricted or Anyone with the link.
+
+This is iLiam account sharing, modeled on Google Docs. Inviting a Gmail address directly or signing in with Google OAuth is **not** included. Shared editing uses Firestore; there is no automatic email/push invitation.
 
 ### REQUIRED: publish Firestore rules
 
 The new `match /whiteboards/{boardId}` rules and its nested `/elements/{elementId}` rules are committed to this repository's `firestore.rules`. **GitHub Pages does not publish Firebase rules.** Open the Firebase Console for project `iliam-4d0c9`, navigate to Firestore Database → Rules, paste the complete latest repository rules, and click Publish.
 
-If you haven't published them yet, local drawing and export still work, but shared-room creation and joining will fail with Firebase permission errors.
+If the updated rules have not been published, local drawing and export remain available, but new sharing settings, account invitations, and the Shared with me list will fail with Firebase permission errors.
 
 ### Notes and limits
 
@@ -31,5 +38,5 @@ If you haven't published them yet, local drawing and export still work, but shar
 - Shared editing uses Firestore writes; lots of large drawings can incur Firebase usage and costs.
 - The whiteboard shows the latest synced drawings, and local Undo affects your recent actions; simultaneous edits from different users may need retrying if a connection drops.
 - Shared rooms require an active internet connection, and existing rooms are persistent rather than automatically expiring.
-- In this release, there is no per-user invite approval or moderator panel. Only give codes to trusted friends.
+- There is no per-user invitation approval, comment-only role, or moderator panel. An invited user has editing permission. Only share public edit links with trusted people.
 - JavaScript syntax and required element IDs were checked. **The Firestore room flow still needs a live test with two signed-in accounts after publishing the rules.**
