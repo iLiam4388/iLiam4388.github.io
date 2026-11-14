@@ -2,6 +2,7 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {getFirestore,doc,collection,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
+import {showIncomingCall,dismissIncomingCall} from "./iliam-call-alerts.js";
 
 // Temporary 2–4-person WebRTC mesh calls. No saved groups and no video recording.
 // A group needs separate pairwise connections for every accepted participant.
@@ -36,6 +37,7 @@ if(launch){
   '<button class="gc-button" id="gc-camera">📷 Camera off</button>',
   '<button class="gc-button" id="gc-share">🖥 Share screen</button>',
   '<button class="gc-button" id="gc-play">🔊 Play audio</button>',
+  '<button class="gc-button" id="gc-pip">▣ Picture in Picture</button>',
   '<button class="gc-button danger" id="gc-end">☎ Leave call</button></div></div></section>'
  ].join("");
  document.body.append(ui);
@@ -52,22 +54,12 @@ if(launch){
  function notifyIncomingCall(invite){
   if(!invite||invite.id===lastNotifiedInvite)return;
   lastNotifiedInvite=invite.id;
-  const title=invite.type==="video"?"📹 Incoming video call":"📞 Incoming audio call";
-  const body=(invite.hostName||"Someone")+" is calling you.";
-  if("Notification" in window && Notification.permission==="granted" && document.hidden){
-   try{const n=new Notification(title,{body,tag:"iliam-group-"+invite.id});
-    n.onclick=()=>{window.focus();n.close();};
-   }catch(e){console.warn("Call notification:",e);}
-  }
-  const toast=document.createElement("button");toast.type="button";toast.className="im-toast";
-  const heading=document.createElement("strong");heading.textContent=title;
-  const detail=document.createElement("span");detail.textContent=body;
-  toast.append(heading,detail);
-  toast.onclick=()=>{toast.remove();$("gc-accept").focus();};
-  document.body.append(toast);
-  setTimeout(()=>toast.remove(),6500);
+  showIncomingCall({
+   kind:"group",id:invite.id,name:invite.hostName,type:invite.type,
+   accept:()=>{$("gc-accept").click();},
+   decline:()=>{$("gc-decline").click();}
+  });
  }
- launch.disabled=true;
  function avatar(p){
   try{const u=new URL(p.photoURL);if(["http:","https:"].includes(u.protocol))return u.href;}catch{}
   const ch=displayName(p).slice(0,1).toUpperCase().replace(/[<>&"]/g,"")||"U";
@@ -203,6 +195,7 @@ if(launch){
   }
   $("gc-share").textContent="🖥 Share screen";
   $("gc-share").disabled=false;
+  if(document.pictureInPictureElement)document.exitPictureInPicture().catch(()=>{});
   $("gc-grid").replaceChildren();
   show("gc-active",false);
   working=false;
@@ -224,6 +217,21 @@ if(launch){
    else await updateDoc(doc(s.ref,"members",me.uid),{status:"left",updatedAt:serverTimestamp()});
   }catch(e){console.warn("Could not mark group call left:",e);}
  }
+ $("gc-pip").onclick=async()=>{
+  const s=current;if(!s||s.type!=="video")return;
+  if(!document.pictureInPictureEnabled){
+   status("Picture-in-Picture is unavailable in this browser.");return;
+  }
+  try{
+   if(document.pictureInPictureElement){await document.exitPictureInPicture();return;}
+   const videos=[...$("gc-grid").querySelectorAll("video")];
+   const remote=videos.find(video=>!video.classList.contains("self")&&video.readyState>=2);
+   const video=remote||videos.find(video=>video.readyState>=2);
+   if(!video){status("Wait for someone’s video to appear before opening Picture-in-Picture.");return;}
+   await video.requestPictureInPicture();
+   status("Picture-in-Picture is on. You can switch tabs while the call continues.");
+  }catch(e){status("Could not open Picture-in-Picture: "+e.message);}
+ };
  $("gc-end").onclick=leaveRoom;
  $("gc-mute").onclick=()=>{
   const t=current?.stream.getAudioTracks()[0];if(!t)return;t.enabled=!t.enabled;
@@ -433,6 +441,7 @@ if(launch){
   $("gc-active-title").textContent=(s.type==="video"?"📹 Video ":"📞 Audio ")+label;
   show("gc-camera",s.type==="video");
   show("gc-share",s.type==="video");
+  show("gc-pip",s.type==="video");
   $("gc-share").textContent="🖥 Share screen";
   $("gc-mute").textContent="🎙 Mute";$("gc-camera").textContent="📷 Camera off";
   s.cameraTrack=s.stream.getVideoTracks()[0]||null;
@@ -497,6 +506,7 @@ if(launch){
   if(!roomId||!me)return;
   if(incoming?.id===roomId)incoming=null;
   show("gc-invite",false);
+  dismissIncomingCall("group",roomId);
   try{await updateDoc(doc(db,"groupCalls",roomId,"members",me.uid),{status:"declined",updatedAt:serverTimestamp()});}
   catch(e){console.warn("Decline group invite:",e);}
  }
@@ -513,7 +523,7 @@ if(launch){
     throw Error("This group invitation is no longer available.");
    stream=await capture(invite.type);
    await updateDoc(doc(ref,"members",me.uid),{status:"accepted",updatedAt:serverTimestamp()});
-   incoming=null;
+   incoming=null;dismissIncomingCall("group",invite.id);
    beginSession({ref,stream,type:invite.type,host:false,participantCount:room.data().participants.length,peers:new Map(),pending:new Set(),unsubs:[]});
   }catch(e){
    if(stream)stream.getTracks().forEach(t=>t.stop());
@@ -528,6 +538,15 @@ if(launch){
       &&now-millis(v.room.createdAt)<120000&&!dnd&&!blocked.has(v.room.hostId))
    .sort((a,b)=>millis(b.room.createdAt)-millis(a.room.createdAt))[0]||null;
   showInvite();
+  if(!incoming&&lastNotifiedInvite){dismissIncomingCall("group",lastNotifiedInvite);lastNotifiedInvite=null;}
+  if(incoming){
+   const params=new URLSearchParams(location.search);
+   if(params.get("incomingKind")==="group"&&params.get("incomingId")===incoming.id){
+    if(params.get("incomingAction")==="decline")$("gc-decline").click();
+    else $("gc-accept").focus();
+    history.replaceState(null,"",location.pathname);
+   }
+  }
  }
  function listenInbox(uid){
   if(stopInbox)stopInbox();
@@ -587,6 +606,13 @@ if(launch){
    },e=>console.warn("Group call blocks:",e));
    listenInbox(user.uid);
   }catch(e){console.warn("Group calls sign-in:",e);}
+ });
+ navigator.serviceWorker?.addEventListener("message",e=>{
+  const a=e.data;
+  if(a?.type!=="iliam-call-action"||a.kind!=="group")return;
+  if(incoming?.id!==a.id)return;
+  if(a.action==="decline")$("gc-decline").click();
+  else $("gc-accept").focus();
  });
  window.addEventListener("pagehide",()=>{
   if(current){
