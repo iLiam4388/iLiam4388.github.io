@@ -536,7 +536,6 @@ function stopShared(){
  updateRoomInfo();schedule();status("Saved locally");
 }
 async function joinRoom(raw){
- if(!user||!profile){showRoomModal(true);roomStatus("Sign in to your iLiam account before joining.");return;}
  if(busy)return;
  let code=String(raw||"").trim();
  if(code.startsWith("http")){
@@ -554,17 +553,29 @@ async function joinRoom(raw){
   $("board-title").value=safeTitle(room.title);paper=validHex(room.paperColor)?room.paperColor:"#ffffff";$("paper-color").value=paper;
   stopItems=onSnapshot(query(collection(db,"whiteboards",code,"elements"),orderBy("createdAt","asc")),snap=>{
    items=snap.docs.map(d=>({...normalizeElement(d.data()),id:d.id})).filter(e=>drawKinds.has(e.kind)).slice(-500);
-   status("Synced · "+items.length+" objects");schedule();
-  },e=>status("Shared board unavailable: "+e.message));
+   status(canEditBoard()?"Synced · "+items.length+" objects":"View only · "+items.length+" objects");schedule();
+  },e=>{
+   status("Whiteboard access was lost: "+e.message);
+   if(room?.id===code){stopShared();showRoomModal(true);roomStatus("You no longer have access to that whiteboard.");}
+  });
   stopRoom=onSnapshot(doc(db,"whiteboards",code),snap=>{
-   if(!snap.exists()){roomStatus("Board was removed.");return;}
+   if(!snap.exists()){stopShared();showRoomModal(true);roomStatus("This board is no longer accessible.");return;}
    room={id:code,...snap.data()};
+   if(!canViewBoard()){
+    stopShared();showRoomModal(true);roomStatus("This board is restricted to invited accounts.");
+    return;
+   }
    $("board-title").value=safeTitle(room.title);
-   paper=validHex(room.paperColor)?room.paperColor:"#ffffff";$("paper-color").value=paper;updateRoomInfo();schedule();
-  },e=>console.warn("Room settings:",e));
-  updateRoomInfo();showRoomModal(false);status("Live collaboration");
+   paper=validHex(room.paperColor)?room.paperColor:"#ffffff";$("paper-color").value=paper;
+   updateRoomInfo();schedule();
+  },e=>{
+   console.warn("Board access:",e);
+   if(room?.id===code){stopShared();showRoomModal(true);roomStatus("Access denied. This board may be restricted to invited accounts.");}
+  });
+  updateRoomInfo();showRoomModal(false);
+  status(canEditBoard()?"Live collaboration":"View only — sign in to edit");
   const url=new URL(location.href);url.searchParams.set("board",code);window.history.replaceState(null,"",url);
- }catch(e){roomStatus("Could not join: "+e.message+". Publish the latest Firestore rules if needed.");showRoomModal(true);}
+ }catch(e){roomStatus(e?.code==="permission-denied"?"This board is private. Sign in with an invited iLiam account, or ask the owner to change General access.":"Could not open board: "+e.message);showRoomModal(true);}
  finally{busy=false;}
 }
 async function createRoom(){
@@ -655,6 +666,8 @@ function setupUI(){
  $("room-close").onclick=()=>showRoomModal(false);
  $("room-modal").onclick=e=>{if(e.target===$("room-modal"))showRoomModal(false);};
  $("create-room").onclick=createRoom;
+ $("room-access").onchange=e=>changeAccess(e.target.value);
+ $("invite-search").oninput=renderInviteSearch;
  $("join-room").onclick=()=>joinRoom($("room-code").value);
  $("room-code").onkeydown=e=>{if(e.key==="Enter")joinRoom(e.target.value);};
  $("leave-room").onclick=()=>{
@@ -682,11 +695,11 @@ onAuthStateChanged(auth,async u=>{
   if(auth.currentUser?.uid!==u.uid)return;
   if(snap.exists())profile=snap.data();
  }catch(e){console.warn("Whiteboard profile:",e);}
- updateRoomInfo();
+ if(room&&!canViewBoard()){
+  stopShared();showRoomModal(true);
+  roomStatus("This restricted board requires an invited iLiam account.");
+ }else if(room){updateRoomInfo();schedule();}
+ else updateRoomInfo();
  const code=new URL(location.href).searchParams.get("board");
- if(code&&!room){
-  if(profile)joinRoom(code);
-  else{showRoomModal(true);roomStatus("Sign in to your iLiam account in Community to join this shared board.");}
- }
- if(!user&&room){stopShared();showRoomModal(true);roomStatus("Sign in again to use shared boards.");}
+ if(code&&!room)joinRoom(code);
 });
