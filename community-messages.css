@@ -58,3 +58,10 @@
 #iliam-messages-ui .im-member-flag{flex:none;color:#c0effc;font-size:12px}
 #iliam-messages-ui #im-member-list .im-entry:disabled{opacity:.68;cursor:default}
 #iliam-messages-ui #im-member-count{margin:8px 0 16px}
+
+/* Markdown link composer and clickable links in message bubbles */
+#iliam-messages-ui .im-bubble a{color:#9cf4ff;text-decoration:underline;font-weight:700;overflow-wrap:anywhere}
+#iliam-messages-ui .im-bubble a:hover{color:white}
+#iliam-messages-ui .im-send #im-link{flex:none;padding:10px 12px}
+#iliam-messages-ui #im-link-modal .im-panel label{display:block;margin-top:12px}
+@media(max-width:520px){#iliam-messages-ui .im-send{gap:5px;padding:9px}#iliam-messages-ui .im-send #im-link{padding:10px 7px;font-size:12px}#iliam-messages-ui .im-send #im-send{padding:10px 9px}}
