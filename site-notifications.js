@@ -1,6 +1,6 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import {getFirestore,collection,query,orderBy,limit,onSnapshot,doc,getDoc,Timestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import {getFirestore,collection,query,orderBy,limit,onSnapshot,doc,getDoc,updateDoc,Timestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 
 const app=initializeApp(firebaseConfig), db=getFirestore(app), auth=getAuth(app);
@@ -20,16 +20,23 @@ const toggle=document.createElement('button');toggle.id='iliam-notify-settings';
 const panel=document.createElement('section');panel.id='iliam-notify-panel';panel.hidden=true;
 panel.innerHTML='<strong>iLiam notifications</strong><label><input type="checkbox" id="noticeAnnouncements">New announcements</label><label><input type="checkbox" id="noticeVotes">Upvotes and featured posts</label><p style="font-size:12px">Browser notifications work only while an iLiam page is open. Turn them on to request permission.</p>';
 document.body.append(panel);
-const settings={announcements:localStorage.getItem('iliam-notify-announcements')==='true',votes:localStorage.getItem('iliam-notify-votes')==='true'};
-panel.querySelector('#noticeAnnouncements').checked=settings.announcements;
-panel.querySelector('#noticeVotes').checked=settings.votes;
+const settings={announcements:false,votes:false};
+const announceCheck=panel.querySelector('#noticeAnnouncements'),votesCheck=panel.querySelector('#noticeVotes');
+let accountUid=null;
+function paintSettings(){announceCheck.checked=settings.announcements;votesCheck.checked=settings.votes;}
+paintSettings();
 toggle.onclick=()=>panel.hidden=!panel.hidden;
 async function updateSetting(key,checked){
- settings[key]=checked;localStorage.setItem('iliam-notify-'+key,String(checked));
- if(checked&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();
+ const uid=auth.currentUser?.uid;
+ if(!uid)return;
+ const old=settings[key];settings[key]=checked;paintSettings();
+ try{
+  await updateDoc(doc(db,'profiles',uid),{['notificationSettings.'+key]:checked});
+  if(checked&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();
+ }catch(error){settings[key]=old;paintSettings();console.warn('Notification setting not saved:',error);alert('Could not save notification setting to your account.');}
 }
-panel.querySelector('#noticeAnnouncements').onchange=e=>updateSetting('announcements',e.target.checked);
-panel.querySelector('#noticeVotes').onchange=e=>updateSetting('votes',e.target.checked);
+announceCheck.onchange=e=>updateSetting('announcements',e.target.checked);
+votesCheck.onchange=e=>updateSetting('votes',e.target.checked);
 function notify(title,body){if('Notification' in window&&Notification.permission==='granted')new Notification(title,{body});}
 function milliseconds(value){return value?.toMillis?.()??(typeof value==='number'?value:0)}
 let announcements=[],dismissed=new Set(),seenAnnouncements=new Set(),annInitial=true;
@@ -60,9 +67,13 @@ setInterval(showNotices,1000);
 let stopVotes=null;
 onAuthStateChanged(auth,async user=>{
  if(stopVotes){stopVotes();stopVotes=null;}
+ accountUid=user?.uid||null;
+ settings.announcements=false;settings.votes=false;paintSettings();
  if(!user)return;
  try{
-  const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists())return;
+  const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists()||accountUid!==user.uid)return;
+  settings.announcements=p.data().notificationSettings?.announcements===true;
+  settings.votes=p.data().notificationSettings?.votes===true;paintSettings();
   let first=true,prior=new Map();
   stopVotes=onSnapshot(collection(db,'posts'),snap=>{
    const next=new Map();
