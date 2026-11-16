@@ -452,6 +452,16 @@ async function initializeSignedInUser(user){
   document.querySelectorAll('[data-post-id]').forEach(article=>{const b=article.querySelector('.save-btn');if(b)b.textContent=savedPostIds.has(article.dataset.postId)?'★ Saved':'☆ Save';});
   if(savedPostsModal.classList.contains('show'))renderSavedPosts();
  },error=>console.warn('Saved posts:',error));
+ // One-time optional migration. Shared-device data is never assigned without approval.
+ try{
+  const legacy=JSON.parse(localStorage.getItem('iliam_saved_posts')||'[]');
+  if(Array.isArray(legacy)&&legacy.length&&confirm('This browser contains old saved posts. Import them into the currently signed-in iLiam account?')){
+   for(const id of legacy.filter(id=>typeof id==='string'&&id.length>0&&id.length<=150).slice(0,300)){
+    await setDoc(doc(db,'profiles',user.uid,'savedPosts',id),{savedAt:serverTimestamp()});
+   }
+   localStorage.removeItem('iliam_saved_posts');
+  }
+ }catch(error){console.warn('Old saved posts import was not completed:',error);}
  postingGuidance.hidden=currentProfile.hidePostingGuidance===true;
  watchAvatar(user.uid);
  authModal.classList.remove("show");profileModal.classList.remove("show");
