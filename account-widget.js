@@ -6,7 +6,8 @@ import {firebaseConfig} from "./firebase-config.js";
 const mount=document.getElementById("iliam-account");
 if(mount){
   const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
-  mount.innerHTML='<button class="account-button" type="button" id="iliam-account-toggle">👤 Sign in</button><div class="account-panel" id="iliam-account-panel" hidden><p id="iliam-account-label"></p><a href="community.html">Open Community profile</a><p></p><button id="iliam-account-signout" type="button">Sign out</button></div>';
+  const profileSvg='<svg aria-hidden="true" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em;flex:none"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>';
+  mount.innerHTML='<button class="account-button" type="button" id="iliam-account-toggle">'+profileSvg+' Sign in</button><div class="account-panel" id="iliam-account-panel" hidden><p id="iliam-account-label"></p><a href="community.html">Open Community profile</a><p></p><button id="iliam-account-signout" type="button">Sign out</button></div>';
   const button=mount.querySelector("#iliam-account-toggle");
   const menu=mount.querySelector("#iliam-account-panel");
   const label=mount.querySelector("#iliam-account-label");
@@ -40,7 +41,10 @@ if(mount){
   }
   function close(){overlay.hidden=true;$("iliam-login-error").textContent="";}
   function refreshButton(){
-    button.textContent=profile?"👤 "+(profile.nickname||profile.username):user?"👤 Account setup":"👤 Sign in";
+    const name=profile?(profile.nickname||profile.username):user?"Account setup":"Sign in";
+    button.replaceChildren();
+    button.insertAdjacentHTML("afterbegin",profileSvg);
+    button.append(document.createTextNode(" "+name));
     label.textContent=profile?(profile.nickname||profile.username)+" · @"+profile.username:"Account";
   }
   button.onclick=()=>{
