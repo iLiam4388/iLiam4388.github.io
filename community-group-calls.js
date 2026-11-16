@@ -25,7 +25,7 @@ if(launch){
   '<button class="gc-button good" id="gc-audio" disabled>📞 Audio call</button></div>',
   '<p class="gc-status" id="gc-picker-status" role="status"></p></div>',
   '<button id="gc-allow-notifications" class="gc-button" type="button">🔔 Enable call notifications</button>',
-  '<label class="gc-dnd-footer"><span><strong>🌙 Do Not Disturb</strong><small>Don’t receive incoming calls</small></span><input id="gc-dnd" type="checkbox" aria-label="Do Not Disturb"></label>',
+  '<label class="gc-dnd-footer"><span><strong class="dnd-inline-heading"><svg class="dnd-moon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14z"/></svg><span class="dnd-label-text">Do Not Disturb</span></strong><small>Don’t receive incoming calls</small></span><input id="gc-dnd" type="checkbox" aria-label="Do Not Disturb"></label>',
   '<p class="gc-status" id="gc-privacy-status" role="status"></p></div></section>',
   '<section class="gc-invite" id="gc-invite" hidden aria-live="assertive">',
   '<h2 id="gc-invite-title">Incoming group call</h2><p id="gc-invite-who"></p>',
