@@ -14,7 +14,7 @@ if(launcher){
  '<header class="im-top"><h2>✉ iLiam Messages</h2><div class="im-actions"><button type="button" class="im-btn primary" id="im-add">＋ Add user</button><button type="button" class="im-btn" id="im-settings-open">⚙ Settings</button><button type="button" class="im-btn" id="im-close">✕ Close</button></div></header>',
  '<div class="im-main"><aside class="im-sidebar"><div id="im-conversations" class="im-list"><p class="im-empty">Loading…</p></div></aside>',
  '<section class="im-chat"><header class="im-chat-head"><h3 id="im-title">Choose a conversation</h3>',
- '<div class="im-actions"><button type="button" class="im-btn" id="im-edit-group" hidden>✎ Edit group</button><button type="button" class="im-btn danger" id="im-delete" hidden>🗑 Clear chat</button><button type="button" class="im-btn" id="im-call" hidden>📞 Call</button></div></header>',
+ '<div class="im-actions"><button type="button" class="im-btn" id="im-edit-group" hidden>✎ Edit group</button><button type="button" class="im-btn danger" id="im-delete" hidden><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.2em"><path d="M3 6h18M8 6V4h8v2M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg> Delete chat</button><button type="button" class="im-btn" id="im-call" hidden>📞 Call</button></div></header>',
  '<div id="im-call-menu" class="im-call-menu" hidden><button type="button" class="im-btn" id="im-voice">📞 Audio call</button>',
  '<button type="button" class="im-btn" id="im-video">📹 Video call</button></div>',
  '<div id="im-messages" class="im-bubbles"><p class="im-empty">Choose a chat or add someone.</p></div>',
@@ -110,11 +110,13 @@ if(launcher){
  }
  function isHiddenChat(c){
   if(!hiddenChats.has(c.id))return false;
-  return (hiddenChatTimes.get(c.id)||0)>=(c.createdAt?.toMillis?.()||0);
+  const activeAt=Math.max(c.createdAt?.toMillis?.()||0,c.revivedAt?.toMillis?.()||0);
+  return (hiddenChatTimes.get(c.id)||0)>=activeAt;
  }
  function chatCutoff(c){
   const value=clearCutoffs.get(c.id)||0;
-  return value>=(c.createdAt?.toMillis?.()||0)?value:0;
+  const activeAt=Math.max(c.createdAt?.toMillis?.()||0,c.revivedAt?.toMillis?.()||0);
+  return value>=activeAt?value:0;
  }
  function watchMessageNotices(){
   if(!user)return;
@@ -582,7 +584,8 @@ if(launcher){
       existing.members.length!==members.length ||
       !members.every(uid=>existing.members.includes(uid))))
     throw Error("The existing chat does not match these participants.");
-   const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title})};
+   if(existing)await updateDoc(ref,{revivedAt:serverTimestamp()});
+   const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title}),...(existing?{revivedAt:{toMillis:()=>Date.now()}}:{})};
    profiles.set(user.uid,profile);
    for(const p of guests)profiles.set(p.uid,p);
    if(isHiddenChat(c)){
