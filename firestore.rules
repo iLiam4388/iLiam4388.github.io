@@ -752,11 +752,23 @@ service cloud.firestore {
             && chatUsersExist(request.resource.data.members)
           )
         );
-      allow delete: if false;
+      // Deletion is shared: freeze new messages first, then delete all
+      // message documents and finally the chat itself.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.members
+        && resource.data.get('deleting', false) == false
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['deleting', 'deletionStartedAt'])
+        && request.resource.data.deleting == true
+        && request.resource.data.deletionStartedAt == request.time;
+      allow delete: if signedIn()
+        && request.auth.uid in resource.data.members
+        && resource.data.get('deleting', false) == true;
 
       match /messages/{messageId} {
         allow read: if chatMember(chatId);
         allow create: if chatMember(chatId)
+          && get(/databases/$(database)/documents/chats/$(chatId)).data.get('deleting', false) == false
           && dmAllowed(get(/databases/$(database)/documents/chats/$(chatId)).data.members)
           && request.resource.data.keys().hasOnly(['uid','text','createdAt','replyTo'])
           && request.resource.data.keys().hasAll(['uid','text','createdAt'])
@@ -779,7 +791,8 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/chats/$(chatId)/messages/$(request.resource.data.replyTo.id)).data.uid == request.resource.data.replyTo.uid));
         allow update: if false;
         allow delete: if chatMember(chatId)
-          && resource.data.uid == request.auth.uid;
+          && (resource.data.uid == request.auth.uid
+            || get(/databases/$(database)/documents/chats/$(chatId)).data.get('deleting', false) == true);
       }
     }
 
