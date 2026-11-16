@@ -65,13 +65,15 @@ if(launcher){
  const $=id=>ui.querySelector("#"+id),display=(id,yes)=>{$(id).hidden=!yes;};
  let user=null,profile=null,people=[],profiles=new Map(),picked=new Map(),chats=[],current=null,stopInbox=null,stopMessages=null;
  let messageBlocks=new Set(),messageDnd=false;
- let stopBlocked=null,stopMessageDnd=null;
+ let stopBlocked=null,stopMessageDnd=null,stopProfile=null;
  let inboxWatchers=new Map(),seenMessageIds=new Map(),deletionJobs=new Set(),knownChatIds=new Set(),inboxInitialized=false;
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
  let replyTarget=null,latestMessageSnapshot=null,activeMessageChatId=null,conversationEpoch=0;
  const liveStatus=document.createElement('span');liveStatus.id='im-live-status';liveStatus.setAttribute('role','status');liveStatus.style.cssText='font-size:11px;color:#a4d9ee;padding:3px 7px;white-space:nowrap';
  $('im-title').insertAdjacentElement('afterend',liveStatus);
  const setLiveStatus=text=>{liveStatus.textContent=text;};
+ const accountState=document.createElement("div");accountState.id="im-account-state";accountState.setAttribute("role","status");accountState.style.cssText="font-size:12px;padding:5px 12px;color:#a4d9ee";
+ $("im-conversations").insertAdjacentElement("beforebegin",accountState);
  launcher.disabled=true;
  const label=p=>p?.nickname||p?.username||"iLiam user";
  const time=t=>t?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
@@ -506,7 +508,7 @@ if(launcher){
    query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(100)),
    {includeMetadataChanges:true},
    snap=>{
-    setLiveStatus(snap.metadata.fromCache?"Offline or syncing…":"Live");
+    setLiveStatus(snap.metadata.fromCache?"Cached / reconnecting":"Server synced (listener active)");
     if(epoch!==conversationEpoch||current?.id!==chatId)return;
     latestMessageSnapshot=snap;
     try{renderConversationSnapshot(snap,chatId);}
@@ -640,6 +642,7 @@ if(launcher){
  launcher.onclick=()=>{
   if(!user)return alert("Sign in to Community first.");
   display("im-backdrop",true);
+  if(!current){const first=chats.find(c=>!c.deleting);if(first)showConversation(first);}
   if(!profile)$("im-conversations").textContent="Your account is signed in. Waiting for the iLiam profile to load…";
  };
  $("im-close").onclick=()=>display("im-backdrop",false);
@@ -687,6 +690,7 @@ if(launcher){
  onAuthStateChanged(auth,async u=>{
   if(stopInbox){stopInbox();stopInbox=null;}
   if(stopBlocked){stopBlocked();stopBlocked=null;}
+  if(stopProfile){stopProfile();stopProfile=null;}
   if(stopMessageDnd){stopMessageDnd();stopMessageDnd=null;}
   stopNotifications();
   messageBlocks=new Set();messageDnd=false;knownChatIds=new Set();inboxInitialized=false;
@@ -694,15 +698,22 @@ if(launcher){
   launcher.disabled=!u;
   if(!u){display("im-backdrop",false);return;}
   $("im-conversations").textContent="Connecting to Firebase…";
-  try{
-   const snap=await getDoc(doc(db,"profiles",u.uid));
+  // The Firebase inbox should not wait on a separate profile network request.
+  profile={nickname:u.displayName||"iLiam user",username:""};
+  profiles.set(u.uid,profile);
+  stopProfile=onSnapshot(doc(db,"profiles",u.uid),{includeMetadataChanges:true},snap=>{
    if(auth.currentUser?.uid!==u.uid)return;
    if(!snap.exists()){
-    $("im-conversations").textContent="Your iLiam profile could not be found. Open Profile, then try again.";
+    $("im-account-state").textContent="Signed in, but iLiam profile is missing. Existing chats are still accessible.";
     return;
    }
    profile=snap.data();profiles.set(u.uid,profile);
-   launcher.disabled=false;
+   $("im-account-state").textContent=snap.metadata.fromCache?"Profile cached; waiting for server":"Account ready";
+   if(current)updateConversationControls();
+  },err=>{
+   if(auth.currentUser?.uid===u.uid)$("im-account-state").textContent="Profile error: "+err.message;
+  });
+  try{
    stopBlocked=onSnapshot(collection(db,"messageBlocks",u.uid,"users"),snap=>{
     messageBlocks=new Set(snap.docs.map(d=>d.id));renderSettingsPeople();
     if(current&&latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,current.id);
@@ -714,9 +725,11 @@ if(launcher){
    stopInbox=onSnapshot(query(collection(db,"chats"),where("members","array-contains",u.uid),limit(100)),async snap=>{
     if(auth.currentUser?.uid!==u.uid)return;
     const next=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+    $("im-account-state").textContent=snap.metadata.fromCache?"Inbox cached; connecting…":"Inbox synced from server";
     const fresh=next.filter(c=>!c.deleting&&!knownChatIds.has(c.id));
     knownChatIds=new Set(next.map(c=>c.id));chats=next;
     drawInbox();watchMessageNotices();
+    if(!current&&!$("im-backdrop").hidden){const first=chats.find(c=>!c.deleting);if(first)showConversation(first);}
     if(inboxInitialized)for(const c of fresh)notify("New iLiam conversation","A chat was added to your inbox.",()=>openFromNotification(c));
     inboxInitialized=true;
     ensureProfiles([...new Set(chats.flatMap(c=>c.members))]).then(()=>{
