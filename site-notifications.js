@@ -1,6 +1,6 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import {getFirestore,collection,query,orderBy,limit,onSnapshot,doc,getDoc,updateDoc,Timestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import {getFirestore,collection,query,where,orderBy,limit,onSnapshot,doc,getDoc,updateDoc,Timestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 
 const app=initializeApp(firebaseConfig), db=getFirestore(app), auth=getAuth(app);
@@ -75,7 +75,7 @@ onAuthStateChanged(auth,async user=>{
   settings.announcements=p.data().notificationSettings?.announcements===true;
   settings.votes=p.data().notificationSettings?.votes===true;paintSettings();
   let first=true,prior=new Map();
-  stopVotes=onSnapshot(collection(db,'posts'),snap=>{
+  stopVotes=onSnapshot(query(collection(db,'posts'),where('uid','==',user.uid)),snap=>{
    const next=new Map();
    snap.forEach(d=>{
     const post=d.data();if(post.uid!==user.uid)return;
