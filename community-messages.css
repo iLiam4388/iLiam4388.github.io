@@ -65,3 +65,13 @@
 #iliam-messages-ui .im-send #im-link{flex:none;padding:10px 12px}
 #iliam-messages-ui #im-link-modal .im-panel label{display:block;margin-top:12px}
 @media(max-width:520px){#iliam-messages-ui .im-send{gap:5px;padding:9px}#iliam-messages-ui .im-send #im-link{padding:10px 7px;font-size:12px}#iliam-messages-ui .im-send #im-send{padding:10px 9px}}
+
+/* Replies in private and group messages */
+#iliam-messages-ui .im-reply-composer{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#14344c;border-top:1px solid #4483a2;padding:8px 12px}
+#iliam-messages-ui .im-reply-composer[hidden]{display:none!important}
+#iliam-messages-ui .im-reply-composer>div{min-width:0;display:grid;gap:3px}
+#iliam-messages-ui .im-reply-composer strong{color:#94eaff;font-size:12px}
+#iliam-messages-ui #im-reply-text{max-width:80vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#d3e6f3}
+#iliam-messages-ui .im-reply-quote{display:block;max-width:100%;margin-bottom:7px;padding:6px 9px;border:0;border-left:3px solid #73dfff;border-radius:6px;background:#122f49;color:#c4edff;text-align:left;cursor:pointer;font-size:12px;white-space:normal;overflow-wrap:anywhere}
+#iliam-messages-ui .im-reply-action{display:block;margin-top:5px;background:transparent;border:0;color:#98eaff;font-size:11px;text-decoration:underline;cursor:pointer}
+#iliam-messages-ui .im-flash{outline:3px solid #6beaff}
