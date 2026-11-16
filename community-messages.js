@@ -490,6 +490,11 @@ if(launcher){
   setLiveStatus("Connecting…");
   await ensureProfiles(c.members);
   if(epoch!==conversationEpoch||current?.id!==c.id||auth.currentUser?.uid!==user?.uid)return;
+  // Selecting an active chat must unlock the composer. These controls
+  // start disabled and resetCurrent() disables them again.
+  $("im-input").disabled=false;
+  $("im-send").disabled=false;
+  $("im-link").disabled=false;
   updateConversationControls();display("im-call-menu",false);drawInbox();
   const chatId=c.id;
   activeMessageChatId=chatId;
