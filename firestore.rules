@@ -655,6 +655,33 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // One public conversation. All participants must be genuine iLiam users.
+    match /publicChatMessages/{messageId} {
+      allow read: if hasProfile();
+      allow create: if hasProfile()
+        && request.resource.data.keys().hasOnly(['uid','text','createdAt','replyTo'])
+        && request.resource.data.keys().hasAll(['uid','text','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.createdAt == request.time
+        && (!('replyTo' in request.resource.data)
+          || (request.resource.data.replyTo is map
+            && request.resource.data.replyTo.keys().hasOnly(['id','uid','text'])
+            && request.resource.data.replyTo.keys().hasAll(['id','uid','text'])
+            && request.resource.data.replyTo.id is string
+            && request.resource.data.replyTo.id.size() > 0
+            && request.resource.data.replyTo.id.size() <= 150
+            && request.resource.data.replyTo.uid is string
+            && request.resource.data.replyTo.text is string
+            && request.resource.data.replyTo.text.size() <= 180
+            && exists(/databases/$(database)/documents/publicChatMessages/$(request.resource.data.replyTo.id))
+            && get(/databases/$(database)/documents/publicChatMessages/$(request.resource.data.replyTo.id)).data.uid == request.resource.data.replyTo.uid));
+      allow update: if false;
+      allow delete: if isAdmin() || (hasProfile() && resource.data.uid == request.auth.uid);
+    }
+
     match /chats/{chatId} {
       allow get, list: if signedIn()
         && request.auth.uid in resource.data.members;
@@ -722,13 +749,25 @@ service cloud.firestore {
         allow read: if chatMember(chatId);
         allow create: if chatMember(chatId)
           && dmAllowed(get(/databases/$(database)/documents/chats/$(chatId)).data.members)
-          && request.resource.data.keys().hasOnly(['uid','text','createdAt'])
+          && request.resource.data.keys().hasOnly(['uid','text','createdAt','replyTo'])
           && request.resource.data.keys().hasAll(['uid','text','createdAt'])
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() >= 1
           && request.resource.data.text.size() <= 2000
-          && request.resource.data.createdAt == request.time;
+          && request.resource.data.createdAt == request.time
+          && (!('replyTo' in request.resource.data)
+            || (request.resource.data.replyTo is map
+              && request.resource.data.replyTo.keys().hasOnly(['id','uid','text'])
+              && request.resource.data.replyTo.keys().hasAll(['id','uid','text'])
+              && request.resource.data.replyTo.id is string
+              && request.resource.data.replyTo.id.size() > 0
+              && request.resource.data.replyTo.id.size() <= 150
+              && request.resource.data.replyTo.uid is string
+              && request.resource.data.replyTo.text is string
+              && request.resource.data.replyTo.text.size() <= 180
+              && exists(/databases/$(database)/documents/chats/$(chatId)/messages/$(request.resource.data.replyTo.id))
+              && get(/databases/$(database)/documents/chats/$(chatId)/messages/$(request.resource.data.replyTo.id)).data.uid == request.resource.data.replyTo.uid));
         allow update: if false;
         allow delete: if chatMember(chatId)
           && resource.data.uid == request.auth.uid;
