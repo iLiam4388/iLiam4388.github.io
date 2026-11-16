@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 // Messages is separate from Community posts and from the Calls screen.
@@ -14,7 +14,7 @@ if(launcher){
  '<header class="im-top"><h2>✉ iLiam Messages</h2><div class="im-actions"><button type="button" class="im-btn primary" id="im-add">＋ Add user</button><button type="button" class="im-btn" id="im-settings-open">⚙ Settings</button><button type="button" class="im-btn" id="im-close">✕ Close</button></div></header>',
  '<div class="im-main"><aside class="im-sidebar"><div id="im-conversations" class="im-list"><p class="im-empty">Loading…</p></div></aside>',
  '<section class="im-chat"><header class="im-chat-head"><h3 id="im-title">Choose a conversation</h3>',
- '<div class="im-actions"><button type="button" class="im-btn" id="im-edit-group" hidden>✎ Edit group</button><button type="button" class="im-btn danger" id="im-delete" hidden>🗑 Delete chat</button><button type="button" class="im-btn" id="im-call" hidden>📞 Call</button></div></header>',
+ '<div class="im-actions"><button type="button" class="im-btn" id="im-edit-group" hidden>✎ Edit group</button><button type="button" class="im-btn danger" id="im-delete" hidden>🗑 Clear chat</button><button type="button" class="im-btn" id="im-call" hidden>📞 Call</button></div></header>',
  '<div id="im-call-menu" class="im-call-menu" hidden><button type="button" class="im-btn" id="im-voice">📞 Audio call</button>',
  '<button type="button" class="im-btn" id="im-video">📹 Video call</button></div>',
  '<div id="im-messages" class="im-bubbles"><p class="im-empty">Choose a chat or add someone.</p></div>',
@@ -64,8 +64,8 @@ if(launcher){
  document.body.append(ui);
  const $=id=>ui.querySelector("#"+id),display=(id,yes)=>{$(id).hidden=!yes;};
  let user=null,profile=null,people=[],profiles=new Map(),picked=new Map(),chats=[],current=null,stopInbox=null,stopMessages=null;
- let hiddenChats=new Set(),messageBlocks=new Set(),messageDnd=false;
- let stopHidden=null,stopBlocked=null,stopMessageDnd=null;
+ let hiddenChats=new Set(),hiddenChatTimes=new Map(),clearCutoffs=new Map(),messageBlocks=new Set(),messageDnd=false;
+ let stopHidden=null,stopCleared=null,stopBlocked=null,stopMessageDnd=null;
  let inboxWatchers=new Map(),seenMessageIds=new Map();
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
  let replyTarget=null;
@@ -110,7 +110,7 @@ if(launcher){
  }
  function watchMessageNotices(){
   if(!user)return;
-  const eligible=chats.filter(c=>!hiddenChats.has(c.id));
+  const eligible=chats;
   const ids=new Set(eligible.map(c=>c.id));
   for(const [id,fn] of inboxWatchers)if(!ids.has(id)){fn();inboxWatchers.delete(id);seenMessageIds.delete(id);}
   for(const c of eligible){
@@ -118,10 +118,20 @@ if(launcher){
    let initialized=false;
    const stop=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","desc"),limit(1)),snapshot=>{
     const top=snapshot.docs[0];
-    if(!initialized){initialized=true;seenMessageIds.set(c.id,top?.id||"");return;}
-    if(!top || top.id===seenMessageIds.get(c.id))return;
-    seenMessageIds.set(c.id,top.id);
+    if(!top)return;
     const msg=top.data();
+    const hiddenTime=hiddenChatTimes.get(c.id);
+    const messageTime=msg.createdAt?.toMillis?.()||0;
+    if(hiddenChats.has(c.id)){
+     if(hiddenTime&&messageTime>hiddenTime&&msg.uid!==user?.uid&&!messageBlocks.has(msg.uid)){
+      deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id)).catch(e=>console.warn("Could not reopen chat:",e));
+     }
+     if(!initialized){initialized=true;seenMessageIds.set(c.id,top.id);}
+     return;
+    }
+    if(!initialized){initialized=true;seenMessageIds.set(c.id,top.id);return;}
+    if(top.id===seenMessageIds.get(c.id))return;
+    seenMessageIds.set(c.id,top.id);
     if(msg.uid===user.uid||messageDnd||messageBlocks.has(msg.uid))return;
     if(current?.id===c.id && !$("im-backdrop").hidden && !document.hidden)return;
     notify("New message · "+chatName(c),msg.text.slice(0,140),()=>openFromNotification(c));
@@ -331,10 +341,14 @@ if(launcher){
  $("im-delete").onclick=async()=>{
   if(!current||!user)return;
   const c=current;
-  if(!confirm("Delete this conversation from your inbox? Other participants keep their messages."))return;
+  if(!confirm("Clear and hide this conversation for your account? Re-adding it will show only newer messages. The other participant keeps their history."))return;
   try{
-   await setDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id),{hiddenAt:serverTimestamp()});
-   hiddenChats.add(c.id);resetCurrent();drawInbox();watchMessageNotices();
+   const batch=writeBatch(db);
+   batch.set(doc(db,"messagePreferences",user.uid,"hidden",c.id),{hiddenAt:serverTimestamp()});
+   batch.set(doc(db,"messagePreferences",user.uid,"cleared",c.id),{clearedAt:serverTimestamp()});
+   await batch.commit();
+   hiddenChats.add(c.id);hiddenChatTimes.set(c.id,Date.now());clearCutoffs.set(c.id,Date.now());
+   resetCurrent();drawInbox();watchMessageNotices();
   }catch(e){alert("Could not hide conversation: "+e.message);}
  };
  function safeMessageUrl(raw){
@@ -413,11 +427,13 @@ if(launcher){
   updateConversationControls();display("im-call-menu",false);
   drawInbox();
   $("im-messages").textContent="Loading messages…";
-  stopMessages=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","asc"),limit(100)),snap=>{
+  stopMessages=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","desc"),limit(100)),snap=>{
    if(current?.id!==c.id)return;
    const board=$("im-messages");board.replaceChildren();
-   const visibleMessages=new Map(snap.docs.map(d=>[d.id,{id:d.id,...d.data()}]));
-   for(const row of snap.docs){
+   const cutoff=clearCutoffs.get(c.id)||0;
+   const visibleDocs=snap.docs.slice().reverse().filter(d=>(d.data().createdAt?.toMillis?.()||Date.now())>cutoff);
+   const visibleMessages=new Map(visibleDocs.map(d=>[d.id,{id:d.id,...d.data()}]));
+   for(const row of visibleDocs){
     const m={id:row.id,...row.data()};
     if(messageBlocks.has(m.uid))continue;
     const bubble=document.createElement("div");bubble.className="im-bubble"+(m.uid===user.uid?" mine":"");
@@ -438,7 +454,7 @@ if(launcher){
     const replyButton=document.createElement('button');replyButton.type='button';replyButton.className='im-reply-action';replyButton.textContent='Reply';replyButton.onclick=()=>chooseReply(m);
     bubble.append(content,stamp,replyButton);board.append(bubble);
    }
-   if(snap.empty)board.textContent="No messages yet. Say hello!";
+   if(!visibleDocs.length)board.textContent="No messages yet. Say hello!";
    board.scrollTop=board.scrollHeight;
   },e=>$("im-messages").textContent="Could not load this chat: "+e.message);
  }
@@ -589,10 +605,11 @@ if(launcher){
  onAuthStateChanged(auth,async u=>{
   if(stopInbox){stopInbox();stopInbox=null;}
   if(stopHidden){stopHidden();stopHidden=null;}
+  if(stopCleared){stopCleared();stopCleared=null;}
   if(stopBlocked){stopBlocked();stopBlocked=null;}
   if(stopMessageDnd){stopMessageDnd();stopMessageDnd=null;}
   stopNotifications();
-  hiddenChats=new Set();messageBlocks=new Set();messageDnd=false;
+  hiddenChats=new Set();hiddenChatTimes=new Map();clearCutoffs=new Map();messageBlocks=new Set();messageDnd=false;
   resetCurrent();user=u;profile=null;chats=[];profiles.clear();
   launcher.disabled=true;
   if(!u){display("im-backdrop",false);return;}
@@ -603,9 +620,14 @@ if(launcher){
    launcher.disabled=false;
    stopHidden=onSnapshot(collection(db,"messagePreferences",u.uid,"hidden"),snap=>{
     hiddenChats=new Set(snap.docs.map(d=>d.id));
+    hiddenChatTimes=new Map(snap.docs.map(d=>[d.id,d.data().hiddenAt?.toMillis?.()||0]));
     if(current&&hiddenChats.has(current.id))resetCurrent();
     drawInbox();watchMessageNotices();
    },e=>console.warn("Hidden chats unavailable:",e));
+   stopCleared=onSnapshot(collection(db,"messagePreferences",u.uid,"cleared"),snap=>{
+    clearCutoffs=new Map(snap.docs.map(d=>[d.id,d.data().clearedAt?.toMillis?.()||0]));
+    if(current)showConversation(current);
+   },e=>console.warn("Cleared chats unavailable:",e));
    stopBlocked=onSnapshot(collection(db,"messageBlocks",u.uid,"users"),snap=>{
     messageBlocks=new Set(snap.docs.map(d=>d.id));renderSettingsPeople();
     if(current)showConversation(current);
