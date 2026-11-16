@@ -227,7 +227,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 import {installAdmin} from './community-admin.js';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import{getFirestore,doc,getDoc,addDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import{getFirestore,doc,getDoc,addDoc,setDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 const firebaseConfig={
  apiKey:"AIzaSyD7QF6z6e2psZzQwkmO7LLkc4twcNrZWEg",
@@ -251,6 +251,7 @@ const usernameLockHint=$("usernameLockHint");
 
 let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
 const postCache=new Map();
+let savedPostIds=new Set(),stopSavedPosts=null;
 const postingGuidance=document.querySelector(".posting-guidance");
 const dismissPostingGuidanceButton=$("dismissPostingGuidance");
 dismissPostingGuidanceButton.addEventListener("click",async()=>{
@@ -444,6 +445,13 @@ async function initializeSignedInUser(user){
  const snap=await getDoc(doc(db,"profiles",user.uid));
  if(!snap.exists())return false;
  currentProfile=snap.data();
+ if(stopSavedPosts)stopSavedPosts();
+ savedPostIds=new Set();
+ stopSavedPosts=onSnapshot(collection(db,'profiles',user.uid,'savedPosts'),snapshot=>{
+  savedPostIds=new Set(snapshot.docs.map(d=>d.id));
+  document.querySelectorAll('[data-post-id]').forEach(article=>{const b=article.querySelector('.save-btn');if(b)b.textContent=savedPostIds.has(article.dataset.postId)?'★ Saved':'☆ Save';});
+  if(savedPostsModal.classList.contains('show'))renderSavedPosts();
+ },error=>console.warn('Saved posts:',error));
  postingGuidance.hidden=currentProfile.hidePostingGuidance===true;
  watchAvatar(user.uid);
  authModal.classList.remove("show");profileModal.classList.remove("show");
@@ -503,6 +511,8 @@ onAuthStateChanged(auth,async user=>{
  try{
   if(!user){
    adminControl.stop();
+   if(stopSavedPosts){stopSavedPosts();stopSavedPosts=null;}
+   savedPostIds=new Set();
    clearAvatarListeners();
    currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;setAdminButtonVisible(false);postingGuidance.hidden=true;
    if(stopPostsListener){stopPostsListener();stopPostsListener=null}
@@ -608,7 +618,7 @@ resetCommunityButton.addEventListener("click",async()=>{
   }catch(error){
    console.warn("Legacy usernames collection could not be cleared:",error);
   }
-  localStorage.removeItem("iliam_saved_posts");
+  // Cloud saved posts are account-owned; community reset does not erase bookmarks.
   followedUids=new Set();
   adminError.textContent=`Community reset complete: ${postCount} posts removed, ${relationCount} follow records cleared, ${legacyUsernameCount} old username records removed. Account profiles were preserved.`;
  }catch(error){adminError.textContent="Could not reset community: "+error.message}
@@ -878,19 +888,22 @@ async function toggleFollow(targetUid){
  try{await runTransaction(db,async tx=>{const existing=await tx.get(followingRef);if(existing.exists()){tx.delete(followingRef);tx.delete(followerRef)}else{const data={createdAt:serverTimestamp()};tx.set(followingRef,data);tx.set(followerRef,data)}})}catch(error){alert("Could not update follow: "+error.message)}
 }
 
-function getSavedPostIds(){
+function getSavedPostIds(){return [...savedPostIds];}
+async function toggleSavedPost(id,button){
+ if(!currentUser)return;
+ const uid=currentUser.uid,wasSaved=savedPostIds.has(id);
+ button.disabled=true;
  try{
-  const value=JSON.parse(localStorage.getItem("iliam_saved_posts")||"[]");
-  return Array.isArray(value)?value:[];
- }catch{return[]}
-}
-
-function toggleSavedPost(id,button){
- const saved=new Set(getSavedPostIds());
- if(saved.has(id)){saved.delete(id);button.textContent="☆ Save"}
- else{saved.add(id);button.textContent="★ Saved"}
- localStorage.setItem("iliam_saved_posts",JSON.stringify([...saved]));
- if(savedPostsModal.classList.contains("show"))renderSavedPosts();
+  const ref=doc(db,'profiles',uid,'savedPosts',id);
+  if(wasSaved)await deleteDoc(ref);
+  else await setDoc(ref,{savedAt:serverTimestamp()});
+  if(currentUser?.uid===uid){
+   if(wasSaved)savedPostIds.delete(id);else savedPostIds.add(id);
+   button.textContent=wasSaved?'☆ Save':'★ Saved';
+   if(savedPostsModal.classList.contains('show'))renderSavedPosts();
+  }
+ }catch(error){alert('Could not update saved posts: '+error.message);}
+ finally{button.disabled=false;}
 }
 
 savedPostsButton.addEventListener("click",()=>{
@@ -944,13 +957,7 @@ async function renderSavedPosts(){
     target.animate([{transform:"scale(1)"},{transform:"scale(1.02)"},{transform:"scale(1)"}],{duration:700});
    }else alert("That post is not currently in the newest 50 posts.");
   };
-  card.querySelector(".remove-saved").onclick=()=>{
-   const saved=new Set(getSavedPostIds());saved.delete(p.id);
-   localStorage.setItem("iliam_saved_posts",JSON.stringify([...saved]));
-   const mainButton=document.querySelector(`[data-post-id="${CSS.escape(p.id)}"] .save-btn`);
-   if(mainButton)mainButton.textContent="☆ Save";
-   renderSavedPosts();
-  };
+  card.querySelector(".remove-saved").onclick=()=>toggleSavedPost(p.id,card.querySelector(".remove-saved"));
   savedPostsList.appendChild(card);
  }
 }
