@@ -118,7 +118,22 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <div class="posting-guidance" role="note" style="margin:12px 0 18px;padding:14px 16px;border:1px solid #55cfff;border-radius:12px;background:rgba(0,90,150,.24);line-height:1.55;text-align:left">
   <strong>Community is for posts, not casual chatting.</strong><br>
   Share something with everyone, like on Reddit or X. To respond to a post, use its comments or upvotes instead of making another post. Want to have a conversation? Use <strong>Messages</strong> or <strong>Public Chat</strong>.
+  <div style="display:flex;justify-content:flex-end;margin-top:12px">
+    <button id="dismissPostingGuidance" type="button" style="padding:8px 12px;background:#145b86;color:white;border:1px solid #74d8ff;border-radius:9px;cursor:pointer;font:inherit">Do not show again</button>
+  </div>
 </div>
+<script>
+(function(){
+  const notice=document.querySelector('.posting-guidance');
+  const button=document.getElementById('dismissPostingGuidance');
+  const key='iliam_community_posting_guidance_dismissed';
+  try { if(localStorage.getItem(key)==='true') notice.hidden=true; } catch (_) {}
+  button.addEventListener('click',function(){
+    notice.hidden=true;
+    try { localStorage.setItem(key,'true'); } catch (_) {}
+  });
+})();
+</script>
 <div class="toolbar">
 <button class="tool-btn" type="button" data-wrap="**">B</button>
 <button class="tool-btn" type="button" data-wrap="*"><i>I</i></button>
