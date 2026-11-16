@@ -35,7 +35,8 @@
 #iliam-call-settings-button{background:linear-gradient(#6e7cff,#42339a);box-shadow:0 0 12px #9185ff88}
 #iliam-call-settings-button:disabled{opacity:.55;cursor:not-allowed}
 #iliam-call-ui .call-dnd-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:15px;margin:14px 0 18px;background:#182f4d;border:1px solid #6dd8ff55;border-radius:14px}
-#iliam-call-ui .call-dnd-row span{display:flex;flex-direction:column;gap:5px}
+#iliam-call-ui .call-dnd-row > span{display:flex;flex-direction:column;gap:5px}
+#iliam-call-ui .call-dnd-row strong{display:inline-flex;align-items:center;gap:8px}
 #iliam-call-ui .call-dnd-row small{font-size:12px;color:#b9d6e7;line-height:1.4}
 #iliam-call-ui .call-dnd-row input{width:23px;height:23px;accent-color:#43e5bf;flex:none;cursor:pointer}
 #iliam-call-ui .call-settings-heading{font-size:17px;margin:20px 0 4px}
