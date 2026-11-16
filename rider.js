@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import {loadCloudDraft,saveCloudDraft} from "./cloud-drafts.js";
+let projectOwnerUid=null;
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { STLLoader } from "three/addons/loaders/STLLoader.js";
@@ -595,7 +596,7 @@ function queueAutosave() {
  clearTimeout(saveTimer);
  saveTimer=setTimeout(async()=>{
   try{
-   await saveCloudDraft('rider3d',serializeProject(project));
+   await saveCloudDraft('rider3d',serializeProject(project),projectOwnerUid);
    autosaveAvailable=true;
    $("saveStatus").textContent="Saved to iLiam account";
    $("saveStatus").classList.remove("unsaved");
@@ -1773,6 +1774,7 @@ new ResizeObserver(resize).observe(view);
 let recovered = false;
 try {
  const saved=await loadCloudDraft('rider3d');
+ projectOwnerUid=saved.user;
  if(saved.content){
   project=normalizeProject(saved.content);recovered=true;autosaveAvailable=true;
  }else if(saved.user){
