@@ -585,10 +585,10 @@ if(launcher){
       !members.every(uid=>existing.members.includes(uid))))
     throw Error("The existing chat does not match these participants.");
    if(existing)await updateDoc(ref,{revivedAt:serverTimestamp()});
-   const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title}),...(existing?{revivedAt:{toMillis:()=>Date.now()}}:{})};
+   const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title})};
    profiles.set(user.uid,profile);
    for(const p of guests)profiles.set(p.uid,p);
-   if(isHiddenChat(c)){
+   if(hiddenChats.has(c.id)){
     await deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id));
     hiddenChats.delete(c.id);
    }
