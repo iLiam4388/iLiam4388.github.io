@@ -68,7 +68,7 @@ if(launcher){
  let stopHidden=null,stopCleared=null,stopBlocked=null,stopMessageDnd=null;
  let inboxWatchers=new Map(),seenMessageIds=new Map(),deletionJobs=new Set(),knownChatIds=new Set(),inboxInitialized=false;
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
- let replyTarget=null;
+ let replyTarget=null,latestMessageSnapshot=null,activeMessageChatId=null,conversationEpoch=0;
  launcher.disabled=true;
  const label=p=>p?.nickname||p?.username||"iLiam user";
  const time=t=>t?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
@@ -430,8 +430,10 @@ if(launcher){
   display('im-reply-composer',true);$('im-input').focus();
  }
  function resetCurrent(){
+  conversationEpoch++;
   clearReply();
   if(stopMessages){stopMessages();stopMessages=null;}
+  latestMessageSnapshot=null;activeMessageChatId=null;
   current=null;
   $("im-title").textContent="Choose a conversation";
   $("im-messages").replaceChildren();
@@ -439,21 +441,10 @@ if(launcher){
   $("im-input").disabled=true;$("im-send").disabled=true;$("im-link").disabled=true;
   display("im-call",false);display("im-edit-group",false);display("im-delete",false);display("im-call-menu",false);
  }
- async function showConversation(c){
-  if(!user||!c)return;
-  if(stopMessages){stopMessages();stopMessages=null;}
-  clearReply();
-  current=c;
-  await ensureProfiles(c.members);
-  if(current?.id!==c.id)return;
-  $("im-title").textContent=chatName(c);
-  $("im-input").disabled=false;$("im-send").disabled=false;$("im-link").disabled=false;
-  updateConversationControls();display("im-call-menu",false);
-  drawInbox();
-  $("im-messages").textContent="Loading messages…";
-  stopMessages=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","desc"),limit(100)),snap=>{
-   if(current?.id!==c.id)return;
-   const board=$("im-messages");board.replaceChildren();
+ function renderConversationSnapshot(snap,chatId){
+  if(current?.id!==chatId)return;
+  const c=current;
+  const board=$("im-messages");board.replaceChildren();
    const cutoff=chatCutoff(c);
    const visibleDocs=snap.docs.slice().reverse().filter(d=>(d.data().createdAt?.toMillis?.()||Date.now())>cutoff);
    const visibleMessages=new Map(visibleDocs.map(d=>[d.id,{id:d.id,...d.data()}]));
@@ -498,7 +489,44 @@ if(launcher){
    }
    if(!visibleDocs.length)board.textContent="No messages yet. Say hello!";
    board.scrollTop=board.scrollHeight;
-  },e=>$("im-messages").textContent="Could not load this chat: "+e.message);
+
+ }
+ async function showConversation(c,{force=false}={}){
+  if(!user||!c||c.deleting)return;
+  if(!force&&current?.id===c.id&&stopMessages&&activeMessageChatId===c.id){
+   current=c;updateConversationControls();drawInbox();
+   if(latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,c.id);
+   return;
+  }
+  const epoch=++conversationEpoch;
+  if(stopMessages){stopMessages();stopMessages=null;}
+  latestMessageSnapshot=null;activeMessageChatId=null;
+  clearReply();current=c;
+  $("im-messages").textContent="Connecting to messages…";
+  await ensureProfiles(c.members);
+  if(epoch!==conversationEpoch||current?.id!==c.id||auth.currentUser?.uid!==user?.uid)return;
+  updateConversationControls();display("im-call-menu",false);drawInbox();
+  const chatId=c.id;
+  activeMessageChatId=chatId;
+  stopMessages=onSnapshot(
+   query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(100)),
+   snap=>{
+    if(epoch!==conversationEpoch||current?.id!==chatId)return;
+    latestMessageSnapshot=snap;
+    try{renderConversationSnapshot(snap,chatId);}
+    catch(error){
+     console.error("Message render failed:",error);
+     $("im-messages").textContent="Could not display the latest messages: "+error.message;
+    }
+   },
+   error=>{
+    if(epoch!==conversationEpoch)return;
+    console.error("Live Messages listener failed:",error);
+    if(stopMessages){stopMessages();stopMessages=null;}
+    activeMessageChatId=null;
+    $("im-messages").textContent="Live updates stopped: "+error.message+". Close and reopen this conversation to reconnect.";
+   }
+  );
  }
  function drawInbox(){
   const list=$("im-conversations");list.replaceChildren();
@@ -644,7 +672,7 @@ if(launcher){
   const now=Date.now();
   if(now-lastConversationResume<1500)return;
   lastConversationResume=now;
-  showConversation(current);
+  showConversation(current,{force:true});
  }
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)resumeConversation();});
  window.addEventListener("pageshow",e=>{if(e.persisted)resumeConversation();});
@@ -683,11 +711,11 @@ if(launcher){
    },e=>console.warn("Hidden chats unavailable:",e));
    stopCleared=onSnapshot(collection(db,"messagePreferences",u.uid,"cleared"),snap=>{
     clearCutoffs=new Map(snap.docs.map(d=>[d.id,d.data().clearedAt?.toMillis?.()||0]));
-    if(current)showConversation(current);
+    if(current&&latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,current.id);
    },e=>console.warn("Cleared chats unavailable:",e));
    stopBlocked=onSnapshot(collection(db,"messageBlocks",u.uid,"users"),snap=>{
     messageBlocks=new Set(snap.docs.map(d=>d.id));renderSettingsPeople();
-    if(current)showConversation(current);
+    if(current&&latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,current.id);
    },e=>console.warn("Message block list unavailable:",e));
    stopMessageDnd=onSnapshot(doc(db,"messagePreferences",u.uid,"settings","messages"),snap=>{
     messageDnd=snap.exists()&&snap.data().doNotDisturb===true;
