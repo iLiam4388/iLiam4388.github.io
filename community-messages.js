@@ -69,6 +69,9 @@ if(launcher){
  let inboxWatchers=new Map(),seenMessageIds=new Map(),deletionJobs=new Set(),knownChatIds=new Set(),inboxInitialized=false;
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
  let replyTarget=null,latestMessageSnapshot=null,activeMessageChatId=null,conversationEpoch=0;
+ const liveStatus=document.createElement('span');liveStatus.id='im-live-status';liveStatus.setAttribute('role','status');liveStatus.style.cssText='font-size:11px;color:#a4d9ee;padding:3px 7px;white-space:nowrap';
+ $('im-title').insertAdjacentElement('afterend',liveStatus);
+ const setLiveStatus=text=>{liveStatus.textContent=text;};
  launcher.disabled=true;
  const label=p=>p?.nickname||p?.username||"iLiam user";
  const time=t=>t?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
@@ -415,6 +418,7 @@ if(launcher){
   clearReply();
   if(stopMessages){stopMessages();stopMessages=null;}
   latestMessageSnapshot=null;activeMessageChatId=null;
+  setLiveStatus("");
   current=null;
   $("im-title").textContent="Choose a conversation";
   $("im-messages").replaceChildren();
@@ -483,6 +487,7 @@ if(launcher){
   latestMessageSnapshot=null;activeMessageChatId=null;
   clearReply();current=c;
   $("im-messages").textContent="Connecting to messages…";
+  setLiveStatus("Connecting…");
   await ensureProfiles(c.members);
   if(epoch!==conversationEpoch||current?.id!==c.id||auth.currentUser?.uid!==user?.uid)return;
   updateConversationControls();display("im-call-menu",false);drawInbox();
@@ -490,7 +495,9 @@ if(launcher){
   activeMessageChatId=chatId;
   stopMessages=onSnapshot(
    query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(100)),
+   {includeMetadataChanges:true},
    snap=>{
+    setLiveStatus(snap.metadata.fromCache?"Offline or syncing…":"Live");
     if(epoch!==conversationEpoch||current?.id!==chatId)return;
     latestMessageSnapshot=snap;
     try{renderConversationSnapshot(snap,chatId);}
@@ -504,6 +511,7 @@ if(launcher){
     console.error("Live Messages listener failed:",error);
     if(stopMessages){stopMessages();stopMessages=null;}
     activeMessageChatId=null;
+    setLiveStatus("Disconnected");
     $("im-messages").textContent="Live updates stopped: "+error.message+". Close and reopen this conversation to reconnect.";
    }
   );
