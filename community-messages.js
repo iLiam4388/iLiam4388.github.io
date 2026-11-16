@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,writeBatch,getDocsFromServer} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 // Messages is separate from Community posts and from the Calls screen.
@@ -72,6 +72,12 @@ if(launcher){
  const liveStatus=document.createElement('span');liveStatus.id='im-live-status';liveStatus.setAttribute('role','status');liveStatus.style.cssText='font-size:11px;color:#a4d9ee;padding:3px 7px;white-space:nowrap';
  $('im-title').insertAdjacentElement('afterend',liveStatus);
  const setLiveStatus=text=>{liveStatus.textContent=text;};
+ const syncButton=document.createElement("button");
+ syncButton.type="button";syncButton.className="im-btn";
+ syncButton.style.cssText="padding:4px 8px;font-size:12px;white-space:nowrap";
+ syncButton.title="Check messages directly against Firebase";
+ syncButton.innerHTML='<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14-5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14 5l2-2"/><path d="M20 20v-4h-4"/></svg> Check server';
+ liveStatus.insertAdjacentElement("afterend",syncButton);
  const accountState=document.createElement("div");accountState.id="im-account-state";accountState.setAttribute("role","status");accountState.style.cssText="font-size:12px;padding:5px 12px;color:#a4d9ee";
  $("im-conversations").insertAdjacentElement("beforebegin",accountState);
  launcher.disabled=true;
@@ -527,6 +533,22 @@ if(launcher){
    }
   );
  }
+ syncButton.onclick=async()=>{
+  if(!user||!current)return;
+  syncButton.disabled=true;
+  const chatId=current.id;
+  setLiveStatus("Checking server…");
+  try{
+   const snap=await getDocsFromServer(query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(100)));
+   if(current?.id!==chatId)return;
+   setLiveStatus("Server verified · "+snap.size+" recent messages");
+   latestMessageSnapshot=snap;
+   renderConversationSnapshot(snap,chatId);
+  }catch(error){
+   setLiveStatus("Server check failed: "+error.message);
+   console.error("Messages server check:",error);
+  }finally{syncButton.disabled=false;}
+ };
  function drawInbox(){
   const list=$("im-conversations");list.replaceChildren();
   for(const c of chats){
