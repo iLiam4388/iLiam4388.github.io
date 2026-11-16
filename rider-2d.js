@@ -5,6 +5,7 @@ const canvas = $("canvas");
 const ctx = canvas.getContext("2d");
 const TAU = Math.PI * 2;
 const STORAGE_KEY = "il-rider-2d-v1";
+let projectOwnerUid=null;
 const MAX_OBJECTS = 150;
 const MAX_PARTICLES = 240;
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -322,7 +323,7 @@ function scheduleSave() {
  clearTimeout(saveTimer);$("saveStatus").textContent="Saving to iLiam…";
  saveTimer=setTimeout(async()=>{
   try{
-   await saveCloudDraft('rider2d',JSON.stringify(projectData()));
+   await saveCloudDraft('rider2d',JSON.stringify(projectData()),projectOwnerUid);
    $("saveStatus").textContent="Saved to iLiam account";
   }catch(error){
    $("saveStatus").textContent="Not saved — export a project file: "+error.message;
@@ -687,6 +688,7 @@ async function start() {
  let restored = false;
  try{
   const saved=await loadCloudDraft('rider2d');
+  projectOwnerUid=saved.user;
   if(saved.content){
    const loaded=validateProject(JSON.parse(saved.content));
    await loadProjectFonts(loaded);scene=loaded;restored=true;
