@@ -66,7 +66,7 @@ if(launcher){
  let user=null,profile=null,people=[],profiles=new Map(),picked=new Map(),chats=[],current=null,stopInbox=null,stopMessages=null;
  let hiddenChats=new Set(),hiddenChatTimes=new Map(),clearCutoffs=new Map(),messageBlocks=new Set(),messageDnd=false;
  let stopHidden=null,stopCleared=null,stopBlocked=null,stopMessageDnd=null;
- let inboxWatchers=new Map(),seenMessageIds=new Map();
+ let inboxWatchers=new Map(),seenMessageIds=new Map(),deletionJobs=new Set(),knownChatIds=new Set(),inboxInitialized=false;
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
  let replyTarget=null;
  launcher.disabled=true;
@@ -108,9 +108,17 @@ if(launcher){
   for(const fn of inboxWatchers.values())fn();
   inboxWatchers.clear();seenMessageIds.clear();
  }
+ function isHiddenChat(c){
+  if(!hiddenChats.has(c.id))return false;
+  return (hiddenChatTimes.get(c.id)||0)>=(c.createdAt?.toMillis?.()||0);
+ }
+ function chatCutoff(c){
+  const value=clearCutoffs.get(c.id)||0;
+  return value>=(c.createdAt?.toMillis?.()||0)?value:0;
+ }
  function watchMessageNotices(){
   if(!user)return;
-  const eligible=chats;
+  const eligible=chats.filter(c=>!c.deleting);
   const ids=new Set(eligible.map(c=>c.id));
   for(const [id,fn] of inboxWatchers)if(!ids.has(id)){fn();inboxWatchers.delete(id);seenMessageIds.delete(id);}
   for(const c of eligible){
@@ -122,7 +130,7 @@ if(launcher){
     const msg=top.data();
     const hiddenTime=hiddenChatTimes.get(c.id);
     const messageTime=msg.createdAt?.toMillis?.()||0;
-    if(hiddenChats.has(c.id)){
+    if(isHiddenChat(c)){
      if(hiddenTime&&messageTime>hiddenTime&&msg.uid!==user?.uid&&!messageBlocks.has(msg.uid)){
       deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id)).catch(e=>console.warn("Could not reopen chat:",e));
      }
@@ -341,16 +349,30 @@ if(launcher){
  $("im-delete").onclick=async()=>{
   if(!current||!user)return;
   const c=current;
-  if(!confirm("Clear and hide this conversation for your account? Re-adding it will show only newer messages. The other participant keeps their history."))return;
+  if(!confirm("PERMANENTLY delete this conversation and every message for ALL participants? This cannot be undone."))return;
+  $("im-delete").disabled=true;
   try{
-   const batch=writeBatch(db);
-   batch.set(doc(db,"messagePreferences",user.uid,"hidden",c.id),{hiddenAt:serverTimestamp()});
-   batch.set(doc(db,"messagePreferences",user.uid,"cleared",c.id),{clearedAt:serverTimestamp()});
-   await batch.commit();
-   hiddenChats.add(c.id);hiddenChatTimes.set(c.id,Date.now());clearCutoffs.set(c.id,Date.now());
-   resetCurrent();drawInbox();watchMessageNotices();
-  }catch(e){alert("Could not hide conversation: "+e.message);}
+   await updateDoc(doc(db,"chats",c.id),{deleting:true,deletionStartedAt:serverTimestamp()});
+   resetCurrent();drawInbox();
+   await permanentlyDeleteChat(c.id);
+  }catch(e){
+   alert("Could not finish deleting chat: "+e.message+". Reopen Messages to retry cleanup.");
+  }finally{$("im-delete").disabled=false;}
  };
+ async function permanentlyDeleteChat(chatId){
+  if(deletionJobs.has(chatId))return;
+  deletionJobs.add(chatId);
+  try{
+   while(true){
+    const page=await getDocs(query(collection(db,"chats",chatId,"messages"),limit(150)));
+    if(page.empty)break;
+    const batch=writeBatch(db);
+    for(const message of page.docs)batch.delete(message.ref);
+    await batch.commit();
+   }
+   await deleteDoc(doc(db,"chats",chatId));
+  }finally{deletionJobs.delete(chatId);}
+ }
  function safeMessageUrl(raw){
   try{
    const url=new URL(raw);
@@ -430,7 +452,7 @@ if(launcher){
   stopMessages=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","desc"),limit(100)),snap=>{
    if(current?.id!==c.id)return;
    const board=$("im-messages");board.replaceChildren();
-   const cutoff=clearCutoffs.get(c.id)||0;
+   const cutoff=chatCutoff(c);
    const visibleDocs=snap.docs.slice().reverse().filter(d=>(d.data().createdAt?.toMillis?.()||Date.now())>cutoff);
    const visibleMessages=new Map(visibleDocs.map(d=>[d.id,{id:d.id,...d.data()}]));
    for(const row of visibleDocs){
@@ -465,7 +487,7 @@ if(launcher){
  function drawInbox(){
   const list=$("im-conversations");list.replaceChildren();
   for(const c of chats){
-   if(hiddenChats.has(c.id))continue;
+   if(c.deleting||isHiddenChat(c))continue;
    const btn=document.createElement("button");btn.type="button";
    btn.className="im-entry"+(c.id===current?.id?" selected":"");
    if(c.kind==="group"&&c.imageUrl){
@@ -563,7 +585,7 @@ if(launcher){
    const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title})};
    profiles.set(user.uid,profile);
    for(const p of guests)profiles.set(p.uid,p);
-   if(hiddenChats.has(c.id)){
+   if(isHiddenChat(c)){
     await deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id));
     hiddenChats.delete(c.id);
    }
@@ -627,7 +649,7 @@ if(launcher){
   if(stopBlocked){stopBlocked();stopBlocked=null;}
   if(stopMessageDnd){stopMessageDnd();stopMessageDnd=null;}
   stopNotifications();
-  hiddenChats=new Set();hiddenChatTimes=new Map();clearCutoffs=new Map();messageBlocks=new Set();messageDnd=false;
+  hiddenChats=new Set();hiddenChatTimes=new Map();clearCutoffs=new Map();messageBlocks=new Set();messageDnd=false;knownChatIds=new Set();inboxInitialized=false;
   resetCurrent();user=u;profile=null;chats=[];profiles.clear();
   launcher.disabled=true;
   if(!u){display("im-backdrop",false);return;}
@@ -655,12 +677,23 @@ if(launcher){
     $("im-dnd").checked=messageDnd;
    },e=>console.warn("Message DND unavailable:",e));
    stopInbox=onSnapshot(query(collection(db,"chats"),where("members","array-contains",u.uid),limit(100)),async snap=>{
-    chats=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
-    await ensureProfiles([...new Set(chats.flatMap(c=>c.members))]);
     if(auth.currentUser?.uid!==u.uid)return;
+    const next=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+    const fresh=next.filter(c=>!c.deleting&&!knownChatIds.has(c.id)&&!isHiddenChat(c));
+    knownChatIds=new Set(next.map(c=>c.id));chats=next;
+    drawInbox();watchMessageNotices();
+    if(inboxInitialized)for(const c of fresh)notify("New iLiam conversation","A chat was added to your inbox.",()=>openFromNotification(c));
+    inboxInitialized=true;
+    ensureProfiles([...new Set(chats.flatMap(c=>c.members))]).then(()=>{
+     if(auth.currentUser?.uid===u.uid)drawInbox();
+    });
+    for(const c of next)if(c.deleting&&!deletionJobs.has(c.id)){
+     const started=c.deletionStartedAt?.toMillis?.()||Date.now();
+     if(Date.now()-started>20000)permanentlyDeleteChat(c.id).catch(e=>console.warn("Chat cleanup:",e));
+    }
     if(current){
      const updated=chats.find(c=>c.id===current.id);
-     if(updated){
+     if(updated&&!updated.deleting){
       const membershipChanged=updated.members.join("|")!==current.members.join("|");
       current=updated;updateConversationControls();
       if(membershipChanged){
