@@ -440,12 +440,16 @@ if(launcher){
     if(c.kind==="group"){
      const who=document.createElement("span");who.className="im-sender";who.textContent=m.uid===user.uid?"You":label(profileOf(m.uid));bubble.append(who);
     }
-    if(m.replyTo){
-     const reference=visibleMessages.get(m.replyTo.id);
-     const quote=document.createElement("button");quote.type="button";quote.className="im-reply-quote";
+    if(m.replyTo && typeof m.replyTo==="object"){
+     // A missing or malformed original must not break the live message listener.
+     const replyId=typeof m.replyTo.id==="string"?m.replyTo.id:"";
+     const reference=replyId?visibleMessages.get(replyId):null;
      const original=reference&&!messageBlocks.has(reference.uid)?reference:null;
-     quote.textContent="↳ "+(original?label(profileOf(original.uid))+": "+original.text.slice(0,110):"Original message not in recent history");
-     quote.onclick=()=>{const target=board.querySelector(`[data-message-id="${CSS.escape(m.replyTo.id)}"]`);if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("im-flash");setTimeout(()=>target.classList.remove("im-flash"),900);}};
+     const quote=document.createElement("button");quote.type="button";quote.className="im-reply-quote";
+     const fallback=typeof m.replyTo.text==="string"?m.replyTo.text.slice(0,110):"Original message unavailable";
+     const originalName=original?label(profileOf(original.uid)):label(profileOf(m.replyTo.uid));
+     quote.textContent="↳ "+originalName+": "+(original?String(original.text||"").slice(0,110):fallback);
+     quote.onclick=()=>{if(!replyId)return;const target=board.querySelector(`[data-message-id="${CSS.escape(replyId)}"]`);if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("im-flash");setTimeout(()=>target.classList.remove("im-flash"),900);}};
      bubble.append(quote);
     }
     bubble.dataset.messageId=m.id;
@@ -592,6 +596,20 @@ if(launcher){
   }catch(err){alert("Message not sent: "+err.message);}
   finally{btn.disabled=false;}
  };
+ // Mobile browsers can suspend Firebase listeners while backgrounded.
+ // Reattach the current conversation on resume so replies and regular messages
+ // both use a fresh real-time snapshot.
+ let lastConversationResume=0;
+ function resumeConversation(){
+  if(document.hidden||!user||!current)return;
+  const now=Date.now();
+  if(now-lastConversationResume<1500)return;
+  lastConversationResume=now;
+  showConversation(current);
+ }
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)resumeConversation();});
+ window.addEventListener("pageshow",e=>{if(e.persisted)resumeConversation();});
+ window.addEventListener("online",resumeConversation);
  $("im-call").onclick=()=>display("im-call-menu",$("im-call-menu").hidden);
  function callChat(type){
   if(!current||!user)return;
