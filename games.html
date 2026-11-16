@@ -355,12 +355,12 @@ onSnapshot(q,snap=>{
       order:Number.isFinite(x.order)?x.order:9999
     };
   }).filter(g=>g.enabled&&g.url!=='#').sort((a,b)=>(a.order-b.order)||(Number(b.featured)-Number(a.featured))||a.name.localeCompare(b.name));
-  localStorage.setItem('iliamGamesCache',JSON.stringify(games));
+  // The games catalog is already loaded directly from Firestore.
   status.textContent=`${games.length} game${games.length===1?'':'s'} loaded`;
   render();
 },err=>{
-  try{games=JSON.parse(localStorage.getItem('iliamGamesCache')||'[]')}catch{games=[]}
-  status.textContent=games.length?'Firebase is unavailable — showing cached games.':'Could not load games from Firebase.';
+  games=[];
+  status.textContent='Could not load games from Firebase. Check your connection.';
   render();
   console.error(err);
 });
