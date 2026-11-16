@@ -83,11 +83,14 @@ if(launcher){
    const sender=document.createElement("strong");sender.textContent=profileName(m.uid);
    const t=document.createElement("time");t.textContent=m.createdAt?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
    head.append(sender,t);body.append(head);
-   if(m.replyTo){
+   if(m.replyTo&&typeof m.replyTo==="object"){
+    const replyId=typeof m.replyTo.id==="string"?m.replyTo.id:"";
+    const original=seenMessages.get(replyId);
     const quoted=document.createElement("button");quoted.type="button";quoted.className="pc-quote";
-    const original=seenMessages.get(m.replyTo.id);
-    quoted.textContent="↳ "+(original?profileName(original.uid)+": "+original.text.slice(0,110):"Original message not in recent history");
-    quoted.onclick=()=>{const target=area.querySelector('[data-message-id="'+CSS.escape(m.replyTo.id)+'"]');if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("pc-highlight");setTimeout(()=>target.classList.remove("pc-highlight"),1000);}};
+    // Never render a stored copy of a deleted message as if it were still live.
+    quoted.textContent="↳ "+(original?profileName(original.uid)+": "+String(original.text||"").slice(0,110):"Original message unavailable or deleted");
+    quoted.disabled=!original;
+    quoted.onclick=()=>{if(!replyId)return;const target=area.querySelector('[data-message-id="'+CSS.escape(replyId)+'"]');if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("pc-highlight");setTimeout(()=>target.classList.remove("pc-highlight"),1000);}};
     body.append(quoted);
    }
    const message=document.createElement("div");message.className="pc-message-text";makeLinks(message,m.text);body.append(message);
@@ -95,7 +98,15 @@ if(launcher){
    const response=document.createElement("button");response.type="button";response.textContent="Reply";response.onclick=()=>startReply(m);actions.append(response);
    if(user&&(m.uid===user.uid||$("pc-history").dataset.admin==="yes")){
     const remove=document.createElement("button");remove.type="button";remove.textContent="Delete";
-    remove.onclick=async()=>{if(!confirm("Delete this public message?"))return;try{await deleteDoc(doc(db,"publicChatMessages",m.id));}catch(e){status("Could not delete: "+e.message);}};actions.append(remove);
+    remove.onclick=async()=>{
+     if(!confirm("Permanently delete this public message or reply for everyone?"))return;
+     remove.disabled=true;
+     try{
+      await deleteDoc(doc(db,"publicChatMessages",m.id));
+      if(reply?.id===m.id)clearReply();
+      // The Firestore listener will update every connected participant.
+     }catch(e){status("Could not delete: "+e.message);remove.disabled=false;}
+    };actions.append(remove);
    }
    body.append(actions);line.append(body);area.append(line);
   }
@@ -119,6 +130,16 @@ if(launcher){
   root.hidden=true;document.body.classList.remove("pc-open");clearReply();
   if(stop){stop();stop=null;}session++;seenMessages.clear();
  }
+ let lastResume=0;
+ function resumePublicChat(){
+  if(root.hidden||document.hidden||!auth.currentUser)return;
+  const now=Date.now();if(now-lastResume<1500)return;lastResume=now;
+  if(stop){stop();stop=null;}
+  session++;seenMessages.clear();open();
+ }
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)resumePublicChat();});
+ window.addEventListener("online",resumePublicChat);
+ window.addEventListener("pageshow",event=>{if(event.persisted)resumePublicChat();});
  launcher.onclick=open;
  $("pc-close").onclick=close;
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!root.hidden){if(!$("pc-link-overlay").hidden)$("pc-link-overlay").hidden=true;else close();}});
