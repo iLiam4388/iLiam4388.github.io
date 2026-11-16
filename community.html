@@ -115,25 +115,14 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <section class="post-box">
 <h2>Post Something</h2>
-<div class="posting-guidance" role="note" style="margin:12px 0 18px;padding:14px 16px;border:1px solid #55cfff;border-radius:12px;background:rgba(0,90,150,.24);line-height:1.55;text-align:left">
+<div class="posting-guidance" role="note" hidden style="margin:12px 0 18px;padding:14px 16px;border:1px solid #55cfff;border-radius:12px;background:rgba(0,90,150,.24);line-height:1.55;text-align:left">
   <strong>Community is for posts, not casual chatting.</strong><br>
   Share something with everyone, like on Reddit or X. To respond to a post, use its comments or upvotes instead of making another post. Want to have a conversation? Use <strong>Messages</strong> or <strong>Public Chat</strong>.
   <div style="display:flex;justify-content:flex-end;margin-top:12px">
     <button id="dismissPostingGuidance" type="button" style="padding:8px 12px;background:#145b86;color:white;border:1px solid #74d8ff;border-radius:9px;cursor:pointer;font:inherit">Do not show again</button>
   </div>
 </div>
-<script>
-(function(){
-  const notice=document.querySelector('.posting-guidance');
-  const button=document.getElementById('dismissPostingGuidance');
-  const key='iliam_community_posting_guidance_dismissed';
-  try { if(localStorage.getItem(key)==='true') notice.hidden=true; } catch (_) {}
-  button.addEventListener('click',function(){
-    notice.hidden=true;
-    try { localStorage.setItem(key,'true'); } catch (_) {}
-  });
-})();
-</script>
+
 <div class="toolbar">
 <button class="tool-btn" type="button" data-wrap="**">B</button>
 <button class="tool-btn" type="button" data-wrap="*"><i>I</i></button>
@@ -262,6 +251,22 @@ const usernameLockHint=$("usernameLockHint");
 
 let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
 const postCache=new Map();
+const postingGuidance=document.querySelector(".posting-guidance");
+const dismissPostingGuidanceButton=$("dismissPostingGuidance");
+dismissPostingGuidanceButton.addEventListener("click",async()=>{
+  if(!currentUser||!currentProfile)return;
+  const uid=currentUser.uid;
+  dismissPostingGuidanceButton.disabled=true;
+  try{
+    await updateDoc(doc(db,"profiles",uid),{hidePostingGuidance:true});
+    if(currentUser?.uid===uid){
+      currentProfile.hidePostingGuidance=true;
+      postingGuidance.hidden=true;
+    }
+  }catch(error){
+    alert("Could not save this preference to your iLiam account: "+error.message);
+  }finally{dismissPostingGuidanceButton.disabled=false;}
+});
 
 function setAdminButtonVisible(visible){
  adminButton.hidden=!visible;
@@ -439,6 +444,7 @@ async function initializeSignedInUser(user){
  const snap=await getDoc(doc(db,"profiles",user.uid));
  if(!snap.exists())return false;
  currentProfile=snap.data();
+ postingGuidance.hidden=currentProfile.hidePostingGuidance===true;
  watchAvatar(user.uid);
  authModal.classList.remove("show");profileModal.classList.remove("show");
  followedUids=new Set();
@@ -498,7 +504,7 @@ onAuthStateChanged(auth,async user=>{
   if(!user){
    adminControl.stop();
    clearAvatarListeners();
-   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;setAdminButtonVisible(false);
+   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;setAdminButtonVisible(false);postingGuidance.hidden=true;
    if(stopPostsListener){stopPostsListener();stopPostsListener=null}
    postsElement.innerHTML='<div class="empty">Log in or sign up to view the community.</div>';
    setStatus("Log in or create an account to join the community.");
