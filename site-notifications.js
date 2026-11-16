@@ -72,8 +72,18 @@ onAuthStateChanged(auth,async user=>{
  if(!user)return;
  try{
   const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists()||accountUid!==user.uid)return;
-  settings.announcements=p.data().notificationSettings?.announcements===true;
-  settings.votes=p.data().notificationSettings?.votes===true;paintSettings();
+  let prefs=p.data().notificationSettings;
+  if(!prefs){
+   const oldA=localStorage.getItem('iliam-notify-announcements'),oldV=localStorage.getItem('iliam-notify-votes');
+   if((oldA!==null||oldV!==null)&&confirm('Import this browser\'s previous notification preferences into your current iLiam account?')){
+    prefs={announcements:oldA==='true',votes:oldV==='true'};
+    await updateDoc(doc(db,'profiles',user.uid),{notificationSettings:prefs});
+    localStorage.removeItem('iliam-notify-announcements');
+    localStorage.removeItem('iliam-notify-votes');
+   }
+  }
+  settings.announcements=prefs?.announcements===true;
+  settings.votes=prefs?.votes===true;paintSettings();
   let first=true,prior=new Map();
   stopVotes=onSnapshot(query(collection(db,'posts'),where('uid','==',user.uid)),snap=>{
    const next=new Map();
