@@ -105,7 +105,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
   <button class="profile-btn" id="iliam-group-button" type="button" disabled>📞 CALL SOMEONE</button>
   <button class="profile-btn" id="iliam-messages-button" type="button" disabled>✉ MESSAGES</button>
   <button class="profile-btn" id="profileButton" type="button">👤 PROFILE</button>
-  <button class="admin-panel-btn" id="adminButton" type="button" hidden>🛡 ADMIN</button>
+  <button class="admin-panel-btn" id="adminButton" type="button" hidden style="display:none">🛡 ADMIN</button>
 </div>
 
 <div class="divider"></div>
@@ -244,8 +244,13 @@ const usernameLockHint=$("usernameLockHint");
 let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
 const postCache=new Map();
 
+function setAdminButtonVisible(visible){
+ adminButton.hidden=!visible;
+ adminButton.style.display=visible?"inline-block":"none";
+ if(!visible)adminModal.classList.remove("show");
+}
 const adminControl=installAdmin({db,getUser:()=>currentUser,onRole:value=>{
- isAdmin=value;adminButton.hidden=!value;
+ isAdmin=value;setAdminButtonVisible(Boolean(value)&&Boolean(currentUser));
  if(currentUser&&currentProfile)listenForPosts();
 },escapeHtml:value=>escapeHtml(value),richText:value=>richText(value)});
 
@@ -411,7 +416,7 @@ async function initializeSignedInUser(user){
  clearAvatarListeners();
  currentUser=user;
  isAdmin=(await getDoc(doc(db,"admins",user.uid))).exists();
- adminButton.hidden=!isAdmin;
+ setAdminButtonVisible(isAdmin);
  const snap=await getDoc(doc(db,"profiles",user.uid));
  if(!snap.exists())return false;
  currentProfile=snap.data();
@@ -474,7 +479,7 @@ onAuthStateChanged(auth,async user=>{
   if(!user){
    adminControl.stop();
    clearAvatarListeners();
-   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;adminButton.hidden=true;
+   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;setAdminButtonVisible(false);
    if(stopPostsListener){stopPostsListener();stopPostsListener=null}
    postsElement.innerHTML='<div class="empty">Log in or sign up to view the community.</div>';
    setStatus("Log in or create an account to join the community.");
