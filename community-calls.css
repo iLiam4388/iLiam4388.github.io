@@ -52,3 +52,8 @@
 
 /* Screen sharing on older one-to-one calls */
 #iliam-call-ui #call-share{background:#195789;border-color:#87cfff}
+
+/* Fixed DND label: a single SVG and label on the same baseline. */
+.dnd-inline-heading{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;white-space:nowrap}
+.dnd-inline-heading>.dnd-moon-svg{display:block!important;width:20px!important;height:20px!important;min-width:20px!important;flex:none!important;vertical-align:middle}
+.dnd-inline-heading>.dnd-label-text{display:inline!important;flex:none!important;white-space:nowrap}
