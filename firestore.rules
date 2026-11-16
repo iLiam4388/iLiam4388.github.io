@@ -159,17 +159,6 @@ service cloud.firestore {
         allow update: if false;
       }
 
-      match /drafts/{draftId} {
-        allow read: if isSelf(uid);
-        allow create, update: if isSelf(uid)
-          && draftId in ['whiteboard', 'rider2d', 'rider3d']
-          && request.resource.data.keys().hasOnly(['content', 'updatedAt'])
-          && request.resource.data.content is string
-          && request.resource.data.content.size() <= 700000
-          && request.resource.data.updatedAt == request.time;
-        allow delete: if isSelf(uid);
-      }
-
       match /following/{targetUid} {
         allow read: if signedIn();
         allow create: if isSelf(uid)
