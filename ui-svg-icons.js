@@ -33,7 +33,7 @@ const shapes={
   "megaphone":'<path d="m3 11 14-7v16L3 13zM7 14l2 7h4l-2-6M17 8a4 4 0 0 1 0 8"/>'
 };
 const symbols={
-'★':'star','☆':'star','📞':'phone','☎':'phone','✉':'mail','👤':'user','🛡':'shield','🔗':'link','✕':'x','💬':'message','♥':'heart',
+'★':'star','☆':'star','⭐':'star','📞':'phone','☎':'phone','✉':'mail','👤':'user','🛡':'shield','🔗':'link','✕':'x','💬':'message','♥':'heart',
 '⚙':'settings','✎':'edit','🗑':'trash','📹':'video','🔔':'bell','🌙':'moon','☑':'check','☐':'check','👥':'users',
 '🎙':'mic','📷':'camera','🖥':'monitor','🔊':'volume','🔇':'volume-off','⛶':'expand','✦':'sparkles','✋':'hand',
 '🔒':'lock','🌍':'globe','👍':'thumbs-up','📢':'megaphone','✓':'check'
@@ -44,7 +44,7 @@ function svg(name){
  span.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+shapes[name]+'</svg>';
  return span;
 }
-const eligible='button,a:not(.profile-link):not(.saved-profile-link),h1,h2,h3,h4,h5,h6,.modal-head,.modal-title,.topbar';
+const eligible='button,a:not(.profile-link):not(.saved-profile-link),h1,h2,h3,h4,h5,h6,.modal-head,.modal-title,.topbar,.im-dnd-row,.call-dnd-row,.gc-dnd-footer,.gc-voice,.featured-label';
 function processText(node){
  const parent=node.parentElement;if(!parent||parent.closest('.iliam-svg-icon,svg,script,style,textarea,input,[contenteditable],.post-text,.comment-text,.message-text,.chat-message,.review-text'))return;
  const target=parent.closest(eligible);if(!target)return;
@@ -60,7 +60,7 @@ function scan(root){
  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(processText);
 }
-const css=document.createElement('style');css.textContent='.iliam-svg-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:-.12em;line-height:1;flex:none}.iliam-svg-icon svg{width:1em;height:1em;display:block;overflow:visible}';
+const css=document.createElement('style');css.textContent='.iliam-svg-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:-.12em;line-height:1;flex:none}.iliam-svg-icon svg{width:1em;height:1em;display:block;overflow:visible}.featured-label .iliam-svg-icon{color:#fff;stroke:#fff;vertical-align:-.15em}';
 document.head.append(css);
 if(document.body)scan(document.body);
 else document.addEventListener('DOMContentLoaded',()=>scan(document.body),{once:true});
