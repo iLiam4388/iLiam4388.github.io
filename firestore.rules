@@ -142,10 +142,10 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data)
           .affectedKeys().hasOnly(['nickname', 'photoURL', 'hidePostingGuidance', 'notificationSettings'])
         && request.resource.data.get('hidePostingGuidance', false) is bool
-        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}) is map
-        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}).keys().hasOnly(['announcements', 'votes'])
-        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}).get('announcements', false) is bool
-        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}).get('votes', false) is bool;
+        && request.resource.data.get('notificationSettings', {'announcements': false, 'votes': false}) is map
+        && request.resource.data.get('notificationSettings', {'announcements': false, 'votes': false}).keys().hasOnly(['announcements', 'votes'])
+        && request.resource.data.get('notificationSettings', {'announcements': false, 'votes': false}).get('announcements', false) is bool
+        && request.resource.data.get('notificationSettings', {'announcements': false, 'votes': false}).get('votes', false) is bool;
 
       allow delete: if isSelf(uid) || isAdmin();
 
