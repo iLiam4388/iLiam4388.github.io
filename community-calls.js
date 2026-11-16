@@ -25,7 +25,7 @@ if(launch){
   '<div id="call-block-editor" hidden>',
   '<input id="call-block-search" class="call-input" type="search" placeholder="Search users to block or unblock" aria-label="Find accounts to block">',
   '<div class="call-user-list" id="call-block-users"></div></div>',
-  '<div class="call-settings-bottom"><label class="call-dnd-row"><span><strong>🌙 Do Not Disturb</strong><small>Stop new voice and video calls from ringing.</small></span><input id="call-dnd" type="checkbox" aria-label="Do Not Disturb"></label></div>',
+  '<div class="call-settings-bottom"><label class="call-dnd-row"><span><strong class="dnd-inline-heading"><svg class="dnd-moon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14z"/></svg><span class="dnd-label-text">Do Not Disturb</span></strong><small>Stop new voice and video calls from ringing.</small></span><input id="call-dnd" type="checkbox" aria-label="Do Not Disturb"></label></div>',
   '<p class="call-status" id="call-settings-status" role="status"></p></div></section>',
   '<section class="call-incoming" id="call-incoming" hidden><h2 class="call-title" id="call-incoming-heading">Incoming call</h2>',
   '<p id="call-incoming-name"></p><div class="call-actions"><button class="call-btn primary" id="call-accept">Accept</button>',
