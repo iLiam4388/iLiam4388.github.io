@@ -140,9 +140,35 @@ service cloud.firestore {
         && request.resource.data.username == resource.data.username
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['nickname', 'photoURL']);
+          .affectedKeys().hasOnly(['nickname', 'photoURL', 'hidePostingGuidance', 'notificationSettings'])
+        && request.resource.data.get('hidePostingGuidance', false) is bool
+        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}) is map
+        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}).keys().hasOnly(['announcements', 'votes'])
+        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}).get('announcements', false) is bool
+        && request.resource.data.get('notificationSettings', {announcements:false,votes:false}).get('votes', false) is bool;
 
       allow delete: if isSelf(uid) || isAdmin();
+
+      match /savedPosts/{postId} {
+        allow read: if isSelf(uid);
+        allow create: if isSelf(uid)
+          && postId.size() > 0 && postId.size() <= 150
+          && request.resource.data.keys().hasOnly(['savedAt'])
+          && request.resource.data.savedAt == request.time;
+        allow delete: if isSelf(uid);
+        allow update: if false;
+      }
+
+      match /drafts/{draftId} {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid)
+          && draftId in ['whiteboard', 'rider2d', 'rider3d']
+          && request.resource.data.keys().hasOnly(['content', 'updatedAt'])
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 700000
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if isSelf(uid);
+      }
 
       match /following/{targetUid} {
         allow read: if signedIn();
