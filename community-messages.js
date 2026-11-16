@@ -470,9 +470,9 @@ if(launcher){
      const reference=replyId?visibleMessages.get(replyId):null;
      const original=reference&&!messageBlocks.has(reference.uid)?reference:null;
      const quote=document.createElement("button");quote.type="button";quote.className="im-reply-quote";
-     const fallback=typeof m.replyTo.text==="string"?m.replyTo.text.slice(0,110):"Original message unavailable";
-     const originalName=original?label(profileOf(original.uid)):label(profileOf(m.replyTo.uid));
-     quote.textContent="↳ "+originalName+": "+(original?String(original.text||"").slice(0,110):fallback);
+     const originalName=original?label(profileOf(original.uid)):"Original message";
+     quote.textContent="↳ "+(original?originalName+": "+String(original.text||"").slice(0,110):"Original message unavailable or deleted");
+     quote.disabled=!original;
      quote.onclick=()=>{if(!replyId)return;const target=board.querySelector(`[data-message-id="${CSS.escape(replyId)}"]`);if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("im-flash");setTimeout(()=>target.classList.remove("im-flash"),900);}};
      bubble.append(quote);
     }
@@ -480,7 +480,21 @@ if(launcher){
     const content=document.createElement("div");renderMessageLinks(content,m.text); // Safe text and validated links.
     const stamp=document.createElement("span");stamp.className="im-time";stamp.textContent=time(m.createdAt);
     const replyButton=document.createElement('button');replyButton.type='button';replyButton.className='im-reply-action';replyButton.textContent='Reply';replyButton.onclick=()=>chooseReply(m);
-    bubble.append(content,stamp,replyButton);board.append(bubble);
+    bubble.append(content,stamp,replyButton);
+    if(m.uid===user.uid){
+     const deleteButton=document.createElement("button");
+     deleteButton.type="button";deleteButton.className="im-reply-action";deleteButton.textContent="Delete";
+     deleteButton.onclick=async()=>{
+      if(!confirm("Permanently delete this message or reply for everyone in this conversation?"))return;
+      deleteButton.disabled=true;
+      try{
+       await deleteDoc(doc(db,"chats",c.id,"messages",m.id));
+       if(replyTarget?.id===m.id)clearReply();
+      }catch(error){alert("Could not delete message: "+error.message);deleteButton.disabled=false;}
+     };
+     bubble.append(deleteButton);
+    }
+    board.append(bubble);
    }
    if(!visibleDocs.length)board.textContent="No messages yet. Say hello!";
    board.scrollTop=board.scrollHeight;
