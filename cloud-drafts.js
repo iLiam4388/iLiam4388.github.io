@@ -18,10 +18,11 @@ export async function loadCloudDraft(kind){
  if(auth.currentUser?.uid!==user.uid)throw new Error('Account changed while loading.');
  return {user:user.uid,content:snap.exists()?snap.data().content:null};
 }
-export async function saveCloudDraft(kind,content){
+export async function saveCloudDraft(kind,content,expectedUid){
  if(!allowed.has(kind))throw new Error('Invalid project type.');
  const user=await currentUser();
  if(!user)throw new Error('Sign in to your iLiam account to save this project.');
+ if(!expectedUid||user.uid!==expectedUid)throw new Error('Account changed — project not saved to the wrong user. Reload this page.');
  if(typeof content!=='string'||new TextEncoder().encode(content).length>650000)
    throw new Error('Project is too large for cloud autosave. Export the project as a file.');
  await setDoc(doc(db,'profiles',user.uid,'drafts',kind),{content,updatedAt:serverTimestamp()});
