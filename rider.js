@@ -1,6 +1,4 @@
 import * as THREE from "three";
-import {loadCloudDraft,saveCloudDraft} from "./cloud-drafts.js";
-let projectOwnerUid=null;
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { STLLoader } from "three/addons/loaders/STLLoader.js";
@@ -591,22 +589,20 @@ function commit(message) {
   if (message) notify(message);
 }
 function queueAutosave() {
- $("saveStatus").textContent="Saving to iLiam account…";
- autosaveAvailable=false;
- clearTimeout(saveTimer);
- saveTimer=setTimeout(async()=>{
-  try{
-   await saveCloudDraft('rider3d',serializeProject(project),projectOwnerUid);
-   autosaveAvailable=true;
-   $("saveStatus").textContent="Saved to iLiam account";
-   $("saveStatus").classList.remove("unsaved");
-  }catch(error){
-   autosaveAvailable=false;
-   $("saveStatus").textContent="Not saved — download a project file";
-   $("saveStatus").classList.add("unsaved");
-   console.warn("3D cloud autosave:",error);
-  }
- },8000);
+  $("saveStatus").textContent = "Saving on this device…";
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORE_KEY, serializeProject(project));
+      autosaveAvailable = true;
+      $("saveStatus").textContent = "Saved on this device";
+      $("saveStatus").classList.remove("unsaved");
+    } catch {
+      autosaveAvailable = false;
+      $("saveStatus").textContent = "Download a file to save";
+      $("saveStatus").classList.add("unsaved");
+    }
+  }, 400);
 }
 function updateHistoryButtons() {
   $("undoBtn").disabled = !history.canUndo;
@@ -1773,22 +1769,15 @@ function resize() {
 new ResizeObserver(resize).observe(view);
 let recovered = false;
 try {
- const saved=await loadCloudDraft('rider3d');
- projectOwnerUid=saved.user;
- if(saved.content){
-  project=normalizeProject(saved.content);recovered=true;autosaveAvailable=true;
- }else if(saved.user){
-  // Existing local data may be from another person using this browser.
-  const legacy=localStorage.getItem(STORE_KEY);
-  if(legacy&&confirm("Import this browser's old 3D Rider project into your signed-in iLiam account?")){
-   project=normalizeProject(legacy);
-   await saveCloudDraft('rider3d',serializeProject(project));
-   localStorage.removeItem(STORE_KEY);
-   recovered=true;autosaveAvailable=true;
+  const saved = localStorage.getItem(STORE_KEY);
+  if (saved) {
+    project = normalizeProject(saved);
+    recovered = true;
   }
- }
-} catch(error){
- notify("Could not restore cloud project: "+error.message+". You can open an exported project file.");
+} catch {
+  notify(
+    "The saved browser session could not be restored. You can still open a project file.",
+  );
 }
 if (!project)
   project = normalizeProject({
