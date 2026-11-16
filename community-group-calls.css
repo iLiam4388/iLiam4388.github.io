@@ -40,7 +40,9 @@
 #iliam-group-ui .gc-block-row{cursor:default}
 #iliam-group-ui .gc-block-row .gc-button{flex:none;padding:8px 11px;font-size:12px}
 #iliam-group-ui .gc-dnd-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #47869b;margin-top:17px;padding:17px 8px 4px;cursor:pointer}
-#iliam-group-ui .gc-dnd-footer span{display:flex;flex-direction:column;gap:5px}
+#iliam-group-ui .gc-dnd-footer > span{display:flex;flex-direction:column;gap:5px}
+#iliam-group-ui .gc-dnd-footer strong{display:inline-flex;align-items:center;gap:8px}
+#iliam-group-ui .gc-dnd-footer strong .iliam-svg-icon{display:inline-flex;flex:none}
 #iliam-group-ui .gc-dnd-footer small{color:#add9e9;font-size:12px}
 #iliam-group-ui .gc-dnd-footer input{width:23px;height:23px;flex:none;accent-color:#41e5ae;cursor:pointer}
 #iliam-group-ui #gc-privacy-status:empty{min-height:0;margin:0}
