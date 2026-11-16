@@ -1,11 +1,9 @@
-/** 2D Rider: touch-first modeling and animation studio. */
-import {loadCloudDraft,saveCloudDraft} from "./cloud-drafts.js";
+/** 2D Rider: dependency-free, touch-first modeling and animation studio. */
 const $ = (id) => document.getElementById(id);
 const canvas = $("canvas");
 const ctx = canvas.getContext("2d");
 const TAU = Math.PI * 2;
 const STORAGE_KEY = "il-rider-2d-v1";
-let projectOwnerUid=null;
 const MAX_OBJECTS = 150;
 const MAX_PARTICLES = 240;
 const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -320,17 +318,12 @@ function changed({ geometry = false } = {}) {
   dirty = true; refresh(); scheduleSave();
 }
 function scheduleSave() {
- clearTimeout(saveTimer);$("saveStatus").textContent="Saving to iLiam…";
- saveTimer=setTimeout(async()=>{
-  try{
-   await saveCloudDraft('rider2d',JSON.stringify(projectData()),projectOwnerUid);
-   $("saveStatus").textContent="Saved to iLiam account";
-  }catch(error){
-   $("saveStatus").textContent="Not saved — export a project file: "+error.message;
-  }
- },6000);
+  clearTimeout(saveTimer); $("saveStatus").textContent = "Saving on this device…";
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projectData())); $("saveStatus").textContent = "Saved on this device"; }
+    catch { $("saveStatus").textContent = "Device storage is full. Save a project file to keep this scene."; }
+  }, 400);
 }
-
 function toast(message) { $("toast").textContent = message; $("toast").hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").hidden = true, 3400); }
 function selectObject(id) { selectedId = id; refresh(); dirty = true; }
 function addObject(type, variant) {
@@ -685,24 +678,9 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("visibilitychange", () => { if (document.hidden) stop(); });
 new ResizeObserver(resize).observe($("stage"));
 async function start() {
- let restored = false;
- try{
-  const saved=await loadCloudDraft('rider2d');
-  projectOwnerUid=saved.user;
-  if(saved.content){
-   const loaded=validateProject(JSON.parse(saved.content));
-   await loadProjectFonts(loaded);scene=loaded;restored=true;
-  }else if(saved.user){
-   // Ask before importing browser-only data from a potentially shared device.
-   const legacy=localStorage.getItem(STORAGE_KEY);
-   if(legacy&&confirm("Import this browser's old 2D Rider project into your signed-in iLiam account?")){
-    const loaded=validateProject(JSON.parse(legacy));
-    await loadProjectFonts(loaded);scene=loaded;restored=true;
-    await saveCloudDraft('rider2d',JSON.stringify(projectData()));
-    localStorage.removeItem(STORAGE_KEY);
-   }
-  }
- }catch(error){toast("Cloud restore failed: "+error.message);}
+  let restored = false;
+  try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) { const loaded = validateProject(JSON.parse(stored)); await loadProjectFonts(loaded); scene = loaded; restored = true; } }
+  catch { toast("The saved scene could not be restored. Open a project to recover it."); }
   if (!restored) {
     const first = makeObject("circle"); Object.assign(first, { x: -1.1, y: -0.8, physics: "rigid", color: "#b28cf3" });
     const second = makeObject("rect"); Object.assign(second, { x: 1.1, y: 0.3, rotation: -12, color: "#66c6d4" }); scene.objects.push(first, second);
