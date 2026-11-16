@@ -64,8 +64,8 @@ if(launcher){
  document.body.append(ui);
  const $=id=>ui.querySelector("#"+id),display=(id,yes)=>{$(id).hidden=!yes;};
  let user=null,profile=null,people=[],profiles=new Map(),picked=new Map(),chats=[],current=null,stopInbox=null,stopMessages=null;
- let hiddenChats=new Set(),hiddenChatTimes=new Map(),clearCutoffs=new Map(),messageBlocks=new Set(),messageDnd=false;
- let stopHidden=null,stopCleared=null,stopBlocked=null,stopMessageDnd=null;
+ let messageBlocks=new Set(),messageDnd=false;
+ let stopBlocked=null,stopMessageDnd=null;
  let inboxWatchers=new Map(),seenMessageIds=new Map(),deletionJobs=new Set(),knownChatIds=new Set(),inboxInitialized=false;
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
  let replyTarget=null,latestMessageSnapshot=null,activeMessageChatId=null,conversationEpoch=0;
@@ -108,16 +108,6 @@ if(launcher){
   for(const fn of inboxWatchers.values())fn();
   inboxWatchers.clear();seenMessageIds.clear();
  }
- function isHiddenChat(c){
-  if(!hiddenChats.has(c.id))return false;
-  const activeAt=Math.max(c.createdAt?.toMillis?.()||0,c.revivedAt?.toMillis?.()||0);
-  return (hiddenChatTimes.get(c.id)||0)>=activeAt;
- }
- function chatCutoff(c){
-  const value=clearCutoffs.get(c.id)||0;
-  const activeAt=Math.max(c.createdAt?.toMillis?.()||0,c.revivedAt?.toMillis?.()||0);
-  return value>=activeAt?value:0;
- }
  function watchMessageNotices(){
   if(!user)return;
   const eligible=chats.filter(c=>!c.deleting);
@@ -130,15 +120,6 @@ if(launcher){
     const top=snapshot.docs[0];
     if(!top)return;
     const msg=top.data();
-    const hiddenTime=hiddenChatTimes.get(c.id);
-    const messageTime=msg.createdAt?.toMillis?.()||0;
-    if(isHiddenChat(c)){
-     if(hiddenTime&&messageTime>hiddenTime&&msg.uid!==user?.uid&&!messageBlocks.has(msg.uid)){
-      deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id)).catch(e=>console.warn("Could not reopen chat:",e));
-     }
-     if(!initialized){initialized=true;seenMessageIds.set(c.id,top.id);}
-     return;
-    }
     if(!initialized){initialized=true;seenMessageIds.set(c.id,top.id);return;}
     if(top.id===seenMessageIds.get(c.id))return;
     seenMessageIds.set(c.id,top.id);
@@ -445,8 +426,7 @@ if(launcher){
   if(current?.id!==chatId)return;
   const c=current;
   const board=$("im-messages");board.replaceChildren();
-   const cutoff=chatCutoff(c);
-   const visibleDocs=snap.docs.slice().reverse().filter(d=>(d.data().createdAt?.toMillis?.()||Date.now())>cutoff);
+   const visibleDocs=snap.docs.slice().reverse();
    const visibleMessages=new Map(visibleDocs.map(d=>[d.id,{id:d.id,...d.data()}]));
    for(const row of visibleDocs){
     const m={id:row.id,...row.data()};
@@ -531,7 +511,7 @@ if(launcher){
  function drawInbox(){
   const list=$("im-conversations");list.replaceChildren();
   for(const c of chats){
-   if(c.deleting||isHiddenChat(c))continue;
+   if(c.deleting)continue;
    const btn=document.createElement("button");btn.type="button";
    btn.className="im-entry"+(c.id===current?.id?" selected":"");
    if(c.kind==="group"&&c.imageUrl){
@@ -630,10 +610,6 @@ if(launcher){
    const c={id:ref.id,...(existing||{members,kind:group?"group":"direct",title})};
    profiles.set(user.uid,profile);
    for(const p of guests)profiles.set(p.uid,p);
-   if(hiddenChats.has(c.id)){
-    await deleteDoc(doc(db,"messagePreferences",user.uid,"hidden",c.id));
-    hiddenChats.delete(c.id);
-   }
    if(!chats.some(x=>x.id===c.id))chats.unshift(c);
    display("im-new",false);await showConversation(c);drawInbox();watchMessageNotices();
   }catch(e){
@@ -689,12 +665,10 @@ if(launcher){
  $("im-video").onclick=()=>callChat("video");
  onAuthStateChanged(auth,async u=>{
   if(stopInbox){stopInbox();stopInbox=null;}
-  if(stopHidden){stopHidden();stopHidden=null;}
-  if(stopCleared){stopCleared();stopCleared=null;}
   if(stopBlocked){stopBlocked();stopBlocked=null;}
   if(stopMessageDnd){stopMessageDnd();stopMessageDnd=null;}
   stopNotifications();
-  hiddenChats=new Set();hiddenChatTimes=new Map();clearCutoffs=new Map();messageBlocks=new Set();messageDnd=false;knownChatIds=new Set();inboxInitialized=false;
+  messageBlocks=new Set();messageDnd=false;knownChatIds=new Set();inboxInitialized=false;
   resetCurrent();user=u;profile=null;chats=[];profiles.clear();
   launcher.disabled=true;
   if(!u){display("im-backdrop",false);return;}
@@ -703,16 +677,6 @@ if(launcher){
    if(auth.currentUser?.uid!==u.uid||!snap.exists())return;
    profile=snap.data();profiles.set(u.uid,profile);
    launcher.disabled=false;
-   stopHidden=onSnapshot(collection(db,"messagePreferences",u.uid,"hidden"),snap=>{
-    hiddenChats=new Set(snap.docs.map(d=>d.id));
-    hiddenChatTimes=new Map(snap.docs.map(d=>[d.id,d.data().hiddenAt?.toMillis?.()||0]));
-    if(current&&hiddenChats.has(current.id))resetCurrent();
-    drawInbox();watchMessageNotices();
-   },e=>console.warn("Hidden chats unavailable:",e));
-   stopCleared=onSnapshot(collection(db,"messagePreferences",u.uid,"cleared"),snap=>{
-    clearCutoffs=new Map(snap.docs.map(d=>[d.id,d.data().clearedAt?.toMillis?.()||0]));
-    if(current&&latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,current.id);
-   },e=>console.warn("Cleared chats unavailable:",e));
    stopBlocked=onSnapshot(collection(db,"messageBlocks",u.uid,"users"),snap=>{
     messageBlocks=new Set(snap.docs.map(d=>d.id));renderSettingsPeople();
     if(current&&latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,current.id);
@@ -724,7 +688,7 @@ if(launcher){
    stopInbox=onSnapshot(query(collection(db,"chats"),where("members","array-contains",u.uid),limit(100)),async snap=>{
     if(auth.currentUser?.uid!==u.uid)return;
     const next=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
-    const fresh=next.filter(c=>!c.deleting&&!knownChatIds.has(c.id)&&!isHiddenChat(c));
+    const fresh=next.filter(c=>!c.deleting&&!knownChatIds.has(c.id));
     knownChatIds=new Set(next.map(c=>c.id));chats=next;
     drawInbox();watchMessageNotices();
     if(inboxInitialized)for(const c of fresh)notify("New iLiam conversation","A chat was added to your inbox.",()=>openFromNotification(c));
