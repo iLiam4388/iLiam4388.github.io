@@ -2,6 +2,7 @@ import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import {getFirestore,collection,doc,getDoc,getDocs,setDoc,updateDoc,deleteDoc,onSnapshot,query,where,orderBy,limit,arrayUnion,arrayRemove,serverTimestamp,writeBatch} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
+import {loadCloudDraft,saveCloudDraft} from "./cloud-drafts.js";
 
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const $=id=>document.getElementById(id),canvas=$("board"),wrap=$("canvas-wrap"),ctx=canvas.getContext("2d");
@@ -61,27 +62,46 @@ function normalizeElement(raw){
  return result;
 }
 function initLocal(){
- try{
-  const raw=JSON.parse(localStorage.getItem(STORAGE)||"null");
-  if(raw&&Array.isArray(raw.items)){
-   localDraft={
-    items:raw.items.slice(0,400).map(e=>({...normalizeElement(e),id:String(e.id||newId())})).filter(e=>drawKinds.has(e.kind)),
-    title:safeTitle(raw.title),paper:validHex(raw.paper)?raw.paper:"#ffffff"
-   };
-  }
- }catch(e){console.warn("Could not read local whiteboard:",e);}
- if(!localDraft)localDraft={items:[],title:"Untitled Whiteboard",paper:"#ffffff"};
+ localDraft={items:[],title:"Untitled Whiteboard",paper:"#ffffff"};
+ items=[];$("board-title").value=localDraft.title;
+ paper=localDraft.paper;$("paper-color").value=paper;
+}
+function applyDraft(raw){
+ if(!raw||!Array.isArray(raw.items))return;
+ localDraft={
+  items:raw.items.slice(0,400).map(e=>({...normalizeElement(e),id:String(e.id||newId())})).filter(e=>drawKinds.has(e.kind)),
+  title:safeTitle(raw.title),paper:validHex(raw.paper)?raw.paper:"#ffffff"
+ };
  items=localDraft.items.map(e=>({...e}));
  $("board-title").value=localDraft.title;
  paper=localDraft.paper;$("paper-color").value=paper;
+ history=[];future=[];schedule();
 }
-function writeLocal(){
+async function restoreAccountDraft(){
+ if(room)return;
+ try{
+  const saved=await loadCloudDraft('whiteboard');
+  if(saved.content){applyDraft(JSON.parse(saved.content));status("Whiteboard restored from iLiam account");return;}
+  if(!saved.user){status("Sign in to iLiam to save this whiteboard");return;}
+  // Legacy browser data may belong to another user of a shared Chromebook.
+  const legacy=localStorage.getItem(STORAGE);
+  if(legacy&&confirm("Found an old whiteboard saved in this browser. Import it into the currently signed-in iLiam account?")){
+   const old=JSON.parse(legacy);applyDraft(old);
+   await saveCloudDraft('whiteboard',JSON.stringify(localDraft));
+   localStorage.removeItem(STORAGE);
+   status("Old whiteboard moved to your iLiam account");
+  }
+ }catch(e){status("Cloud draft unavailable — export your whiteboard: "+e.message);}
+}
+async function writeLocal(){
  if(room)return;
  localDraft={items:items.slice(-400).map(e=>({...e})),title:safeTitle($("board-title").value),paper};
- try{localStorage.setItem(STORAGE,JSON.stringify(localDraft));status("Saved locally");}
- catch(e){status("Browser storage is full — export your board");}
+ try{
+  await saveCloudDraft('whiteboard',JSON.stringify(localDraft));
+  status("Saved to iLiam account");
+ }catch(e){status("Not cloud-saved — export your board: "+e.message);}
 }
-function saveLocalSoon(){if(room)return;status("Saving…");clearTimeout(saveTimer);saveTimer=setTimeout(writeLocal,250);}
+function saveLocalSoon(){if(room)return;status("Saving to iLiam…");clearTimeout(saveTimer);saveTimer=setTimeout(writeLocal,4000);}
 function schedule(){if(frame)return;frame=requestAnimationFrame(()=>{frame=0;paint();});}
 function geometry(){
  const r=wrap.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);
@@ -621,7 +641,7 @@ async function createRoom(){
  if(!user||!profile){showRoomModal(true);roomStatus("Sign in to iLiam Community before sharing.");return;}
  if(busy)return;
  busy=true;roomStatus("Creating board…");
- if(!room)writeLocal(); // Keep the original local board intact if the user leaves the shared room later.
+ if(!room)await writeLocal(); // Save personal board before leaving for a shared room.
  const source=items.map(e=>({...e}));
  const code=newId();
  try{
@@ -738,6 +758,7 @@ onAuthStateChanged(auth,async u=>{
   if(auth.currentUser?.uid!==u.uid)return;
   if(snap.exists())profile=snap.data();
  }catch(e){console.warn("Whiteboard profile:",e);}
+ if(!room)await restoreAccountDraft();
  if(room&&!canViewBoard()){
   stopShared();showRoomModal(true);
   roomStatus("This restricted board requires an invited iLiam account.");
