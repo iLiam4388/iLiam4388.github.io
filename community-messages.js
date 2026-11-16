@@ -486,16 +486,20 @@ if(launcher){
   if(stopMessages){stopMessages();stopMessages=null;}
   latestMessageSnapshot=null;activeMessageChatId=null;
   clearReply();current=c;
-  $("im-messages").textContent="Connecting to messages…";
-  setLiveStatus("Connecting…");
-  await ensureProfiles(c.members);
-  if(epoch!==conversationEpoch||current?.id!==c.id||auth.currentUser?.uid!==user?.uid)return;
-  // Selecting an active chat must unlock the composer. These controls
-  // start disabled and resetCurrent() disables them again.
+  // Unlock immediately; profile lookups must never block typing.
   $("im-input").disabled=false;
   $("im-send").disabled=false;
   $("im-link").disabled=false;
   updateConversationControls();display("im-call-menu",false);drawInbox();
+  $("im-messages").textContent="Connecting to messages…";
+  setLiveStatus("Connecting…");
+  ensureProfiles(c.members).then(()=>{
+   if(epoch===conversationEpoch&&current?.id===c.id){
+    updateConversationControls();drawInbox();
+    if(latestMessageSnapshot)renderConversationSnapshot(latestMessageSnapshot,c.id);
+   }
+  });
+  if(epoch!==conversationEpoch||current?.id!==c.id||auth.currentUser?.uid!==user?.uid)return;
   const chatId=c.id;
   activeMessageChatId=chatId;
   stopMessages=onSnapshot(
@@ -633,7 +637,11 @@ if(launcher){
   }
   finally{updatePicker();}
  }
- launcher.onclick=()=>{if(!profile)return alert("Sign in to Community first.");display("im-backdrop",true);};
+ launcher.onclick=()=>{
+  if(!user)return alert("Sign in to Community first.");
+  display("im-backdrop",true);
+  if(!profile)$("im-conversations").textContent="Your account is signed in. Waiting for the iLiam profile to load…";
+ };
  $("im-close").onclick=()=>display("im-backdrop",false);
  $("im-add").onclick=openNew;
  $("im-new-close").onclick=()=>display("im-new",false);
@@ -683,11 +691,16 @@ if(launcher){
   stopNotifications();
   messageBlocks=new Set();messageDnd=false;knownChatIds=new Set();inboxInitialized=false;
   resetCurrent();user=u;profile=null;chats=[];profiles.clear();
-  launcher.disabled=true;
+  launcher.disabled=!u;
   if(!u){display("im-backdrop",false);return;}
+  $("im-conversations").textContent="Connecting to Firebase…";
   try{
    const snap=await getDoc(doc(db,"profiles",u.uid));
-   if(auth.currentUser?.uid!==u.uid||!snap.exists())return;
+   if(auth.currentUser?.uid!==u.uid)return;
+   if(!snap.exists()){
+    $("im-conversations").textContent="Your iLiam profile could not be found. Open Profile, then try again.";
+    return;
+   }
    profile=snap.data();profiles.set(u.uid,profile);
    launcher.disabled=false;
    stopBlocked=onSnapshot(collection(db,"messageBlocks",u.uid,"users"),snap=>{
@@ -731,6 +744,10 @@ if(launcher){
       ?"Messages unavailable: Firestore rules for /chats need to be published in Firebase."
       :"Messages unavailable: "+e.message;
    });
-  }catch(err){console.warn("Messages account:",err);}
+  }catch(err){
+   console.error("Messages account initialization:",err);
+   if(auth.currentUser?.uid===u.uid)
+    $("im-conversations").textContent="Could not load your Messages account: "+err.message;
+  }
  });
 }
