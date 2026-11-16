@@ -18,7 +18,8 @@ if(launcher){
  '<div id="im-call-menu" class="im-call-menu" hidden><button type="button" class="im-btn" id="im-voice">📞 Audio call</button>',
  '<button type="button" class="im-btn" id="im-video">📹 Video call</button></div>',
  '<div id="im-messages" class="im-bubbles"><p class="im-empty">Choose a chat or add someone.</p></div>',
- '<form id="im-form" class="im-send"><input class="im-input" id="im-input" maxlength="2000" placeholder="Type a private message…" aria-label="Message" disabled>',
+ '<div class="im-reply-composer" id="im-reply-composer" hidden><div><strong id="im-reply-name"></strong><span id="im-reply-text"></span></div><button type="button" class="im-btn" id="im-reply-cancel" aria-label="Cancel reply">✕</button></div>',
+  '<form id="im-form" class="im-send"><input class="im-input" id="im-input" maxlength="2000" placeholder="Type a private message…" aria-label="Message" disabled>',
  '<button class="im-btn" id="im-link" type="button" disabled title="Insert clickable link">🔗 Link</button>',
  '<button class="im-btn primary" id="im-send" type="submit" disabled>Send</button></form></section></div>',
  '</div></section>',
@@ -67,6 +68,7 @@ if(launcher){
  let stopHidden=null,stopBlocked=null,stopMessageDnd=null;
  let inboxWatchers=new Map(),seenMessageIds=new Map();
  let pendingGroupImage=undefined,pendingGroupMembers=new Set(),groupMemberCandidates=[];
+ let replyTarget=null;
  launcher.disabled=true;
  const label=p=>p?.nickname||p?.username||"iLiam user";
  const time=t=>t?.toDate?.().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})||"";
@@ -381,7 +383,16 @@ if(launcher){
  $("im-link-cancel").onclick=()=>display("im-link-modal",false);
  $("im-insert-link").onclick=insertLink;
  $("im-link-url").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();insertLink();}});
+ function clearReply(){replyTarget=null;display('im-reply-composer',false);}
+ $('im-reply-cancel').onclick=clearReply;
+ function chooseReply(message){
+  replyTarget={id:message.id,uid:message.uid,text:String(message.text||'').slice(0,180)};
+  $('im-reply-name').textContent=message.uid===user.uid?'Replying to yourself':'Replying to '+label(profileOf(message.uid));
+  $('im-reply-text').textContent=replyTarget.text;
+  display('im-reply-composer',true);$('im-input').focus();
+ }
  function resetCurrent(){
+  clearReply();
   if(stopMessages){stopMessages();stopMessages=null;}
   current=null;
   $("im-title").textContent="Choose a conversation";
@@ -393,6 +404,7 @@ if(launcher){
  async function showConversation(c){
   if(!user||!c)return;
   if(stopMessages){stopMessages();stopMessages=null;}
+  clearReply();
   current=c;
   await ensureProfiles(c.members);
   if(current?.id!==c.id)return;
@@ -404,16 +416,27 @@ if(launcher){
   stopMessages=onSnapshot(query(collection(db,"chats",c.id,"messages"),orderBy("createdAt","asc"),limit(100)),snap=>{
    if(current?.id!==c.id)return;
    const board=$("im-messages");board.replaceChildren();
+   const visibleMessages=new Map(snap.docs.map(d=>[d.id,{id:d.id,...d.data()}]));
    for(const row of snap.docs){
-    const m=row.data();
+    const m={id:row.id,...row.data()};
     if(messageBlocks.has(m.uid))continue;
     const bubble=document.createElement("div");bubble.className="im-bubble"+(m.uid===user.uid?" mine":"");
     if(c.kind==="group"){
      const who=document.createElement("span");who.className="im-sender";who.textContent=m.uid===user.uid?"You":label(profileOf(m.uid));bubble.append(who);
     }
+    if(m.replyTo){
+     const reference=visibleMessages.get(m.replyTo.id);
+     const quote=document.createElement("button");quote.type="button";quote.className="im-reply-quote";
+     const original=reference&&!messageBlocks.has(reference.uid)?reference:null;
+     quote.textContent="↳ "+(original?label(profileOf(original.uid))+": "+original.text.slice(0,110):"Original message not in recent history");
+     quote.onclick=()=>{const target=board.querySelector(`[data-message-id="${CSS.escape(m.replyTo.id)}"]`);if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("im-flash");setTimeout(()=>target.classList.remove("im-flash"),900);}};
+     bubble.append(quote);
+    }
+    bubble.dataset.messageId=m.id;
     const content=document.createElement("div");renderMessageLinks(content,m.text); // Safe text and validated links.
     const stamp=document.createElement("span");stamp.className="im-time";stamp.textContent=time(m.createdAt);
-    bubble.append(content,stamp);board.append(bubble);
+    const replyButton=document.createElement('button');replyButton.type='button';replyButton.className='im-reply-action';replyButton.textContent='Reply';replyButton.onclick=()=>chooseReply(m);
+    bubble.append(content,stamp,replyButton);board.append(bubble);
    }
    if(snap.empty)board.textContent="No messages yet. Say hello!";
    board.scrollTop=board.scrollHeight;
@@ -546,7 +569,9 @@ if(launcher){
   const text=$("im-input").value.trim();if(!text)return;
   const btn=$("im-send");btn.disabled=true;
   try{
-   await addDoc(collection(db,"chats",current.id,"messages"),{uid:user.uid,text,createdAt:serverTimestamp()});
+   const reply=replyTarget?{replyTo:replyTarget}:{};
+   await addDoc(collection(db,"chats",current.id,"messages"),{uid:user.uid,text,createdAt:serverTimestamp(),...reply});
+   clearReply();
    $("im-input").value="";
   }catch(err){alert("Message not sent: "+err.message);}
   finally{btn.disabled=false;}
