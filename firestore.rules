@@ -633,6 +633,15 @@ service cloud.firestore {
           && request.resource.data.hiddenAt == request.time;
         allow delete: if isSelf(uid);
       }
+      // Per-account chat history cutoff. Clearing does not erase another user's messages.
+      match /cleared/{chatId} {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid)
+          && request.resource.data.keys().hasOnly(['clearedAt'])
+          && request.resource.data.keys().hasAll(['clearedAt'])
+          && request.resource.data.clearedAt == request.time;
+        allow delete: if isSelf(uid);
+      }
       match /settings/{id} {
         allow read: if isSelf(uid);
         allow create, update: if isSelf(uid) && id == 'messages'
