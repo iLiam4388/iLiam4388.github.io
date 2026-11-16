@@ -117,6 +117,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <section class="post-box">
 <h2>Post Something</h2>
+<button id="restorePostingGuidance" type="button" hidden style="margin:3px 0 12px;padding:7px 12px;background:#145b86;color:white;border:1px solid #74d8ff;border-radius:9px;cursor:pointer;font:inherit">Show posting guidelines</button>
 <div class="posting-guidance" role="note" hidden style="margin:12px 0 18px;padding:14px 16px;border:1px solid #55cfff;border-radius:12px;background:rgba(0,90,150,.24);line-height:1.55;text-align:left">
   <strong>Community is for posts, not casual chatting.</strong><br>
   Share something with everyone, like on Reddit or X. To respond to a post, use its comments or upvotes instead of making another post. Want to have a conversation? Use <strong>Messages</strong> or <strong>Public Chat</strong>.
@@ -256,6 +257,27 @@ const postCache=new Map();
 let savedPostIds=new Set(),stopSavedPosts=null;
 const postingGuidance=document.querySelector(".posting-guidance");
 const dismissPostingGuidanceButton=$("dismissPostingGuidance");
+const restorePostingGuidanceButton=$("restorePostingGuidance");
+function updatePostingGuidanceVisibility(){
+ const signedIn=Boolean(currentUser&&currentProfile);
+ const dismissed=signedIn&&currentProfile.hidePostingGuidance===true;
+ postingGuidance.hidden=!signedIn||dismissed;
+ restorePostingGuidanceButton.hidden=!signedIn||!dismissed;
+}
+restorePostingGuidanceButton.addEventListener("click",async()=>{
+ if(!currentUser||!currentProfile)return;
+ const uid=currentUser.uid;
+ restorePostingGuidanceButton.disabled=true;
+ try{
+  await updateDoc(doc(db,"profiles",uid),{hidePostingGuidance:false});
+  if(currentUser?.uid===uid){
+   currentProfile.hidePostingGuidance=false;
+   updatePostingGuidanceVisibility();
+  }
+ }catch(error){
+  alert("Could not restore this notice: "+error.message);
+ }finally{restorePostingGuidanceButton.disabled=false;}
+});
 dismissPostingGuidanceButton.addEventListener("click",async()=>{
   if(!currentUser||!currentProfile)return;
   const uid=currentUser.uid;
@@ -264,7 +286,7 @@ dismissPostingGuidanceButton.addEventListener("click",async()=>{
     await updateDoc(doc(db,"profiles",uid),{hidePostingGuidance:true});
     if(currentUser?.uid===uid){
       currentProfile.hidePostingGuidance=true;
-      postingGuidance.hidden=true;
+      updatePostingGuidanceVisibility();
     }
   }catch(error){
     alert("Could not save this preference to your iLiam account: "+error.message);
@@ -300,7 +322,10 @@ function watchAvatar(uid){
  const stop=onSnapshot(doc(db,"profiles",uid),snap=>{
   const profile=snap.exists()?snap.data():null;
   avatarProfiles.set(uid,profile);
-  if(currentUser?.uid===uid&&profile)currentProfile=profile;
+  if(currentUser?.uid===uid&&profile){
+    currentProfile=profile;
+    updatePostingGuidanceVisibility();
+   }
   document.querySelectorAll("img[data-avatar-uid]").forEach(img=>{
    if(img.dataset.avatarUid!==uid)return;
    const latest=profile||{nickname:img.dataset.avatarName};
@@ -464,7 +489,7 @@ async function initializeSignedInUser(user){
    localStorage.removeItem('iliam_saved_posts');
   }
  }catch(error){console.warn('Old saved posts import was not completed:',error);}
- postingGuidance.hidden=currentProfile.hidePostingGuidance===true;
+ updatePostingGuidanceVisibility();
  watchAvatar(user.uid);
  authModal.classList.remove("show");profileModal.classList.remove("show");
  followedUids=new Set();
@@ -526,7 +551,7 @@ onAuthStateChanged(auth,async user=>{
    if(stopSavedPosts){stopSavedPosts();stopSavedPosts=null;}
    savedPostIds=new Set();
    clearAvatarListeners();
-   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;setAdminButtonVisible(false);postingGuidance.hidden=true;
+   currentUser=null;currentProfile=null;isAdmin=false;postButton.disabled=true;setAdminButtonVisible(false);updatePostingGuidanceVisibility();
    if(stopPostsListener){stopPostsListener();stopPostsListener=null}
    postsElement.innerHTML='<div class="empty">Log in or sign up to view the community.</div>';
    setStatus("Log in or create an account to join the community.");
