@@ -730,6 +730,7 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.auth.uid in resource.data.members
         && resource.data.kind == 'group'
+        && resource.data.get('deleting', false) == false
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['title','imageUrl','members'])
         && request.resource.data.createdAt == resource.data.createdAt
@@ -752,6 +753,14 @@ service cloud.firestore {
             && chatUsersExist(request.resource.data.members)
           )
         );
+      // A member reopening an existing conversation makes it visible again
+      // to participants who had hidden the older conversation.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.members
+        && resource.data.get('deleting', false) == false
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['revivedAt'])
+        && request.resource.data.revivedAt == request.time;
       // Deletion is shared: freeze new messages first, then delete all
       // message documents and finally the chat itself.
       allow update: if signedIn()
