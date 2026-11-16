@@ -87,7 +87,7 @@ async function restoreAccountDraft(){
   const legacy=localStorage.getItem(STORAGE);
   if(legacy&&confirm("Found an old whiteboard saved in this browser. Import it into the currently signed-in iLiam account?")){
    const old=JSON.parse(legacy);applyDraft(old);
-   await saveCloudDraft('whiteboard',JSON.stringify(localDraft));
+   await saveCloudDraft('whiteboard',JSON.stringify(localDraft),saved.user);
    localStorage.removeItem(STORAGE);
    status("Old whiteboard moved to your iLiam account");
   }
@@ -97,7 +97,7 @@ async function writeLocal(){
  if(room)return;
  localDraft={items:items.slice(-400).map(e=>({...e})),title:safeTitle($("board-title").value),paper};
  try{
-  await saveCloudDraft('whiteboard',JSON.stringify(localDraft));
+  await saveCloudDraft('whiteboard',JSON.stringify(localDraft),user?.uid);
   status("Saved to iLiam account");
  }catch(e){status("Not cloud-saved — export your board: "+e.message);}
 }
@@ -752,6 +752,10 @@ async function copy(value){
 }
 setupUI();
 onAuthStateChanged(auth,async u=>{
+ if(user?.uid!==u?.uid){
+  clearTimeout(saveTimer);
+  if(!room)initLocal();
+ }
  user=u;profile=null;
  if(u)try{
   const snap=await getDoc(doc(db,"profiles",u.uid));
