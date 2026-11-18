@@ -22,7 +22,8 @@ jobs:
         with:
           node-version: "22"
       - name: Install Firebase Admin SDK
-        run: npm install --no-save --no-package-lock firebase-admin@13
+        working-directory: scripts
+        run: npm install --omit=dev --no-package-lock
       - name: Archive posts and trim messages
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
