@@ -2,6 +2,7 @@
 // Never put the Firebase service-account key in browser JavaScript or this repository.
 import {initializeApp,cert} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
+import {ACTIVE_POSTS,LEGACY_POSTS,PUBLIC_CHAT_HISTORY,postRetentionState,chatRetentionLimit} from "./community-retention-policy.js";
 
 const raw=process.env.FIREBASE_SERVICE_ACCOUNT;
 if(!raw){
@@ -11,8 +12,6 @@ if(!raw){
 const key=JSON.parse(raw);
 initializeApp({credential:cert(key),projectId:key.project_id});
 const db=getFirestore();
-const ACTIVE_POSTS=50,LEGACY_POSTS=200;
-const PUBLIC_CHAT_HISTORY=500, DIRECT_CHAT_HISTORY=100, GROUP_CHAT_HISTORY=50;
 const FETCH=300;
 
 async function purgeOlderMessages(collectionRef,description,keep){
@@ -47,8 +46,9 @@ async function retainPosts(){
   cursor=snap.docs[snap.docs.length-1];
   for(const post of snap.docs){
    const rank=index++;
-   if(rank<ACTIVE_POSTS)continue;
-   if(rank>=ACTIVE_POSTS+LEGACY_POSTS){
+   const state=postRetentionState(rank);
+   if(state==="active")continue;
+   if(state==="deleted"){
     // recursiveDelete removes votes, comments and likes as well as the post.
     await db.recursiveDelete(post.ref);
     removed++;
@@ -76,7 +76,7 @@ async function main(){
  await retainPosts();
  await purgeOlderMessages(db.collection("publicChatMessages"),"Public Chat",PUBLIC_CHAT_HISTORY);
  for await(const chat of db.collection("chats").stream()){
-  const keep=chat.data().kind==="group" ? GROUP_CHAT_HISTORY : DIRECT_CHAT_HISTORY;
+  const keep=chatRetentionLimit(chat.data().kind);
   await purgeOlderMessages(chat.ref.collection("messages"),"Chat "+chat.id,keep);
  }
  console.log("Community retention finished");
