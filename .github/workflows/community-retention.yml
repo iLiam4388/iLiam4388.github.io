@@ -2,7 +2,7 @@ name: iLiam Community retention
 
 on:
   schedule:
-    - cron: "7 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:
