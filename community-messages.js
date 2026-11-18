@@ -511,7 +511,7 @@ if(launcher){
   const chatId=c.id;
   activeMessageChatId=chatId;
   stopMessages=onSnapshot(
-   query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(100)),
+   query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(c.kind==="group"?50:100)),
    {includeMetadataChanges:true},
    snap=>{
     setLiveStatus(snap.metadata.fromCache?"Cached / reconnecting":"Server synced (listener active)");
@@ -539,7 +539,7 @@ if(launcher){
   const chatId=current.id;
   setLiveStatus("Checking server…");
   try{
-   const snap=await getDocsFromServer(query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(100)));
+   const snap=await getDocsFromServer(query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","desc"),limit(current.kind==="group"?50:100)));
    if(current?.id!==chatId)return;
    setLiveStatus("Server verified · "+snap.size+" recent messages");
    latestMessageSnapshot=snap;
