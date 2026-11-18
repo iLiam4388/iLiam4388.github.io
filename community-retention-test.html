@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iLiam — Community Retention Test</title>
+<style>
+*{box-sizing:border-box}body{background:linear-gradient(#001133,#000011);color:#fff;font:16px Verdana,Arial,sans-serif;margin:0;min-height:100vh}
+main{max-width:1050px;margin:auto;padding:26px 18px 70px}
+h1{color:#66f9ff;text-shadow:0 0 15px #00ffff88}h2{margin-top:32px}a{color:#7dfcff}.notice{border:1px solid #37ecff;border-radius:14px;background:#062544;padding:17px;line-height:1.6}
+#summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:22px}.metric{background:#161b43;border:1px solid #66eaff;border-radius:14px;padding:15px}.metric strong{display:block;font-size:29px;margin:7px 0}.metric small{color:#cad6ed}
+button{cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:#00cee4;color:#09172b;font-weight:800}
+#postFeed{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+.post{padding:17px;border-radius:16px;border:2px solid #fff;background:linear-gradient(#ff9cff,#b600e4);color:#16002b;min-height:135px}
+.post.legacy{background:linear-gradient(#66507c,#31203d);color:#fff;border-color:#c7b9d1}
+.name{font-weight:bold;margin-bottom:12px}.legacy-label{font-size:12px;letter-spacing:.13em;color:#d3baff;font-weight:bold}.actions{font-size:12px;opacity:.8;margin-top:12px}.muted{color:#c5d4e5}#error{color:#ffbaba}
+</style>
+</head>
+<body>
+<main>
+<p><a href="community.html">← Back to Community</a></p>
+<h1>iLiam Community — Retention Test</h1>
+<div class="notice"><strong>Simulation only.</strong> This creates 400 imaginary posts and chat messages inside your browser to test the same retention limits used by the cleanup script. It does <strong>not</strong> sign in, write to Firebase, delete real content, or use your Firebase quota.</div>
+<p><button type="button" id="run">Run the 400-post test again</button> <span id="error" role="status"></span></p>
+<div id="summary"></div>
+<h2>Posts that remain visible</h2>
+<p class="muted">The newest 50 posts are normal. The next 200 are legacy posts showing only text and username. The oldest 150 are deleted, so they do not appear below.</p>
+<section id="postFeed" aria-label="Simulation of retained posts"></section>
+</main>
+<script type="module">
+import {ACTIVE_POSTS,LEGACY_POSTS,PUBLIC_CHAT_HISTORY,postRetentionState,chatRetentionLimit} from "./scripts/community-retention-policy.js";
+const output=document.querySelector("#summary");
+const feed=document.querySelector("#postFeed");
+function show(label,kept,deleted){
+ const card=document.createElement("div");card.className="metric";
+ const small=document.createElement("small");small.textContent=label;
+ const number=document.createElement("strong");number.textContent=String(kept);
+ const subtitle=document.createElement("span");subtitle.textContent=deleted+" deleted";
+ card.append(small,number,subtitle);output.append(card);
+}
+function run(){
+ const posts=Array.from({length:400},(_,rank)=>({rank,username:"sampleUser"+((rank%12)+1),text:"Example post #"+(400-rank)+". This is fake test content."}));
+ const active=posts.filter(p=>postRetentionState(p.rank)==="active");
+ const legacy=posts.filter(p=>postRetentionState(p.rank)==="legacy");
+ const deleted=posts.filter(p=>postRetentionState(p.rank)==="deleted");
+ const directTotal=150,groupTotal=120,publicTotal=600;
+ const privateKeep=Math.min(directTotal,chatRetentionLimit("direct"));
+ const groupKeep=Math.min(groupTotal,chatRetentionLimit("group"));
+ const publicKeep=Math.min(publicTotal,PUBLIC_CHAT_HISTORY);
+ if(active.length!==50||legacy.length!==200||deleted.length!==150||privateKeep!==100||groupKeep!==50||publicKeep!==500)throw Error("Retention policy test failed");
+ output.replaceChildren();feed.replaceChildren();
+ show("Normal posts",active.length,0);
+ show("Legacy posts",legacy.length,0);
+ show("Posts beyond 250",0,deleted.length);
+ show("Private chat messages",privateKeep,directTotal-privateKeep);
+ show("Group chat messages",groupKeep,groupTotal-groupKeep);
+ show("Public Chat messages",publicKeep,publicTotal-publicKeep);
+ for(const post of [...active,...legacy]){
+  const card=document.createElement("article");
+  const state=postRetentionState(post.rank);
+  card.className="post"+(state==="legacy"?" legacy":"");
+  const name=document.createElement("div");name.className="name";name.textContent="@"+post.username;
+  const text=document.createElement("div");text.textContent=post.text;
+  if(state==="legacy"){
+   const tag=document.createElement("div");tag.className="legacy-label";tag.textContent="LEGACY POST";card.append(tag);
+  }
+  card.append(name,text);
+  if(state==="active"){
+   const actions=document.createElement("div");actions.className="actions";actions.textContent="⬆ Upvote  ·  💬 Comments  ·  ☆ Save";card.append(actions);
+  }
+  feed.append(card);
+ }
+ document.querySelector("#error").textContent="PASS — all 400 posts and the three message limits matched the retention policy.";
+}
+document.querySelector("#run").addEventListener("click",()=>{try{run()}catch(error){document.querySelector("#error").textContent=error.message}});
+try{run()}catch(error){document.querySelector("#error").textContent=error.message}
+</script>
+</body>
+</html>
