@@ -15,6 +15,9 @@ const ACTIVE_POSTS=50,LEGACY_POSTS=200,CHAT_HISTORY=500;
 const FETCH=300;
 
 async function purgeOlderMessages(collectionRef,description){
+ // Count aggregation avoids reading 500 messages in every inactive chat.
+ const count=await collectionRef.count().get();
+ if(count.data().count<=CHAT_HISTORY)return 0;
  const latest=await collectionRef.orderBy("createdAt","desc").limit(CHAT_HISTORY).get();
  if(latest.size<CHAT_HISTORY)return 0;
  const cutoff=latest.docs[latest.docs.length-1];
@@ -32,6 +35,8 @@ async function purgeOlderMessages(collectionRef,description){
 }
 
 async function retainPosts(){
+ const count=await db.collection("posts").count().get();
+ if(count.data().count<=ACTIVE_POSTS)return;
  let cursor=null,index=0,archived=0,removed=0;
  while(true){
   let query=db.collection("posts").orderBy("createdAt","desc").limit(FETCH);
