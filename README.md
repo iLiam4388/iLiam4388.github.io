@@ -83,3 +83,36 @@ python tests/rider-mesh-export-browser.py
 ```
 
 The browser checks cover existing modeling workflows, mesh component selection/editing, actual keyframe interpolation, playback/reset, rigid/soft physics, distinct metaball geometry, font upload, text conversion, exports, persistence, and responsive controls. The mesh/export check additionally needs Pillow and FFmpeg/ffprobe to decode GIF and MP4 files and verify their timing, frames, cancellation, and preview restoration. `RIDER_TEST_URL` and `RIDER_BROWSER_PATH` can override the server URL and browser executable. Unit tests cover validation, history, fixed-step animation/physics, and liquid interactions.
+
+
+## Community legacy posts and automatic message retention
+
+Community displays the **50 newest posts** with their normal interactions. The
+next **200** are displayed as noninteractive *Legacy Posts* with just the
+username and post text. Anything beyond those 250 posts is hidden from the
+feed and removed by the scheduled retention job.
+
+The cleanup code is in `scripts/community-retention.mjs`. It securely:
+- converts posts ranked 51–250 to `legacy: true`, removes images, videos,
+  vote counts, featured status, and all nested comments/votes/likes;
+- deletes posts older than rank 250, including their nested data;
+- permanently deletes messages older than the most recent **500 in each
+  individual chat**, and older than the newest **500 in Public Chat**.
+
+### Enable automatic database cleanup
+
+1. In **Firebase Console** for project `iliam-4d0c9`, open **Project
+   settings → Service accounts → Generate new private key**.
+2. In this GitHub repository open **Settings → Secrets and variables →
+   Actions → New repository secret**. Name it `FIREBASE_SERVICE_ACCOUNT`.
+   Paste the **entire JSON contents** of the downloaded Firebase service
+   account key as the secret value. **Never commit the key** or paste it
+   into HTML, chat, or public issue comments.
+3. Go to **Actions → iLiam Community retention → Run workflow** once
+   to process existing older content. GitHub Actions then runs it hourly.
+   The scheduling time is approximate; cleanup is not instantaneous.
+
+Without this secret, the page still shows legacy cards and limits the loaded
+feed to 250, but older Firebase documents, reactions, and messages are **not
+yet physically deleted**. Retention removes data permanently; export anything
+you need before enabling it.
