@@ -96,8 +96,7 @@ The cleanup code is in `scripts/community-retention.mjs`. It securely:
 - converts posts ranked 51–250 to `legacy: true`, removes images, videos,
   vote counts, featured status, and all nested comments/votes/likes;
 - deletes posts older than rank 250, including their nested data;
-- permanently deletes messages older than the most recent **500 in each
-  individual chat**, and older than the newest **500 in Public Chat**.
+- permanently deletes messages older than the newest **100 in each private chat**, **50 in each group chat**, and **500 in Public Chat**.
 
 ### Enable automatic database cleanup
 
@@ -109,7 +108,7 @@ The cleanup code is in `scripts/community-retention.mjs`. It securely:
    account key as the secret value. **Never commit the key** or paste it
    into HTML, chat, or public issue comments.
 3. Go to **Actions → iLiam Community retention → Run workflow** once
-   to process existing older content. GitHub Actions then runs it hourly.
+   to process existing older content. GitHub Actions then runs it every five minutes.
    The scheduling time is approximate; cleanup is not instantaneous.
 
 Without this secret, the page still shows legacy cards and limits the loaded
