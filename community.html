@@ -93,6 +93,8 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
  .small-btn{font-size:13px}
  .back-btn,.saved-posts-btn{font-size:16px;padding:12px 17px}
 }
+.legacy-label{display:inline-block;padding:5px 10px;margin-bottom:12px;border:1px solid #fff;border-radius:12px;background:#20234b;color:#fff;font-size:13px;font-weight:700;letter-spacing:.08em}
+.post.legacy-post{box-shadow:0 0 12px #ff66ff66;background:linear-gradient(#704083,#34104f)}
 </style>
 </head>
 <body>
@@ -254,6 +256,7 @@ const usernameLockHint=$("usernameLockHint");
 
 let currentUser=null,currentProfile=null,isAdmin=false,stopPostsListener=null,followedUids=new Set(),authMode="login",accountCreationInProgress=false;
 const postCache=new Map();
+const ACTIVE_POST_LIMIT=50, LEGACY_POST_LIMIT=200;
 let savedPostIds=new Set(),stopSavedPosts=null;
 const postingGuidance=document.querySelector(".posting-guidance");
 const dismissPostingGuidanceButton=$("dismissPostingGuidance");
@@ -384,7 +387,7 @@ async function openPublicProfile(uid,fallback={}){
    publicProfileActions.innerHTML=`<button class="small-btn follow-btn ${following?"following":""}" id="publicFollowButton" type="button">${following?"Following":"Follow"}</button>`;
    $("publicFollowButton").onclick=async()=>{await toggleFollow(uid);openPublicProfile(uid,profile)};
   }
-  const postSnap=await getDocs(query(collection(db,"posts"),where("uid","==",uid)));
+  const postSnap=await getDocs(query(collection(db,"posts"),where("uid","==",uid),limit(ACTIVE_POST_LIMIT+LEGACY_POST_LIMIT)));
   const userPosts=postSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   publicProfilePostsTitle.textContent=`Posts (${userPosts.length})`;
   publicProfilePosts.innerHTML="";
@@ -392,6 +395,11 @@ async function openPublicProfile(uid,fallback={}){
   for(const p of userPosts){
    const card=document.createElement("article");
    card.className="public-profile-post";
+   if(p.legacy===true){
+    card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(p.text||"")}</div>`;
+    publicProfilePosts.appendChild(card);
+    continue;
+   }
    const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
    card.innerHTML=`<div class="time">${escapeHtml(formatTime(p.createdAt))}</div><div class="post-text">${richText(p.text||"")}</div>${image}${videoMarkup(p.videoUrl||"")}<div class="actions"><button class="small-btn view-profile-post" type="button">View in Feed</button><span>⬆ ${Number(p.upvotes||0)}</span></div>`;
    card.querySelector(".view-profile-post").onclick=()=>{
@@ -678,18 +686,19 @@ postButton.addEventListener("click",async()=>{
 
 function listenForPosts(){
  if(stopPostsListener)stopPostsListener();
- const q=query(collection(db,"posts"),orderBy("createdAt","desc"),limit(50));
+ // The first 50 are interactive; the next 200 are lightweight legacy cards.
+ // Scheduled retention persists legacy=true and deletes out-of-window data.
+ const q=query(collection(db,"posts"),orderBy("createdAt","desc"),limit(ACTIVE_POST_LIMIT+LEGACY_POST_LIMIT));
  stopPostsListener=onSnapshot(q,snap=>{
-  const posts=[];
-  postCache.clear();
-  snap.forEach(s=>{
-   const post={id:s.id,...s.data()};
-   posts.push(post);postCache.set(post.id,post);
-  });
-  posts.sort((a,b)=>{const featured=Number(Boolean(b.featured))-Number(Boolean(a.featured));if(featured)return featured;const followed=Number(followedUids.has(b.uid))-Number(followedUids.has(a.uid));if(followed)return followed;return (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)});
-  if(!posts.length){postsElement.innerHTML='<div class="empty">No posts yet. Be the first!</div>';return}
+  const chronological=snap.docs.map((d,index)=>({id:d.id,...d.data(),legacy:d.data().legacy===true||index>=ACTIVE_POST_LIMIT}));
+  const active=chronological.filter(p=>!p.legacy);
+  const legacy=chronological.filter(p=>p.legacy);
+  active.sort((a,b)=>{const f=Number(Boolean(b.featured))-Number(Boolean(a.featured));if(f)return f;const followed=Number(followedUids.has(b.uid))-Number(followedUids.has(a.uid));if(followed)return followed;return (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)});
+  postCache.clear();chronological.forEach(p=>postCache.set(p.id,p));
+  if(!chronological.length){postsElement.innerHTML='<div class="empty">No posts yet. Be the first!</div>';return}
   postsElement.innerHTML="";
-  posts.forEach(renderPost);
+  active.forEach(renderPost);
+  legacy.forEach(renderPost);
  },error=>setStatus("Could not load posts: "+error.message,true));
 }
 
@@ -697,6 +706,12 @@ function renderPost(p){
  const article=document.createElement("article");
  article.className="post"+(p.featured?" featured":"");
  article.dataset.postId=p.id;
+ if(p.legacy===true){
+  article.className="post legacy-post";
+  article.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(p.text||"")}</div>`;
+  postsElement.appendChild(article);
+  return;
+ }
 
  const saved=getSavedPostIds(),isSaved=saved.includes(p.id);
  const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
@@ -978,6 +993,11 @@ async function renderSavedPosts(){
  for(const p of validPosts){
   const card=document.createElement("div");
   card.className="saved-card";
+  if(p.legacy===true){
+   card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(p.text||"")}</div><button class="small-btn danger remove-saved" type="button">Remove saved post</button>`;
+   card.querySelector(".remove-saved").onclick=()=>toggleSavedPost(p.id,card.querySelector(".remove-saved"));
+   savedPostsList.appendChild(card);continue;
+  }
   card.innerHTML=`
     <div><span class="profile-link saved-profile-link" role="button" tabindex="0">${avatarMarkup(p.uid,p)}<span class="user">${escapeHtml(p.nickname)}</span><span class="username">@${escapeHtml(p.username)}</span></span></div>
     <div class="post-text">${richText(p.text||"(Media post)")}</div>
