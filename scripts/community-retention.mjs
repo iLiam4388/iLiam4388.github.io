@@ -11,15 +11,16 @@ if(!raw){
 const key=JSON.parse(raw);
 initializeApp({credential:cert(key),projectId:key.project_id});
 const db=getFirestore();
-const ACTIVE_POSTS=50,LEGACY_POSTS=200,CHAT_HISTORY=500;
+const ACTIVE_POSTS=50,LEGACY_POSTS=200;
+const PUBLIC_CHAT_HISTORY=500, DIRECT_CHAT_HISTORY=100, GROUP_CHAT_HISTORY=50;
 const FETCH=300;
 
-async function purgeOlderMessages(collectionRef,description){
+async function purgeOlderMessages(collectionRef,description,keep){
  // Count aggregation avoids reading 500 messages in every inactive chat.
  const count=await collectionRef.count().get();
- if(count.data().count<=CHAT_HISTORY)return 0;
- const latest=await collectionRef.orderBy("createdAt","desc").limit(CHAT_HISTORY).get();
- if(latest.size<CHAT_HISTORY)return 0;
+ if(count.data().count<=keep)return 0;
+ const latest=await collectionRef.orderBy("createdAt","desc").limit(keep).get();
+ if(latest.size<keep)return 0;
  const cutoff=latest.docs[latest.docs.length-1];
  let cursor=cutoff,removed=0;
  while(true){
@@ -73,9 +74,10 @@ async function retainPosts(){
 
 async function main(){
  await retainPosts();
- await purgeOlderMessages(db.collection("publicChatMessages"),"Public Chat");
+ await purgeOlderMessages(db.collection("publicChatMessages"),"Public Chat",PUBLIC_CHAT_HISTORY);
  for await(const chat of db.collection("chats").stream()){
-  await purgeOlderMessages(chat.ref.collection("messages"),"Chat "+chat.id);
+  const keep=chat.data().kind==="group" ? GROUP_CHAT_HISTORY : DIRECT_CHAT_HISTORY;
+  await purgeOlderMessages(chat.ref.collection("messages"),"Chat "+chat.id,keep);
  }
  console.log("Community retention finished");
 }
