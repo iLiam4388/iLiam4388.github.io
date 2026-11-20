@@ -6,8 +6,8 @@ import {ACTIVE_POSTS,LEGACY_POSTS,PUBLIC_CHAT_HISTORY,postRetentionState,chatRet
 
 const raw=process.env.FIREBASE_SERVICE_ACCOUNT;
 if(!raw){
- console.log("Retention skipped: configure the FIREBASE_SERVICE_ACCOUNT GitHub Actions secret.");
- process.exit(0);
+ console.error("Community retention failed: FIREBASE_SERVICE_ACCOUNT GitHub Actions secret is missing.");
+ process.exit(1);
 }
 const key=JSON.parse(raw);
 initializeApp({credential:cert(key),projectId:key.project_id});
