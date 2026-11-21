@@ -38,3 +38,18 @@ console.log("LIVE_RULES_READ: YES");
 console.log("RULES_EXACT_MATCH: "+(live===local?"YES":"NO"));
 console.log("GITHUB_RULES_SHA256_PREFIX: "+hash(local));
 console.log("LIVE_RULES_SHA256_PREFIX: "+hash(live));
+
+// Report the nature of the mismatch without publishing live rule contents.
+if(live!==local){
+ const oldBoardDelete=local.replace(
+  "      // Only the owner can delete a board after removing its drawings.\\n      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;",
+  "      allow delete: if false;"
+ );
+ const normalized=value=>value.replace(/\\r\\n/g,"\\n").trimEnd();
+ console.log("ONLY_RECENT_BOARD_DELETE_CHANGE: "+(normalized(oldBoardDelete)===normalized(live)?"YES":"NO"));
+ const a=local.split(/\\r?\\n/),b=live.split(/\\r?\\n/);
+ const first=a.findIndex((line,i)=>line!==b[i]);
+ console.log("GITHUB_RULES_LINE_COUNT: "+a.length);
+ console.log("LIVE_RULES_LINE_COUNT: "+b.length);
+ console.log("FIRST_DIFFERING_LINE: "+(first>=0?first+1:Math.min(a.length,b.length)+1));
+}
