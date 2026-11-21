@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/check-firestore-rules.yml"
+      - "scripts/check-rules-readiness.mjs"
   workflow_dispatch:
 
 permissions:
