@@ -39,3 +39,9 @@ button,input{font:inherit}button{cursor:pointer;color:inherit;background:var(--b
 .board-link{width:100%;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left}
 .board-link strong{font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .board-link small{font-size:11px;color:#b2d6e8;white-space:nowrap}
+
+/* Owner-only shared whiteboard deletion controls */
+.board-library-row{display:flex;align-items:stretch;gap:7px;min-width:0}
+.board-library-row .board-link{flex:1;min-width:0}
+.board-delete,#delete-room{border-color:#9c4052;background:#542336;color:#ffe4e8}
+.board-delete:hover:not(:disabled),#delete-room:hover:not(:disabled){background:#782b44;border-color:#ff8e9c}
