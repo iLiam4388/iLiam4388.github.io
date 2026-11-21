@@ -1,4 +1,5 @@
 // Read-only Firebase Rules deployment readiness check.
+// Recheck IAM permissions after the Google Cloud policy update.
 // Never print service-account credentials or the rules source.
 import {readFileSync} from "node:fs";
 import {createHash} from "node:crypto";
