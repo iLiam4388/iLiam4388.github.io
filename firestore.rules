@@ -914,7 +914,8 @@ service cloud.firestore {
             && !('invitedUids' in request.resource.data))
           || validBoardSharing(request.resource.data)
         );
-      allow delete: if false;
+      // Only the owner can delete a board after removing its drawings.
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
       match /elements/{elementId} {
         allow get, list: if canSeeBoard(boardId);
         allow create: if canEditBoard(boardId)
