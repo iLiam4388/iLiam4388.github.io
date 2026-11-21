@@ -1,0 +1,54 @@
+name: Deploy Firebase Firestore rules
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "firestore.rules"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/deploy-firestore-rules.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iliam-firestore-rules-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout rules
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Firebase CLI and verification dependencies
+        run: |
+          npm install -g firebase-tools@15.37.0
+          npm install --prefix scripts --omit=dev --no-package-lock
+      - name: Configure Firebase credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT is missing" >&2
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-deploy-account.json"
+          chmod 600 "$RUNNER_TEMP/firebase-deploy-account.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-deploy-account.json" >> "$GITHUB_ENV"
+      - name: Validate Firestore rules without publishing
+        run: firebase deploy --only firestore:rules --project iliam-4d0c9 --non-interactive --dry-run
+      - name: Deploy Firestore rules
+        run: firebase deploy --only firestore:rules --project iliam-4d0c9 --non-interactive
+      - name: Verify rules match live Firebase release
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/verify-deployed-rules.mjs
