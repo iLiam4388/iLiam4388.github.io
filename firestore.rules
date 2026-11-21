@@ -933,3 +933,4 @@ service cloud.firestore {
     }
   }
 }
+// Firestore rules deployment managed by GitHub Actions (iLiam).
