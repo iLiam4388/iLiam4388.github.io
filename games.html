@@ -241,7 +241,7 @@ createGame.addEventListener('click',async()=>{
   try{
     const data={
       name:gameName.value.trim()||'New Game',
-      url:gameUrl.value.trim(),
+      url:gameLink(gameUrl.value)||'',
       image:gameImage.value.trim(),
       description:gameDescription.value.trim(),
       featured:gameFeatured.checked,
@@ -269,10 +269,21 @@ function safeUrl(value){
 }
 
 
+function gameLink(value){
+  let link=String(value||'').trim();
+  if(!link)return null;
+  // Older cached entries already contain the catalog origin ahead of the game host.
+  const localPrefix=location.origin+'/';
+  const candidate=link.startsWith(localPrefix)?link.slice(localPrefix.length):link;
+  if(/^[a-z0-9-]+\.github\.io(?:[/?#]|$)/i.test(candidate))link='https://'+candidate;
+  return safeUrl(link);
+}
+
 function openGame(game){
-  currentGameUrl=game.url;
+  currentGameUrl=gameLink(game.url);
+  if(!currentGameUrl)return;
   playerTitle.textContent=game.name;
-  gameFrame.src=game.url;
+  gameFrame.src=currentGameUrl;
   playerOverlay.classList.add('open');
   playerOverlay.setAttribute('aria-hidden','false');
   document.body.style.overflow='hidden';
@@ -349,7 +360,7 @@ onSnapshot(q,snap=>{
       name:String(x.name||'Untitled Game'),
       description:String(x.description||''),
       image:safeUrl(x.image)||'images/favicon.png',
-      url:safeUrl(x.url)||'#',
+      url:gameLink(x.url)||'#',
       featured:x.featured===true,
       enabled:x.enabled!==false,
       order:Number.isFinite(x.order)?x.order:9999
