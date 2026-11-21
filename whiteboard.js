@@ -209,13 +209,15 @@ async function publish(action,undo=false){
    if(undo)await setDoc(r,{...normalizeElement(action.item),createdBy:user.uid,createdAt:serverTimestamp()});
    else await deleteDoc(r);
   }else if(action.kind==="clear"){
-   const batch=writeBatch(db);
-   for(const e of action.items.slice(0,400)){
-    const ref=doc(db,"whiteboards",room.id,"elements",e.id);
-    if(undo)batch.set(ref,{...normalizeElement(e),createdBy:user.uid,createdAt:serverTimestamp()});
-    else batch.delete(ref);
+   for(let start=0;start<action.items.length;start+=200){
+    const batch=writeBatch(db);
+    for(const e of action.items.slice(start,start+200)){
+     const ref=doc(db,"whiteboards",room.id,"elements",e.id);
+     if(undo)batch.set(ref,{...normalizeElement(e),createdBy:user.uid,createdAt:serverTimestamp()});
+     else batch.delete(ref);
+    }
+    await batch.commit();
    }
-   await batch.commit();
   }
   status("Synced to shared room");
  }catch(e){
@@ -424,8 +426,45 @@ function renderBoardList(area,boards,emptyText){
   meta.textContent=board.accessMode==="restricted"?"🔒 Restricted":"🔗 Link";
   button.append(title,meta);
   button.onclick=()=>joinRoom(board.id);
-  area.append(button);
+  if(board.ownerId===user?.uid){
+   const row=document.createElement("div");row.className="board-library-row";
+   const remove=document.createElement("button");remove.type="button";remove.className="board-delete";
+   remove.textContent="🗑 Delete";remove.title="Permanently delete this shared whiteboard";
+   remove.onclick=()=>deleteSharedBoard(board);
+   row.append(button,remove);area.append(row);
+  }else area.append(button);
  }
+}
+async function deleteSharedBoard(target=room){
+ if(!user||!profile||!target||target.ownerId!==user.uid)return roomStatus("Only the whiteboard owner can delete it.");
+ if(busy)return;
+ if(!confirm('Permanently delete "'+safeTitle(target.title)+'" and all its drawings for everyone? This cannot be undone.'))return;
+ busy=true;roomStatus("Deleting shared whiteboard…");
+ try{
+  const boardRef=doc(db,"whiteboards",target.id);
+  const snapshot=await getDoc(boardRef);
+  if(!snapshot.exists())throw Error("Board not found or already deleted.");
+  if(snapshot.data().ownerId!==user.uid)throw Error("You are not the owner of this board.");
+  // Remove elements before their parent to satisfy owner-based element rules.
+  while(true){
+   const page=await getDocs(query(collection(db,"whiteboards",target.id,"elements"),limit(200)));
+   if(page.empty)break;
+   const batch=writeBatch(db);
+   page.docs.forEach(element=>batch.delete(element.ref));
+   await batch.commit();
+  }
+  await deleteDoc(boardRef);
+  if(room?.id===target.id){
+   stopShared();
+   const url=new URL(location.href);url.searchParams.delete("board");
+   window.history.replaceState(null,"",url);
+  }
+  roomStatus("Shared whiteboard deleted.");
+  await refreshBoardLibrary();
+ }catch(e){
+  roomStatus("Could not delete whiteboard: "+e.message);
+  console.error("Whiteboard delete failed:",e);
+ }finally{busy=false;updateRoomInfo();}
 }
 async function refreshBoardLibrary(){
  $("board-library").hidden=!profile;
@@ -546,6 +585,8 @@ function updateRoomInfo(){
  $("room-info").hidden=!room;
  $("board-library").hidden=!profile;
  $("leave-room").disabled=!room;
+ $("delete-room").hidden=!isBoardOwner();
+ $("delete-room").disabled=busy||!isBoardOwner();
  if(!room){
   $("board-mode").textContent="● Local board";renderBoardPermissions();return;
  }
@@ -713,6 +754,7 @@ function setupUI(){
  $("invite-search").oninput=renderInviteSearch;
  $("join-room").onclick=()=>joinRoom($("room-code").value);
  $("room-code").onkeydown=e=>{if(e.key==="Enter")joinRoom(e.target.value);};
+ $("delete-room").onclick=()=>deleteSharedBoard();
  $("leave-room").onclick=()=>{
   if(!room)return;stopShared();
   const url=new URL(location.href);url.searchParams.delete("board");window.history.replaceState(null,"",url);
