@@ -46,6 +46,36 @@
         action.rel = 'noopener noreferrer';
       } else {
         action.setAttribute('download', '');
+        action.addEventListener('click', async (event) => {
+          event.preventDefault();
+          if (action.dataset.loading === 'true') return;
+          action.dataset.loading = 'true';
+          const previousLabel = action.textContent;
+          action.textContent = 'CHECKING...';
+          try {
+            const url = new URL(target, document.baseURI);
+            const response = await fetch(url, { method: 'GET', cache: 'no-store' });
+            const type = (response.headers.get('content-type') || '').toLowerCase();
+            if (!response.ok || type.includes('text/html')) {
+              throw new Error('File unavailable (' + response.status + ')');
+            }
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = objectUrl;
+            downloadLink.download = decodeURIComponent(url.pathname.split('/').pop()) || 'download';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            downloadLink.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+          } catch (error) {
+            console.error('iLiam download failed:', target, error);
+            status.textContent = 'This download is currently unavailable: ' + item.title + '. The file needs to be uploaded.';
+          } finally {
+            action.dataset.loading = 'false';
+            action.textContent = previousLabel;
+          }
+        });
       }
       card.append(action);
       fragment.append(card);
