@@ -87,3 +87,13 @@
 #iliam-public-chat .pc-embedded-image{display:block;max-width:100%;max-height:350px;border-radius:10px;margin-top:6px}
 #iliam-public-chat .pc-embedded-video{display:block;width:min(100%,420px);aspect-ratio:16/9;border:0;border-radius:10px;margin-top:6px;background:#000}
 @media(max-width:600px){#iliam-public-chat .pc-composer{flex-wrap:wrap}#iliam-public-chat .pc-composer #pc-text{flex-basis:100%;order:-1}}
+
+.iliam-attachment-chips{display:flex;gap:7px;flex-wrap:wrap;padding:8px 0}
+.iliam-attachment-chips[hidden]{display:none!important}
+.iliam-attachment-chip{display:inline-flex;align-items:center;gap:8px;background:#145573;border:1px solid #6ddcff;border-radius:20px;color:white;padding:5px 9px;font:13px Verdana,Arial,sans-serif}
+.iliam-attachment-chip button{background:#284c65;color:white;border:0;border-radius:50%;width:22px;height:22px;cursor:pointer}
+#iliam-public-chat .iliam-attachment-chips{padding:7px 14px}
+#iliam-messages-ui .iliam-attachment-chips{padding:7px 12px;background:#071b31}
+.iliam-media-img{display:block;max-width:100%;max-height:350px;object-fit:contain;border-radius:10px;margin-top:6px}
+.iliam-media-video{display:block;width:min(100%,420px);aspect-ratio:16/9;border:0;border-radius:10px;background:#000;margin-top:6px}
+#postMediaAdd{padding:9px 13px;border:1px solid #6ddcff;background:#145573;color:#fff;border-radius:8px;cursor:pointer}
