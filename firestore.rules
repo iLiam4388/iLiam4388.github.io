@@ -46,7 +46,7 @@ service cloud.firestore {
       return hasProfile()
         && request.resource.data.keys().hasOnly([
           'uid', 'username', 'nickname', 'photoURL',
-          'text', 'imageUrl', 'videoUrl', 'upvotes',
+          'text', 'upvotes',
           'featured', 'createdAt'
         ])
         && request.resource.data.uid == request.auth.uid
@@ -54,8 +54,6 @@ service cloud.firestore {
         && request.resource.data.nickname is string
         && request.resource.data.photoURL is string
         && request.resource.data.text is string
-        && request.resource.data.imageUrl is string
-        && request.resource.data.videoUrl is string
         && request.resource.data.text.size() <= 2000
         && request.resource.data.upvotes is int
         && request.resource.data.upvotes == 0
