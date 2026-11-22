@@ -392,9 +392,10 @@ if(launcher){
 function mediaEncode(kind,url){return "⟦iLiam-media:v1:"+kind+":"+encodeURIComponent(url)+"⟧";}
 function mediaParse(raw){
  const items=[];
- const text=String(raw||"").replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧|\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g,(whole,k,enc,oldKind,oldUrl)=>{
-  let url;try{url=enc?decodeURIComponent(enc):oldUrl;const u=new URL(url);if(u.protocol!=="http:"&&u.protocol!=="https:")return whole;}catch{return whole;}
-  items.push({kind:k||oldKind,url});return "";
+ const withoutLegacy=String(raw||"").replace(/\[iLiam (?:Image|Video)\]\(https?:\/\/[^\s)]+\)/g,"");
+ const text=withoutLegacy.replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧/g,(whole,kind,encoded)=>{
+  let url;try{url=decodeURIComponent(encoded);const parsed=new URL(url);if(!["https:","http:"].includes(parsed.protocol))return whole;}catch{return whole;}
+  items.push({kind,url});return "";
  });
  return {text:text.trim(),items};
 }
