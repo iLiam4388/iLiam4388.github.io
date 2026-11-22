@@ -1,1 +1,17 @@
-[]
+[
+  {
+    "title": "Slow (Some Random Song I Made)",
+    "image": "images/slow.png",
+    "download": "files/slow.pdf"
+  },
+  {
+    "title": "GCA Logo",
+    "image": "images/banner.png",
+    "download": "files/gca.svg"
+  },
+  {
+    "title": "meme wall",
+    "image": "images/memewall.png",
+    "download": "files/meme wall.pdf"
+  }
+]
