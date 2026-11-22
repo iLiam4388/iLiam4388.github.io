@@ -14,3 +14,7 @@ body{margin:0;min-height:100vh;background:linear-gradient(to bottom,#001133,#000
 .status{padding:22px;color:#fff;font-size:1.1rem}
 .footer{padding:22px;color:cyan}
 @media(max-width:480px){.grid{grid-template-columns:1fr}.card{padding:16px}.media{aspect-ratio:16/10}}
+
+/* Optional product metadata on Store cards */
+.item-description{white-space:pre-line;line-height:1.55;font-size:1rem;margin:0 0 14px;overflow-wrap:anywhere}
+.item-price{font-size:1.4rem;font-weight:800;color:#aaffaa;text-shadow:0 0 12px lime;margin:0 0 20px}
