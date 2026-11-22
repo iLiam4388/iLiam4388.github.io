@@ -386,6 +386,32 @@ if(launcher){
   }
   if(at<message.length)element.append(document.createTextNode(message.slice(at)));
  }
+function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
+ const re=/\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g;let pos=0,m;
+ while((m=re.exec(text))){
+  if(m.index>pos)makeLinks(node,text.slice(pos,m.index));
+  const url=safeUrl(m[2]);
+  if(url){
+   if(m[1]==="Image"){const img=document.createElement("img");img.className=imageClass;img.src=url;img.alt="Shared image";img.loading="lazy";node.append(img);}
+   else{
+    const label=document.createElement("strong");label.textContent="Video";node.append(label);
+    const parsed=new URL(url);let youtubeId="";
+    if(/(^|\.)youtu\.be$/i.test(parsed.hostname))youtubeId=parsed.pathname.split("/")[1]||"";
+    if(/(^|\.)youtube\.com$/i.test(parsed.hostname))youtubeId=parsed.searchParams.get("v")||(parsed.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
+    if(/^[\w-]{11}$/.test(youtubeId)){const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+youtubeId;frame.className=videoClass;frame.allowFullscreen=true;frame.loading="lazy";frame.title="Shared video";node.append(frame);}
+    else if(/\.(mp4|webm|ogg)$/i.test(parsed.pathname)){const video=document.createElement("video");video.controls=true;video.preload="metadata";video.src=url;video.className=videoClass;node.append(video);}
+    else{const a=document.createElement("a");a.textContent="Watch video";a.href=url;a.target="_blank";a.rel="noopener noreferrer";node.append(a);}
+   }
+  }
+  pos=re.lastIndex;
+ }
+ if(pos<text.length)makeLinks(node,text.slice(pos));
+}
+ let mediaKind="";
+ function openMedia(kind){if(!current||!user)return;mediaKind=kind;$("im-media-title").textContent="Add "+kind;$("im-media-url").value="";$("im-media-error").textContent="";display("im-media-modal",true);$("im-media-url").focus();}
+ $("im-image").onclick=()=>openMedia("Image");$("im-attach-video").onclick=()=>openMedia("Video");
+ $("im-media-close").onclick=()=>display("im-media-modal",false);
+ $("im-media-insert").onclick=()=>{const url=safeMessageUrl($("im-media-url").value.trim());if(!url)return $("im-media-error").textContent="Enter a valid HTTP(S) address.";const mark="[iLiam "+mediaKind+"]("+url+")",input=$("im-input");if(input.value.length+mark.length+1>2000)return $("im-media-error").textContent="Message is too long.";input.value+=(input.value?" ":"")+mark;display("im-media-modal",false);input.focus();};
  let linkCursor={start:0,end:0};
  function openLinkEditor(){
   if(!current||!user)return;
@@ -431,7 +457,7 @@ if(launcher){
   $("im-title").textContent="Choose a conversation";
   $("im-messages").replaceChildren();
   $("im-messages").textContent="Choose a chat or add someone.";
-  $("im-input").disabled=true;$("im-send").disabled=true;$("im-link").disabled=true;
+  $("im-input").disabled=true;$("im-send").disabled=true;$("im-link").disabled=true;$("im-image").disabled=true;$("im-attach-video").disabled=true;
   display("im-call",false);display("im-edit-group",false);display("im-delete",false);display("im-call-menu",false);
  }
  function renderConversationSnapshot(snap,chatId){
@@ -460,7 +486,7 @@ if(launcher){
      bubble.append(quote);
     }
     bubble.dataset.messageId=m.id;
-    const content=document.createElement("div");renderMessageLinks(content,m.text); // Safe text and validated links.
+    const content=document.createElement("div");appendInlineMedia(content,m.text||"",renderMessageLinks,safeMessageUrl,"im-embedded-image","im-embedded-video"); // Safe HTTP(S) media and links.
     const stamp=document.createElement("span");stamp.className="im-time";stamp.textContent=time(m.createdAt);
     const replyButton=document.createElement('button');replyButton.type='button';replyButton.className='im-reply-action';replyButton.textContent='Reply';replyButton.onclick=()=>chooseReply(m);
     bubble.append(content,stamp,replyButton);
@@ -497,7 +523,7 @@ if(launcher){
   // Unlock immediately; profile lookups must never block typing.
   $("im-input").disabled=false;
   $("im-send").disabled=false;
-  $("im-link").disabled=false;
+  $("im-link").disabled=false;$("im-image").disabled=false;$("im-attach-video").disabled=false;
   updateConversationControls();display("im-call-menu",false);drawInbox();
   $("im-messages").textContent="Connecting to messages…";
   setLiveStatus("Connecting…");
