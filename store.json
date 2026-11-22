@@ -1,0 +1,16 @@
+[
+  {
+    "title": "Multi Purpose TPU SQUSHY",
+    "image": "images/tpu.png",
+    "description": "A flexible TPU squishy cube designed for 3D printing.\n\nPerfect for:\n- Fidgeting and stress relief\n- DIY projects (feet, supports, grips)\n- Testing TPU print settings\n\nInstant download. Ready to print.",
+    "price": "$1.99",
+    "gumroad": "https://negaragent.gumroad.com/l/3dresouces"
+  },
+  {
+    "title": "Blender Cyber Materials Pack",
+    "image": "images/mat.png",
+    "description": "Four high-quality procedural materials with simple controls for Blender.",
+    "price": "$4.99",
+    "gumroad": "https://negaragent.gumroad.com/l/xvjsuj"
+  }
+]
