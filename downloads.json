@@ -1,12 +1,12 @@
 [
   {
     "title": "Slow (Some Random Song I Made)",
-    "image": "images/slow.png",
+    "image": "images/slow.svg",
     "download": "files/slow.pdf"
   },
   {
     "title": "GCA Logo",
-    "image": "images/banner.png",
+    "image": "files/gca.svg",
     "download": "files/gca.svg"
   },
   {
