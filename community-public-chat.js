@@ -16,9 +16,11 @@ if(launcher){
   <div id="pc-reply-preview" class="pc-reply-preview" hidden><div><strong id="pc-reply-title"></strong><span id="pc-reply-quote"></span></div><button type="button" class="pc-btn" id="pc-cancel-reply">✕</button></div>
   <form id="pc-form" class="pc-composer">
    <button type="button" class="pc-btn" id="pc-link">🔗 Link</button>
+   <button type="button" class="pc-btn" id="pc-image"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="m21 16-6-6L5 21"/></svg> Image</button><button type="button" class="pc-btn" id="pc-video"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/></svg> Video</button>
    <input id="pc-text" maxlength="2000" aria-label="Public message" placeholder="Type a public message..." disabled>
    <button type="submit" class="pc-btn pc-primary" id="pc-send" disabled>Send</button>
   </form>
+  <div id="pc-media-entry" class="pc-media-entry" hidden><input id="pc-media-url" type="url" placeholder="Paste media address"><button type="button" id="pc-media-add" class="pc-btn">Add</button><button type="button" id="pc-media-cancel" class="pc-btn">Cancel</button></div>
   <p class="pc-status" id="pc-status" role="status"></p>
  </div>
  <div id="pc-link-overlay" class="pc-link-overlay" hidden>
@@ -45,6 +47,32 @@ if(launcher){
   }
   node.append(document.createTextNode(text.slice(pos)));
  }
+function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
+ const re=/\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g;let pos=0,m;
+ while((m=re.exec(text))){
+  if(m.index>pos)makeLinks(node,text.slice(pos,m.index));
+  const url=safeUrl(m[2]);
+  if(url){
+   if(m[1]==="Image"){const img=document.createElement("img");img.className=imageClass;img.src=url;img.alt="Shared image";img.loading="lazy";node.append(img);}
+   else{
+    const label=document.createElement("strong");label.textContent="Video";node.append(label);
+    const parsed=new URL(url);let youtubeId="";
+    if(/(^|\.)youtu\.be$/i.test(parsed.hostname))youtubeId=parsed.pathname.split("/")[1]||"";
+    if(/(^|\.)youtube\.com$/i.test(parsed.hostname))youtubeId=parsed.searchParams.get("v")||(parsed.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
+    if(/^[\w-]{11}$/.test(youtubeId)){const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+youtubeId;frame.className=videoClass;frame.allowFullscreen=true;frame.loading="lazy";frame.title="Shared video";node.append(frame);}
+    else if(/\.(mp4|webm|ogg)$/i.test(parsed.pathname)){const video=document.createElement("video");video.controls=true;video.preload="metadata";video.src=url;video.className=videoClass;node.append(video);}
+    else{const a=document.createElement("a");a.textContent="Watch video";a.href=url;a.target="_blank";a.rel="noopener noreferrer";node.append(a);}
+   }
+  }
+  pos=re.lastIndex;
+ }
+ if(pos<text.length)makeLinks(node,text.slice(pos));
+}
+ let mediaKind="";
+ function enterMedia(kind){mediaKind=kind;$("pc-media-entry").hidden=false;$("pc-media-url").value="";$("pc-media-url").placeholder="Paste "+kind.toLowerCase()+" address (https://...)";$("pc-media-add").textContent="Add "+kind;$("pc-media-url").focus();}
+ $("pc-image").onclick=()=>enterMedia("Image");$("pc-video").onclick=()=>enterMedia("Video");
+ $("pc-media-cancel").onclick=()=>{$("pc-media-entry").hidden=true;};
+ $("pc-media-add").onclick=()=>{const url=safeUrl($("pc-media-url").value.trim());if(!url)return status("Enter a valid HTTP(S) address.");const mark="[iLiam "+mediaKind+"]("+url+")",input=$("pc-text");if(input.value.length+mark.length+1>2000)return status("Message is too long.");input.value+=(input.value?" ":"")+mark;$("pc-media-entry").hidden=true;input.focus();status("");};
  function clearReply(){reply=null;$("pc-reply-preview").hidden=true;}
  function startReply(m){
   reply={id:m.id,uid:m.uid,text:m.text.slice(0,180)};
@@ -93,7 +121,7 @@ if(launcher){
     quoted.onclick=()=>{if(!replyId)return;const target=area.querySelector('[data-message-id="'+CSS.escape(replyId)+'"]');if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("pc-highlight");setTimeout(()=>target.classList.remove("pc-highlight"),1000);}};
     body.append(quoted);
    }
-   const message=document.createElement("div");message.className="pc-message-text";makeLinks(message,m.text);body.append(message);
+   const message=document.createElement("div");message.className="pc-message-text";appendInlineMedia(message,m.text||"",makeLinks,safeUrl,"pc-embedded-image","pc-embedded-video");body.append(message);
    const actions=document.createElement("div");actions.className="pc-message-actions";
    const response=document.createElement("button");response.type="button";response.textContent="Reply";response.onclick=()=>startReply(m);actions.append(response);
    if(user&&(m.uid===user.uid||$("pc-history").dataset.admin==="yes")){
