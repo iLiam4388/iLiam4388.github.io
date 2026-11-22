@@ -54,8 +54,11 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 .post-text a,.comment-text a{color:#d8ffff;text-decoration:underline}
 .actions,.comment-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
 .comment-actions{margin-top:10px;gap:7px}
-.post-image{display:block;max-width:100%;max-height:540px;margin:16px auto 0;border:3px solid #fff;border-radius:16px}
-.video-wrap{position:relative;width:100%;padding-top:56.25%;margin-top:16px;border:3px solid #fff;border-radius:16px;overflow:hidden;background:#000}
+.post-image{display:block;max-width:100%;max-height:240px;width:auto;height:auto;object-fit:contain;margin:12px 0 0;border:2px solid #fff;border-radius:12px}
+.video-wrap{position:relative;width:min(100%,380px);aspect-ratio:16/9;margin-top:12px;border:2px solid #fff;border-radius:12px;overflow:hidden;background:#000}
+.post-image-gallery{display:flex;gap:10px;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x mandatory;padding:0 0 10px;margin-top:12px;scrollbar-width:thin}
+.post-image-gallery .post-image{flex:0 0 auto;scroll-snap-align:start;width:min(75vw,320px);height:220px;max-height:220px;object-fit:contain;margin:0;background:#0003}
+.post-gallery-label{font-size:12px;opacity:.82;margin-top:6px}
 .video-wrap iframe,.video-wrap video{position:absolute;inset:0;width:100%;height:100%;border:0}
 .comments{margin-top:18px;padding-top:16px;border-top:2px solid #fff8}
 .comment-list{max-height:520px;overflow-y:auto;padding-right:5px}
@@ -458,7 +461,13 @@ function mediaChips(el,items){
 }
 
 function postTextOnly(text){return mediaParse(text).text;}
-function postMediaHtml(text){return mediaParse(text).items.map(m=>m.kind==="Image"?'<img class="post-image" alt="Post image" loading="lazy" src="'+escapeHtml(m.url)+'">':videoMarkup(m.url)).join("");}
+function postMediaHtml(text){
+ const items=mediaParse(text).items,images=items.filter(m=>m.kind==="Image"),videos=items.filter(m=>m.kind==="Video");
+ const imageHtml=images.length>2
+  ?'<div class="post-image-gallery" role="region" aria-label="Post image gallery, scroll horizontally to view '+images.length+' photos" tabindex="0">'+images.map((m,i)=>'<img class="post-image" alt="Post image '+(i+1)+' of '+images.length+'" loading="lazy" src="'+escapeHtml(m.url)+'">').join("")+'</div><div class="post-gallery-label">'+images.length+' photos · Scroll to view more</div>'
+  :images.map((m,i)=>'<img class="post-image" alt="Post image '+(i+1)+'" loading="lazy" src="'+escapeHtml(m.url)+'">').join("");
+ return imageHtml+videos.map(m=>videoMarkup(m.url)).join("");
+}
 
 function videoMarkup(url){
  const safe=safeUrl(url);if(!safe)return"";
