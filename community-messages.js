@@ -389,32 +389,51 @@ if(launcher){
   }
   if(at<message.length)element.append(document.createTextNode(message.slice(at)));
  }
-function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
- const re=/\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g;let pos=0,m;
- while((m=re.exec(text))){
-  if(m.index>pos)makeLinks(node,text.slice(pos,m.index));
-  const url=safeUrl(m[2]);
-  if(url){
-   if(m[1]==="Image"){const img=document.createElement("img");img.className=imageClass;img.src=url;img.alt="Shared image";img.loading="lazy";node.append(img);}
-   else{
-    const label=document.createElement("strong");label.textContent="Video";node.append(label);
-    const parsed=new URL(url);let youtubeId="";
-    if(/(^|\.)youtu\.be$/i.test(parsed.hostname))youtubeId=parsed.pathname.split("/")[1]||"";
-    if(/(^|\.)youtube\.com$/i.test(parsed.hostname))youtubeId=parsed.searchParams.get("v")||(parsed.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
-    if(/^[\w-]{11}$/.test(youtubeId)){const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+youtubeId;frame.className=videoClass;frame.allowFullscreen=true;frame.loading="lazy";frame.title="Shared video";node.append(frame);}
-    else if(/\.(mp4|webm|ogg)$/i.test(parsed.pathname)){const video=document.createElement("video");video.controls=true;video.preload="metadata";video.src=url;video.className=videoClass;node.append(video);}
-    else{const a=document.createElement("a");a.textContent="Watch video";a.href=url;a.target="_blank";a.rel="noopener noreferrer";node.append(a);}
-   }
-  }
-  pos=re.lastIndex;
- }
- if(pos<text.length)makeLinks(node,text.slice(pos));
+function mediaEncode(kind,url){return "⟦iLiam-media:v1:"+kind+":"+encodeURIComponent(url)+"⟧";}
+function mediaParse(raw){
+ const items=[];
+ const text=String(raw||"").replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧|\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g,(whole,k,enc,oldKind,oldUrl)=>{
+  let url;try{url=enc?decodeURIComponent(enc):oldUrl;const u=new URL(url);if(u.protocol!=="http:"&&u.protocol!=="https:")return whole;}catch{return whole;}
+  items.push({kind:k||oldKind,url});return "";
+ });
+ return {text:text.trim(),items};
 }
+function mediaPack(text,items){return [text.trim(),...items.map(m=>mediaEncode(m.kind,m.url))].filter(Boolean).join("\n");}
+function mediaChips(el,items){
+ el.replaceChildren();items.forEach((m,i)=>{
+  const chip=document.createElement("span");chip.className="iliam-attachment-chip";chip.append(document.createTextNode(m.kind+" "+(i+1)+" "));
+  const remove=document.createElement("button");remove.type="button";remove.textContent="×";remove.setAttribute("aria-label","Remove "+m.kind);
+  remove.onclick=()=>{items.splice(i,1);mediaChips(el,items);};chip.append(remove);el.append(chip);
+ });el.hidden=!items.length;
+}
+
+function mediaRender(node,raw,linkFn){
+ const parsed=mediaParse(raw);if(parsed.text)linkFn(node,parsed.text);
+ for(const m of parsed.items){
+  if(m.kind==="Image"){const img=document.createElement("img");img.className="iliam-media-img";img.src=m.url;img.alt="Shared image";img.loading="lazy";node.append(img);continue;}
+  const label=document.createElement("strong");label.textContent="Video";node.append(label);
+  const url=new URL(m.url);let id="";
+  if(/(^|\.)youtu\.be$/i.test(url.hostname))id=url.pathname.split("/")[1]||"";
+  if(/(^|\.)youtube\.com$/i.test(url.hostname))id=url.searchParams.get("v")||(url.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
+  if(/^[a-zA-Z0-9_-]{11}$/.test(id)){
+   const iframe=document.createElement("iframe");iframe.src="https://www.youtube-nocookie.com/embed/"+id;iframe.title="Shared video";iframe.allowFullscreen=true;iframe.loading="lazy";iframe.className="iliam-media-video";node.append(iframe);
+  }else if(/\.(mp4|webm|ogg)$/i.test(url.pathname)){
+   const video=document.createElement("video");video.src=m.url;video.controls=true;video.preload="metadata";video.className="iliam-media-video";node.append(video);
+  }else{const link=document.createElement("a");link.href=m.url;link.textContent="Watch video";link.target="_blank";link.rel="noopener noreferrer";node.append(link);}
+ }
+}
+
+const messageAttachments=[],messageChips=document.createElement("div");messageChips.className="iliam-attachment-chips";messageChips.hidden=true;$("im-form").insertAdjacentElement("afterend",messageChips);
  let mediaKind="";
  function openMedia(kind){if(!current||!user)return;mediaKind=kind;$("im-media-title").textContent="Add "+kind;$("im-media-url").value="";$("im-media-error").textContent="";display("im-media-modal",true);$("im-media-url").focus();}
  $("im-image").onclick=()=>openMedia("Image");$("im-attach-video").onclick=()=>openMedia("Video");
  $("im-media-close").onclick=()=>display("im-media-modal",false);
- $("im-media-insert").onclick=()=>{const url=safeMessageUrl($("im-media-url").value.trim());if(!url)return $("im-media-error").textContent="Enter a valid HTTP(S) address.";const mark="[iLiam "+mediaKind+"]("+url+")",input=$("im-input");if(input.value.length+mark.length+1>2000)return $("im-media-error").textContent="Message is too long.";input.value+=(input.value?" ":"")+mark;display("im-media-modal",false);input.focus();};
+ $("im-media-insert").onclick=()=>{
+ const url=safeMessageUrl($("im-media-url").value.trim());if(!url)return $("im-media-error").textContent="Enter a valid HTTP(S) address.";
+ if(messageAttachments.length>=8)return $("im-media-error").textContent="Maximum eight attachments.";
+ messageAttachments.push({kind:mediaKind,url});mediaChips(messageChips,messageAttachments);
+ display("im-media-modal",false);$("im-input").focus();
+};
  let linkCursor={start:0,end:0};
  function openLinkEditor(){
   if(!current||!user)return;
@@ -445,7 +464,7 @@ function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
  function clearReply(){replyTarget=null;display('im-reply-composer',false);}
  $('im-reply-cancel').onclick=clearReply;
  function chooseReply(message){
-  replyTarget={id:message.id,uid:message.uid,text:String(message.text||'').slice(0,180)};
+  replyTarget={id:message.id,uid:message.uid,text:mediaParse(message.text).text.slice(0,180)};
   $('im-reply-name').textContent=message.uid===user.uid?'Replying to yourself':'Replying to '+label(profileOf(message.uid));
   $('im-reply-text').textContent=replyTarget.text;
   display('im-reply-composer',true);$('im-input').focus();
@@ -483,13 +502,13 @@ function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
      const original=reference&&!messageBlocks.has(reference.uid)?reference:null;
      const quote=document.createElement("button");quote.type="button";quote.className="im-reply-quote";
      const originalName=original?label(profileOf(original.uid)):"Original message";
-     quote.textContent="↳ "+(original?originalName+": "+String(original.text||"").slice(0,110):"Original message unavailable or deleted");
+     quote.textContent="↳ "+(original?originalName+": "+mediaParse(original.text).text.slice(0,110):"Original message unavailable or deleted");
      quote.disabled=!original;
      quote.onclick=()=>{if(!replyId)return;const target=board.querySelector(`[data-message-id="${CSS.escape(replyId)}"]`);if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("im-flash");setTimeout(()=>target.classList.remove("im-flash"),900);}};
      bubble.append(quote);
     }
     bubble.dataset.messageId=m.id;
-    const content=document.createElement("div");appendInlineMedia(content,m.text||"",renderMessageLinks,safeMessageUrl,"im-embedded-image","im-embedded-video"); // Safe HTTP(S) media and links.
+    const content=document.createElement("div");mediaRender(content,m.text||"",renderMessageLinks); // Safe HTTP(S) media and links.
     const stamp=document.createElement("span");stamp.className="im-time";stamp.textContent=time(m.createdAt);
     const replyButton=document.createElement('button');replyButton.type='button';replyButton.className='im-reply-action';replyButton.textContent='Reply';replyButton.onclick=()=>chooseReply(m);
     bubble.append(content,stamp,replyButton);
@@ -522,7 +541,7 @@ function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
   const epoch=++conversationEpoch;
   if(stopMessages){stopMessages();stopMessages=null;}
   latestMessageSnapshot=null;activeMessageChatId=null;
-  clearReply();current=c;
+  clearReply();messageAttachments.length=0;mediaChips(messageChips,messageAttachments);current=c;
   // Unlock immediately; profile lookups must never block typing.
   $("im-input").disabled=false;
   $("im-send").disabled=false;
@@ -704,7 +723,8 @@ function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
  $("im-create").onclick=createChat;
  $("im-form").onsubmit=async e=>{
   e.preventDefault();if(!user||!current)return;
-  const text=$("im-input").value.trim();if(!text)return;
+  const text=mediaPack($("im-input").value,messageAttachments);if(!text)return;
+ if(text.length>2000)return alert("Message exceeds 2,000 characters including attachments.");
   const btn=$("im-send");btn.disabled=true;
   try{
    const reply=replyTarget?{replyTo:replyTarget}:{};
