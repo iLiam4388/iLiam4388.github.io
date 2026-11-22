@@ -398,8 +398,8 @@ async function openPublicProfile(uid,fallback={}){
     publicProfilePosts.appendChild(card);
     continue;
    }
-   const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
-   card.innerHTML=`<div class="time">${escapeHtml(formatTime(p.createdAt))}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>${image}${videoMarkup(p.videoUrl||"")}${postMediaHtml(p.text||"")}<div class="actions"><button class="small-btn view-profile-post" type="button">View in Feed</button><span>⬆ ${Number(p.upvotes||0)}</span></div>`;
+
+   card.innerHTML=`<div class="time">${escapeHtml(formatTime(p.createdAt))}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>${postMediaHtml(p.text||"")}<div class="actions"><button class="small-btn view-profile-post" type="button">View in Feed</button><span>⬆ ${Number(p.upvotes||0)}</span></div>`;
    card.querySelector(".view-profile-post").onclick=()=>{
     publicProfileModal.classList.remove("show");
     const target=document.querySelector(`[data-post-id="${CSS.escape(p.id)}"]`);
@@ -441,9 +441,10 @@ function richText(value){
 function mediaEncode(kind,url){return "⟦iLiam-media:v1:"+kind+":"+encodeURIComponent(url)+"⟧";}
 function mediaParse(raw){
  const items=[];
- const text=String(raw||"").replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧|\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g,(whole,k,enc,oldKind,oldUrl)=>{
-  let url;try{url=enc?decodeURIComponent(enc):oldUrl;const u=new URL(url);if(u.protocol!=="http:"&&u.protocol!=="https:")return whole;}catch{return whole;}
-  items.push({kind:k||oldKind,url});return "";
+ const withoutLegacy=String(raw||"").replace(/\[iLiam (?:Image|Video)\]\(https?:\/\/[^\s)]+\)/g,"");
+ const text=withoutLegacy.replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧/g,(whole,kind,encoded)=>{
+  let url;try{url=decodeURIComponent(encoded);const parsed=new URL(url);if(!["https:","http:"].includes(parsed.protocol))return whole;}catch{return whole;}
+  items.push({kind,url});return "";
  });
  return {text:text.trim(),items};
 }
@@ -755,7 +756,7 @@ function renderPost(p){
  }
 
  const saved=getSavedPostIds(),isSaved=saved.includes(p.id);
- const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
+
 
  article.innerHTML=`
  ${p.featured?'<span class="featured-label">⭐ FEATURED</span>':""}
@@ -765,8 +766,6 @@ function renderPost(p){
    <span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span>
  </div>
  <div class="post-text">${richText(postTextOnly(p.text||""))}</div>
- ${image}
- ${videoMarkup(p.videoUrl||"")}
  ${postMediaHtml(p.text||"")}
  <div class="actions">
    <button class="small-btn upvote-btn" type="button">⬆ Upvote ${Number(p.upvotes||0)}</button>
@@ -1065,8 +1064,8 @@ async function renderSavedPosts(){
 <script type="module" src="site-notifications.js"></script>
 <script type="module" src="community-calls.js?v=11"></script>
 <script type="module" src="community-group-calls.js?v=11"></script>
-<script type="module" src="community-messages.js?v=18"></script>
-<script type="module" src="community-public-chat.js?v=4"></script>
+<script type="module" src="community-messages.js?v=19"></script>
+<script type="module" src="community-public-chat.js?v=5"></script>
 <script defer src="ui-svg-icons.js?v=2"></script>
 <script defer src="copyright-year.js?v=1"></script>
 </body>
