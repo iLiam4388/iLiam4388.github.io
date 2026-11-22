@@ -47,35 +47,54 @@ if(launcher){
   }
   node.append(document.createTextNode(text.slice(pos)));
  }
-function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
- const re=/\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g;let pos=0,m;
- while((m=re.exec(text))){
-  if(m.index>pos)makeLinks(node,text.slice(pos,m.index));
-  const url=safeUrl(m[2]);
-  if(url){
-   if(m[1]==="Image"){const img=document.createElement("img");img.className=imageClass;img.src=url;img.alt="Shared image";img.loading="lazy";node.append(img);}
-   else{
-    const label=document.createElement("strong");label.textContent="Video";node.append(label);
-    const parsed=new URL(url);let youtubeId="";
-    if(/(^|\.)youtu\.be$/i.test(parsed.hostname))youtubeId=parsed.pathname.split("/")[1]||"";
-    if(/(^|\.)youtube\.com$/i.test(parsed.hostname))youtubeId=parsed.searchParams.get("v")||(parsed.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
-    if(/^[\w-]{11}$/.test(youtubeId)){const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+youtubeId;frame.className=videoClass;frame.allowFullscreen=true;frame.loading="lazy";frame.title="Shared video";node.append(frame);}
-    else if(/\.(mp4|webm|ogg)$/i.test(parsed.pathname)){const video=document.createElement("video");video.controls=true;video.preload="metadata";video.src=url;video.className=videoClass;node.append(video);}
-    else{const a=document.createElement("a");a.textContent="Watch video";a.href=url;a.target="_blank";a.rel="noopener noreferrer";node.append(a);}
-   }
-  }
-  pos=re.lastIndex;
- }
- if(pos<text.length)makeLinks(node,text.slice(pos));
+
+function mediaEncode(kind,url){return "⟦iLiam-media:v1:"+kind+":"+encodeURIComponent(url)+"⟧";}
+function mediaParse(raw){
+ const items=[];
+ const text=String(raw||"").replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧|\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g,(whole,k,enc,oldKind,oldUrl)=>{
+  let url;try{url=enc?decodeURIComponent(enc):oldUrl;const u=new URL(url);if(u.protocol!=="http:"&&u.protocol!=="https:")return whole;}catch{return whole;}
+  items.push({kind:k||oldKind,url});return "";
+ });
+ return {text:text.trim(),items};
 }
+function mediaPack(text,items){return [text.trim(),...items.map(m=>mediaEncode(m.kind,m.url))].filter(Boolean).join("\n");}
+function mediaChips(el,items){
+ el.replaceChildren();items.forEach((m,i)=>{
+  const chip=document.createElement("span");chip.className="iliam-attachment-chip";chip.append(document.createTextNode(m.kind+" "+(i+1)+" "));
+  const remove=document.createElement("button");remove.type="button";remove.textContent="×";remove.setAttribute("aria-label","Remove "+m.kind);
+  remove.onclick=()=>{items.splice(i,1);mediaChips(el,items);};chip.append(remove);el.append(chip);
+ });el.hidden=!items.length;
+}
+
+function mediaRender(node,raw,linkFn){
+ const parsed=mediaParse(raw);if(parsed.text)linkFn(node,parsed.text);
+ for(const m of parsed.items){
+  if(m.kind==="Image"){const img=document.createElement("img");img.className="iliam-media-img";img.src=m.url;img.alt="Shared image";img.loading="lazy";node.append(img);continue;}
+  const label=document.createElement("strong");label.textContent="Video";node.append(label);
+  const url=new URL(m.url);let id="";
+  if(/(^|\.)youtu\.be$/i.test(url.hostname))id=url.pathname.split("/")[1]||"";
+  if(/(^|\.)youtube\.com$/i.test(url.hostname))id=url.searchParams.get("v")||(url.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
+  if(/^[a-zA-Z0-9_-]{11}$/.test(id)){
+   const iframe=document.createElement("iframe");iframe.src="https://www.youtube-nocookie.com/embed/"+id;iframe.title="Shared video";iframe.allowFullscreen=true;iframe.loading="lazy";iframe.className="iliam-media-video";node.append(iframe);
+  }else if(/\.(mp4|webm|ogg)$/i.test(url.pathname)){
+   const video=document.createElement("video");video.src=m.url;video.controls=true;video.preload="metadata";video.className="iliam-media-video";node.append(video);
+  }else{const link=document.createElement("a");link.href=m.url;link.textContent="Watch video";link.target="_blank";link.rel="noopener noreferrer";node.append(link);}
+ }
+}
+const publicAttachments=[],publicChips=document.createElement("div");publicChips.className="iliam-attachment-chips";publicChips.hidden=true;$("pc-form").insertAdjacentElement("afterend",publicChips);
  let mediaKind="";
  function enterMedia(kind){mediaKind=kind;$("pc-media-entry").hidden=false;$("pc-media-url").value="";$("pc-media-url").placeholder="Paste "+kind.toLowerCase()+" address (https://...)";$("pc-media-add").textContent="Add "+kind;$("pc-media-url").focus();}
  $("pc-image").onclick=()=>enterMedia("Image");$("pc-video").onclick=()=>enterMedia("Video");
  $("pc-media-cancel").onclick=()=>{$("pc-media-entry").hidden=true;};
- $("pc-media-add").onclick=()=>{const url=safeUrl($("pc-media-url").value.trim());if(!url)return status("Enter a valid HTTP(S) address.");const mark="[iLiam "+mediaKind+"]("+url+")",input=$("pc-text");if(input.value.length+mark.length+1>2000)return status("Message is too long.");input.value+=(input.value?" ":"")+mark;$("pc-media-entry").hidden=true;input.focus();status("");};
+ $("pc-media-add").onclick=()=>{
+ const url=safeUrl($("pc-media-url").value.trim());if(!url)return status("Enter a valid HTTP(S) address.");
+ if(publicAttachments.length>=8)return status("Maximum eight attachments.");
+ publicAttachments.push({kind:mediaKind,url});mediaChips(publicChips,publicAttachments);
+ $("pc-media-entry").hidden=true;$("pc-text").focus();status("");
+};
  function clearReply(){reply=null;$("pc-reply-preview").hidden=true;}
  function startReply(m){
-  reply={id:m.id,uid:m.uid,text:m.text.slice(0,180)};
+  reply={id:m.id,uid:m.uid,text:mediaParse(m.text).text.slice(0,180)};
   $("pc-reply-title").textContent="Replying to "+(m.uid===user.uid?"yourself":name(knownProfiles.get(m.uid)));
   $("pc-reply-quote").textContent=reply.text;
   $("pc-reply-preview").hidden=false;$("pc-text").focus();
@@ -116,12 +135,12 @@ function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
     const original=seenMessages.get(replyId);
     const quoted=document.createElement("button");quoted.type="button";quoted.className="pc-quote";
     // Never render a stored copy of a deleted message as if it were still live.
-    quoted.textContent="↳ "+(original?profileName(original.uid)+": "+String(original.text||"").slice(0,110):"Original message unavailable or deleted");
+    quoted.textContent="↳ "+(original?profileName(original.uid)+": "+mediaParse(original.text).text.slice(0,110):"Original message unavailable or deleted");
     quoted.disabled=!original;
     quoted.onclick=()=>{if(!replyId)return;const target=area.querySelector('[data-message-id="'+CSS.escape(replyId)+'"]');if(target){target.scrollIntoView({behavior:"smooth",block:"center"});target.classList.add("pc-highlight");setTimeout(()=>target.classList.remove("pc-highlight"),1000);}};
     body.append(quoted);
    }
-   const message=document.createElement("div");message.className="pc-message-text";appendInlineMedia(message,m.text||"",makeLinks,safeUrl,"pc-embedded-image","pc-embedded-video");body.append(message);
+   const message=document.createElement("div");message.className="pc-message-text";mediaRender(message,m.text||"",makeLinks);body.append(message);
    const actions=document.createElement("div");actions.className="pc-message-actions";
    const response=document.createElement("button");response.type="button";response.textContent="Reply";response.onclick=()=>startReply(m);actions.append(response);
    if(user&&(m.uid===user.uid||$("pc-history").dataset.admin==="yes")){
@@ -173,13 +192,14 @@ function appendInlineMedia(node,text,makeLinks,safeUrl,imageClass,videoClass){
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!root.hidden){if(!$("pc-link-overlay").hidden)$("pc-link-overlay").hidden=true;else close();}});
  $("pc-form").onsubmit=async e=>{
   e.preventDefault();if(!user||!profile)return;
-  const text=$("pc-text").value.trim();if(!text)return;
+  const text=mediaPack($("pc-text").value,publicAttachments);if(!text)return;
+ if(text.length>2000)return status("Message exceeds 2,000 characters including attachments.");
   if(Date.now()-lastSent<2000)return status("Please wait two seconds between messages.");
   const uid=user.uid,btn=$("pc-send");btn.disabled=true;
   try{
    await addDoc(collection(db,"publicChatMessages"),{uid,text,createdAt:serverTimestamp(),...(reply?{replyTo:reply}:{})});
    if(auth.currentUser?.uid!==uid)return;
-   lastSent=Date.now();$("pc-text").value="";clearReply();status("");
+   lastSent=Date.now();$("pc-text").value="";publicAttachments.length=0;mediaChips(publicChips,publicAttachments);clearReply();status("");
   }catch(error){status("Message not sent: "+error.message);}
   finally{btn.disabled=false;}
  };
