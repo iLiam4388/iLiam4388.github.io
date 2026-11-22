@@ -1,7 +1,7 @@
 // iLiam Firestore retention. Run only on a trusted server / GitHub Actions.
 // Never put the Firebase service-account key in browser JavaScript or this repository.
 import {initializeApp,cert} from "firebase-admin/app";
-import {getFirestore} from "firebase-admin/firestore";
+import {getFirestore,FieldValue} from "firebase-admin/firestore";
 import {ACTIVE_POSTS,LEGACY_POSTS,PUBLIC_CHAT_HISTORY,postRetentionState,chatRetentionLimit} from "./community-retention-policy.js";
 
 const raw=process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -42,8 +42,8 @@ async function purgeOlderMessages(collectionRef,description,keep){
 
 async function retainPosts(){
  const count=await db.collection("posts").count().get();
- if(count.data().count<=ACTIVE_POSTS)return;
- let cursor=null,index=0,archived=0,removed=0;
+ // Check active posts even if there are fewer than 50 posts.
+ let cursor=null,index=0,archived=0,removed=0,obsoleteMediaRemoved=0;
  while(true){
   let query=db.collection("posts").orderBy("createdAt","desc").limit(FETCH);
   if(cursor)query=query.startAfter(cursor);
@@ -53,7 +53,13 @@ async function retainPosts(){
   for(const post of snap.docs){
    const rank=index++;
    const state=postRetentionState(rank);
-   if(state==="active")continue;
+   if(state==="active"){
+    const data=post.data(),fields={};
+    if(Object.prototype.hasOwnProperty.call(data,"imageUrl"))fields.imageUrl=FieldValue.delete();
+    if(Object.prototype.hasOwnProperty.call(data,"videoUrl"))fields.videoUrl=FieldValue.delete();
+    if(Object.keys(fields).length){await post.ref.update(fields);obsoleteMediaRemoved++;}
+    continue;
+   }
    if(state==="deleted"){
     // recursiveDelete removes votes, comments and likes as well as the post.
     await db.recursiveDelete(post.ref);
@@ -80,7 +86,7 @@ async function retainPosts(){
    archived++;
   }
  }
- console.log("Posts: "+archived+" archived, "+removed+" older than 250 deleted");
+ console.log("Posts: "+archived+" archived, "+removed+" older than 250 deleted, "+obsoleteMediaRemoved+" active posts stripped of obsolete media fields");
 }
 
 async function main(){
