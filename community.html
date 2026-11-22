@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="images/favicon.png">
 <link rel="stylesheet" href="community-calls.css?v=9">
 <link rel="stylesheet" href="community-group-calls.css?v=5">
-<link rel="stylesheet" href="community-messages.css?v=7">
+<link rel="stylesheet" href="community-messages.css?v=8">
 <link rel="stylesheet" href="community-public-chat.css?v=1">
 
 <style>
@@ -135,7 +135,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <button class="tool-btn" type="button" id="linkButton">🔗 Link</button>
 </div>
 <textarea id="postText" maxlength="2000" placeholder="Write something. Use **bold**, *italic*, __underline__, or add links."></textarea>
-<div class="media-choice"><button id="postImageChoice" type="button" aria-pressed="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="m21 16-6-6L5 21"/></svg> Image</button><button id="postVideoChoice" type="button" aria-pressed="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/></svg> Video</button></div><div class="media-fields" id="postMediaFields" hidden><input id="imageUrl" type="url" placeholder="Paste an image address" hidden><input id="videoUrl" type="url" placeholder="Paste a YouTube or direct video address" hidden></div>
+<div class="media-choice"><button id="postImageChoice" type="button" aria-pressed="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="m21 16-6-6L5 21"/></svg> Image</button><button id="postVideoChoice" type="button" aria-pressed="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/></svg> Video</button></div><div class="media-fields" id="postMediaFields" hidden><input id="imageUrl" type="url" placeholder="Paste an image address" hidden><input id="videoUrl" type="url" placeholder="Paste a YouTube or direct video address" hidden><button id="postMediaAdd" type="button">Add</button></div><div id="postMediaChips" class="iliam-attachment-chips" hidden></div>
 <button class="post-btn" id="postButton" type="button" disabled>POST</button>
 </section>
 
@@ -393,12 +393,12 @@ async function openPublicProfile(uid,fallback={}){
    const card=document.createElement("article");
    card.className="public-profile-post";
    if(p.legacy===true){
-    card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(p.text||"")}</div>`;
+    card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>`;
     publicProfilePosts.appendChild(card);
     continue;
    }
    const image=safeUrl(p.imageUrl)?`<img class="post-image" src="${escapeHtml(safeUrl(p.imageUrl))}" alt="Post image" loading="lazy">`:"";
-   card.innerHTML=`<div class="time">${escapeHtml(formatTime(p.createdAt))}</div><div class="post-text">${richText(p.text||"")}</div>${image}${videoMarkup(p.videoUrl||"")}<div class="actions"><button class="small-btn view-profile-post" type="button">View in Feed</button><span>⬆ ${Number(p.upvotes||0)}</span></div>`;
+   card.innerHTML=`<div class="time">${escapeHtml(formatTime(p.createdAt))}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>${image}${videoMarkup(p.videoUrl||"")}${postMediaHtml(p.text||"")}<div class="actions"><button class="small-btn view-profile-post" type="button">View in Feed</button><span>⬆ ${Number(p.upvotes||0)}</span></div>`;
    card.querySelector(".view-profile-post").onclick=()=>{
     publicProfileModal.classList.remove("show");
     const target=document.querySelector(`[data-post-id="${CSS.escape(p.id)}"]`);
@@ -435,6 +435,27 @@ function richText(value){
  s=s.replace(/\*([^*\n]+)\*/g,"<em>$1</em>");
  return s.replace(/\n/g,"<br>");
 }
+
+
+function mediaEncode(kind,url){return "⟦iLiam-media:v1:"+kind+":"+encodeURIComponent(url)+"⟧";}
+function mediaParse(raw){
+ const items=[];
+ const text=String(raw||"").replace(/⟦iLiam-media:v1:(Image|Video):([^⟧]+)⟧|\[iLiam (Image|Video)\]\((https?:\/\/[^\s)]+)\)/g,(whole,k,enc,oldKind,oldUrl)=>{
+  let url;try{url=enc?decodeURIComponent(enc):oldUrl;const u=new URL(url);if(u.protocol!=="http:"&&u.protocol!=="https:")return whole;}catch{return whole;}
+  items.push({kind:k||oldKind,url});return "";
+ });
+ return {text:text.trim(),items};
+}
+function mediaPack(text,items){return [text.trim(),...items.map(m=>mediaEncode(m.kind,m.url))].filter(Boolean).join("\n");}
+function mediaChips(el,items){
+ el.replaceChildren();items.forEach((m,i)=>{
+  const chip=document.createElement("span");chip.className="iliam-attachment-chip";chip.append(document.createTextNode(m.kind+" "+(i+1)+" "));
+  const remove=document.createElement("button");remove.type="button";remove.textContent="×";remove.setAttribute("aria-label","Remove "+m.kind);
+  remove.onclick=()=>{items.splice(i,1);mediaChips(el,items);};chip.append(remove);el.append(chip);
+ });el.hidden=!items.length;
+}
+function postTextOnly(text){return mediaParse(text).text;}
+function postMediaHtml(text){return mediaParse(text).items.map(m=>m.kind==="Image"?'<img class="post-image" alt="Post image" loading="lazy" src="'+escapeHtml(m.url)+'">':videoMarkup(m.url)).join("");}
 
 function videoMarkup(url){
  const safe=safeUrl(url);if(!safe)return"";
@@ -667,8 +688,10 @@ resetCommunityButton.addEventListener("click",async()=>{
  finally{deleteAllPostsButton.disabled=false;resetCommunityButton.disabled=false}
 });
 
+
 let activePostMedia="";
 const postMediaFields=$("postMediaFields"),postImageChoice=$("postImageChoice"),postVideoChoice=$("postVideoChoice");
+const postAttachments=[],postChip=$("postMediaChips");
 function selectPostMedia(kind){
  activePostMedia=activePostMedia===kind?"":kind;
  postMediaFields.hidden=!activePostMedia;imageUrl.hidden=activePostMedia!=="image";videoUrl.hidden=activePostMedia!=="video";
@@ -677,16 +700,24 @@ function selectPostMedia(kind){
  if(activePostMedia)(activePostMedia==="image"?imageUrl:videoUrl).focus();
 }
 postImageChoice.onclick=()=>selectPostMedia("image");postVideoChoice.onclick=()=>selectPostMedia("video");
+$("postMediaAdd").onclick=()=>{
+ const kind=activePostMedia==="image"?"Image":"Video",field=kind==="Image"?imageUrl:videoUrl,url=safeUrl(field.value.trim());
+ if(!url)return alert("Enter a valid HTTP(S) media URL.");
+ if(postAttachments.length>=8)return alert("Maximum eight attachments.");
+ postAttachments.push({kind,url});field.value="";mediaChips(postChip,postAttachments);field.focus();
+};
 postButton.addEventListener("click",async()=>{
- const text=postText.value.trim(),img=safeUrl(imageUrl.value.trim()),vid=safeUrl(videoUrl.value.trim());
- if(!text&&!img&&!vid)return alert("Add text, an image, or a video.");
+ const text=mediaPack(postText.value,postAttachments);
+ if(!text)return alert("Add text, an image, or a video.");
+ if(text.length>2000)return alert("Post exceeds 2,000 characters including attachments.");
  postButton.disabled=true;postButton.textContent="POSTING…";
  try{
   await addDoc(collection(db,"posts"),{
    uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,photoURL:currentProfile.photoURL||"",
-   text:text.slice(0,2000),imageUrl:img,videoUrl:vid,upvotes:0,featured:false,createdAt:serverTimestamp()
+   text,upvotes:0,featured:false,createdAt:serverTimestamp()
   });
-  postText.value="";imageUrl.value="";videoUrl.value="";selectPostMedia(activePostMedia);
+  postText.value="";postAttachments.length=0;mediaChips(postChip,postAttachments);
+  imageUrl.value="";videoUrl.value="";if(activePostMedia)selectPostMedia(activePostMedia);
  }catch(error){alert("Could not post: "+error.message)}
  finally{postButton.disabled=false;postButton.textContent="POST"}
 });
@@ -715,7 +746,7 @@ function renderPost(p){
  article.dataset.postId=p.id;
  if(p.legacy===true){
   article.className="post legacy-post";
-  article.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(p.text||"")}</div>`;
+  article.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>`;
   postsElement.appendChild(article);
   return;
  }
@@ -730,9 +761,10 @@ function renderPost(p){
    <span class="admin-badge" data-community-badge="${escapeHtml(p.uid)}" hidden></span>
    <span class="time">• ${escapeHtml(formatTime(p.createdAt))}</span>
  </div>
- <div class="post-text">${richText(p.text||"")}</div>
+ <div class="post-text">${richText(postTextOnly(p.text||""))}</div>
  ${image}
  ${videoMarkup(p.videoUrl||"")}
+ ${postMediaHtml(p.text||"")}
  <div class="actions">
    <button class="small-btn upvote-btn" type="button">⬆ Upvote ${Number(p.upvotes||0)}</button>
    <button class="small-btn save-btn" type="button">${isSaved?"★ Saved":"☆ Save"}</button>
@@ -1001,7 +1033,7 @@ async function renderSavedPosts(){
   const card=document.createElement("div");
   card.className="saved-card";
   if(p.legacy===true){
-   card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(p.text||"")}</div><button class="small-btn danger remove-saved" type="button">Remove saved post</button>`;
+   card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div><button class="small-btn danger remove-saved" type="button">Remove saved post</button>`;
    card.querySelector(".remove-saved").onclick=()=>toggleSavedPost(p.id,card.querySelector(".remove-saved"));
    savedPostsList.appendChild(card);continue;
   }
@@ -1029,8 +1061,8 @@ async function renderSavedPosts(){
 <script type="module" src="site-notifications.js"></script>
 <script type="module" src="community-calls.js?v=11"></script>
 <script type="module" src="community-group-calls.js?v=11"></script>
-<script type="module" src="community-messages.js?v=17"></script>
-<script type="module" src="community-public-chat.js?v=3"></script>
+<script type="module" src="community-messages.js?v=18"></script>
+<script type="module" src="community-public-chat.js?v=4"></script>
 <script defer src="ui-svg-icons.js?v=2"></script>
 <script defer src="copyright-year.js?v=1"></script>
 </body>
