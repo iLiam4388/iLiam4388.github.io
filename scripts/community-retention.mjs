@@ -14,6 +14,12 @@ initializeApp({credential:cert(key),projectId:key.project_id});
 const db=getFirestore();
 const FETCH=300;
 
+const legacyMediaPattern=/⟦iLiam-media:v1:(?:Image|Video):[^⟧]+⟧|\[iLiam (?:Image|Video)\]\(https?:\/\/[^\s)]+\)/g;
+function textOnly(text){
+ return String(text||"").replace(legacyMediaPattern,"").trim();
+}
+
+
 async function purgeOlderMessages(collectionRef,description,keep){
  // Count aggregation avoids reading 500 messages in every inactive chat.
  const count=await collectionRef.count().get();
@@ -55,14 +61,19 @@ async function retainPosts(){
     continue;
    }
    const data=post.data();
-   if(data.legacy===true)continue;
-   // Completely remove nested reactions/comments before dropping their counts.
+   const cleanText=textOnly(data.text);
+   // Even posts already marked legacy may still contain obsolete media fields.
+   const allowed=new Set(["uid","username","text","createdAt","legacy"]);
+   const needsCleanup=data.legacy!==true || data.text!==cleanText ||
+     Object.keys(data).some(key=>!allowed.has(key));
+   if(!needsCleanup)continue;
+   // Delete reactions from archives; replace the post with text-only data.
    await db.recursiveDelete(post.ref.collection("votes"));
    await db.recursiveDelete(post.ref.collection("comments"));
    await post.ref.set({
     uid:String(data.uid||""),
     username:String(data.username||"unknown"),
-    text:String(data.text||""),
+    text:cleanText,
     createdAt:data.createdAt,
     legacy:true
    });
