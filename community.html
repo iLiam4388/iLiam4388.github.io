@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="images/favicon.png">
 <link rel="stylesheet" href="community-calls.css?v=9">
 <link rel="stylesheet" href="community-group-calls.css?v=5">
-<link rel="stylesheet" href="community-messages.css?v=6">
+<link rel="stylesheet" href="community-messages.css?v=7">
 <link rel="stylesheet" href="community-public-chat.css?v=1">
 
 <style>
@@ -95,7 +95,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 }
 .legacy-label{display:inline-block;padding:5px 10px;margin-bottom:12px;border:1px solid #fff;border-radius:12px;background:#20234b;color:#fff;font-size:13px;font-weight:700;letter-spacing:.08em}
 .post.legacy-post{box-shadow:0 0 12px #ff66ff66;background:linear-gradient(#704083,#34104f)}
-</style>
+.media-choice{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.media-choice button{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border:2px solid #77d6ff;border-radius:10px;background:#10426d;color:#fff;cursor:pointer;font:inherit}.media-choice button[aria-pressed="true"]{background:#087e94;border-color:#fff}.media-fields[hidden],.media-fields input[hidden]{display:none!important}.media-caption{font-weight:700;color:#a7eafe;margin-top:12px}</style>
 </head>
 <body>
 <h1 class="page-title">COMMUNITY</h1>
@@ -135,10 +135,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <button class="tool-btn" type="button" id="linkButton">🔗 Link</button>
 </div>
 <textarea id="postText" maxlength="2000" placeholder="Write something. Use **bold**, *italic*, __underline__, or add links."></textarea>
-<div class="media-fields">
-<input id="imageUrl" type="url" placeholder="Optional image URL">
-<input id="videoUrl" type="url" placeholder="Optional YouTube or direct video URL">
-</div>
+<div class="media-choice"><button id="postImageChoice" type="button" aria-pressed="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="2"/><path d="m21 16-6-6L5 21"/></svg> Image</button><button id="postVideoChoice" type="button" aria-pressed="false"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/></svg> Video</button></div><div class="media-fields" id="postMediaFields" hidden><input id="imageUrl" type="url" placeholder="Paste an image address" hidden><input id="videoUrl" type="url" placeholder="Paste a YouTube or direct video address" hidden></div>
 <button class="post-btn" id="postButton" type="button" disabled>POST</button>
 </section>
 
@@ -445,10 +442,10 @@ function videoMarkup(url){
   const u=new URL(safe);let id="";
   if(u.hostname.includes("youtu.be"))id=u.pathname.slice(1);
   if(u.hostname.includes("youtube.com"))id=u.searchParams.get("v")||"";
-  if(id)return`<div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(id)}" allowfullscreen loading="lazy"></iframe></div>`;
-  if(/\.(mp4|webm|ogg)(\?|$)/i.test(u.pathname+u.search))return`<div class="video-wrap"><video controls preload="metadata" src="${escapeHtml(safe)}"></video></div>`;
+  if(id)return`<div class="media-caption">Video</div><div class="video-wrap"><iframe src="https://www.youtube-nocookie.com/embed/${escapeHtml(id)}" allowfullscreen loading="lazy"></iframe></div>`;
+  if(/\.(mp4|webm|ogg)(\?|$)/i.test(u.pathname+u.search))return`<div class="media-caption">Video</div><div class="video-wrap"><video controls preload="metadata" src="${escapeHtml(safe)}"></video></div>`;
  }catch{}
- return`<p><a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">Open video</a></p>`;
+ return`<p><a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">Video</a></p>`;
 }
 
 document.querySelectorAll("[data-wrap]").forEach(button=>button.addEventListener("click",()=>{
@@ -670,6 +667,16 @@ resetCommunityButton.addEventListener("click",async()=>{
  finally{deleteAllPostsButton.disabled=false;resetCommunityButton.disabled=false}
 });
 
+let activePostMedia="";
+const postMediaFields=$("postMediaFields"),postImageChoice=$("postImageChoice"),postVideoChoice=$("postVideoChoice");
+function selectPostMedia(kind){
+ activePostMedia=activePostMedia===kind?"":kind;
+ postMediaFields.hidden=!activePostMedia;imageUrl.hidden=activePostMedia!=="image";videoUrl.hidden=activePostMedia!=="video";
+ postImageChoice.setAttribute("aria-pressed",String(activePostMedia==="image"));postVideoChoice.setAttribute("aria-pressed",String(activePostMedia==="video"));
+ if(activePostMedia!=="image")imageUrl.value="";if(activePostMedia!=="video")videoUrl.value="";
+ if(activePostMedia)(activePostMedia==="image"?imageUrl:videoUrl).focus();
+}
+postImageChoice.onclick=()=>selectPostMedia("image");postVideoChoice.onclick=()=>selectPostMedia("video");
 postButton.addEventListener("click",async()=>{
  const text=postText.value.trim(),img=safeUrl(imageUrl.value.trim()),vid=safeUrl(videoUrl.value.trim());
  if(!text&&!img&&!vid)return alert("Add text, an image, or a video.");
@@ -679,7 +686,7 @@ postButton.addEventListener("click",async()=>{
    uid:currentUser.uid,username:currentProfile.username,nickname:currentProfile.nickname,photoURL:currentProfile.photoURL||"",
    text:text.slice(0,2000),imageUrl:img,videoUrl:vid,upvotes:0,featured:false,createdAt:serverTimestamp()
   });
-  postText.value="";imageUrl.value="";videoUrl.value="";
+  postText.value="";imageUrl.value="";videoUrl.value="";selectPostMedia(activePostMedia);
  }catch(error){alert("Could not post: "+error.message)}
  finally{postButton.disabled=false;postButton.textContent="POST"}
 });
@@ -1022,8 +1029,8 @@ async function renderSavedPosts(){
 <script type="module" src="site-notifications.js"></script>
 <script type="module" src="community-calls.js?v=11"></script>
 <script type="module" src="community-group-calls.js?v=11"></script>
-<script type="module" src="community-messages.js?v=16"></script>
-<script type="module" src="community-public-chat.js?v=2"></script>
+<script type="module" src="community-messages.js?v=17"></script>
+<script type="module" src="community-public-chat.js?v=3"></script>
 <script defer src="ui-svg-icons.js?v=2"></script>
 <script defer src="copyright-year.js?v=1"></script>
 </body>
