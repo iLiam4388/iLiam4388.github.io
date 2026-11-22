@@ -95,7 +95,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 }
 .legacy-label{display:inline-block;padding:5px 10px;margin-bottom:12px;border:1px solid #fff;border-radius:12px;background:#20234b;color:#fff;font-size:13px;font-weight:700;letter-spacing:.08em}
 .post.legacy-post{box-shadow:0 0 12px #ff66ff66;background:linear-gradient(#704083,#34104f)}
-.media-choice{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.media-choice button{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border:2px solid #77d6ff;border-radius:10px;background:#10426d;color:#fff;cursor:pointer;font:inherit}.media-choice button[aria-pressed="true"]{background:#087e94;border-color:#fff}.media-fields[hidden],.media-fields input[hidden]{display:none!important}.media-caption{font-weight:700;color:#a7eafe;margin-top:12px}.legacy-media-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.legacy-media-toggle{display:inline-flex;align-items:center;gap:6px}.legacy-media-viewer{width:100%;padding:10px;border-radius:10px;background:#0003}.legacy-media-viewer[hidden]{display:none!important}.legacy-media-viewer a{display:block;margin-top:7px;color:#aeefff}.legacy-video-frame{display:block;width:min(100%,520px);aspect-ratio:16/9;border:0;border-radius:10px;background:#000}</style>
+.media-choice{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.media-choice button{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border:2px solid #77d6ff;border-radius:10px;background:#10426d;color:#fff;cursor:pointer;font:inherit}.media-choice button[aria-pressed="true"]{background:#087e94;border-color:#fff}.media-fields[hidden],.media-fields input[hidden]{display:none!important}.media-caption{font-weight:700;color:#a7eafe;margin-top:12px}</style>
 </head>
 <body>
 <h1 class="page-title">COMMUNITY</h1>
@@ -394,7 +394,7 @@ async function openPublicProfile(uid,fallback={}){
    card.className="public-profile-post";
    if(p.legacy===true){
     card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>`;
-    addLegacyMediaViewer(card,p);
+
     publicProfilePosts.appendChild(card);
     continue;
    }
@@ -456,39 +456,6 @@ function mediaChips(el,items){
  });el.hidden=!items.length;
 }
 
-function addLegacyMediaViewer(card,p){
- const items=[];
- const image=safeUrl(p.imageUrl||"");if(image)items.push({kind:"Image",url:image});
- const video=safeUrl(p.videoUrl||"");if(video)items.push({kind:"Video",url:video});
- items.push(...mediaParse(p.text||"").items);
- if(!items.length)return;
- const bar=document.createElement("div");bar.className="legacy-media-controls";
- for(const item of items){
-  const btn=document.createElement("button");btn.className="small-btn legacy-media-toggle";btn.type="button";
-  const icon=document.createElementNS("http://www.w3.org/2000/svg","svg");icon.setAttribute("viewBox","0 0 24 24");icon.setAttribute("width","16");icon.setAttribute("height","16");icon.setAttribute("stroke","currentColor");icon.setAttribute("fill","none");icon.setAttribute("stroke-width","2");
-  const path=document.createElementNS("http://www.w3.org/2000/svg","path");path.setAttribute("d",item.kind==="Image"?"M3 3h18v18H3z M3 17l6-6 4 4 3-3 5 5":"M3 5h18v14H3z M10 8l6 4-6 4z");icon.append(path);
-  const caption=document.createElement("span");caption.textContent="Show "+item.kind.toLowerCase();btn.append(icon,caption);btn.setAttribute("aria-expanded","false");
-  const viewer=document.createElement("div");viewer.className="legacy-media-viewer";viewer.hidden=true;
-  btn.onclick=()=>{
-   if(viewer.hidden&&viewer.childNodes.length===0){
-    if(item.kind==="Image"){
-     const img=document.createElement("img");img.className="post-image";img.src=item.url;img.alt="Legacy post image";img.loading="lazy";viewer.append(img);
-     const a=document.createElement("a");a.href=item.url;a.target="_blank";a.rel="noopener noreferrer";a.textContent="Open original image";viewer.append(a);
-    }else{
-     const url=new URL(item.url);let id="";
-     if(/(^|\.)youtu\.be$/i.test(url.hostname))id=url.pathname.slice(1).split("/")[0];
-     if(/(^|\.)youtube\.com$/i.test(url.hostname))id=url.searchParams.get("v")||(url.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]||"";
-     if(/^[\w-]{11}$/.test(id)){const frame=document.createElement("iframe");frame.src="https://www.youtube-nocookie.com/embed/"+id;frame.title="Legacy video";frame.allowFullscreen=true;frame.loading="lazy";frame.className="legacy-video-frame";viewer.append(frame);}
-     else if(/\.(mp4|webm|ogg)$/i.test(url.pathname)){const player=document.createElement("video");player.src=item.url;player.controls=true;player.preload="metadata";player.className="legacy-video-frame";viewer.append(player);}
-     else{const a=document.createElement("a");a.href=item.url;a.target="_blank";a.rel="noopener noreferrer";a.textContent="Open video";viewer.append(a);}
-    }
-   }
-   viewer.hidden=!viewer.hidden;caption.textContent=(viewer.hidden?"Show ":"Hide ")+item.kind.toLowerCase();btn.setAttribute("aria-expanded",String(!viewer.hidden));
-  };
-  bar.append(btn,viewer);
- }
- card.append(bar);
-}
 function postTextOnly(text){return mediaParse(text).text;}
 function postMediaHtml(text){return mediaParse(text).items.map(m=>m.kind==="Image"?'<img class="post-image" alt="Post image" loading="lazy" src="'+escapeHtml(m.url)+'">':videoMarkup(m.url)).join("");}
 
@@ -782,7 +749,7 @@ function renderPost(p){
  if(p.legacy===true){
   article.className="post legacy-post";
   article.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div>`;
-  addLegacyMediaViewer(article,p);
+
   postsElement.appendChild(article);
   return;
  }
@@ -1070,7 +1037,7 @@ async function renderSavedPosts(){
   card.className="saved-card";
   if(p.legacy===true){
    card.innerHTML=`<div class="legacy-label">LEGACY POST</div><div class="username">@${escapeHtml(p.username||"unknown")}</div><div class="post-text">${richText(postTextOnly(p.text||""))}</div><button class="small-btn danger remove-saved" type="button">Remove saved post</button>`;
-   addLegacyMediaViewer(card,p);
+
    card.querySelector(".remove-saved").onclick=()=>toggleSavedPost(p.id,card.querySelector(".remove-saved"));
    savedPostsList.appendChild(card);continue;
   }
