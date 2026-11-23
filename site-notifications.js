@@ -107,6 +107,8 @@ onAuthStateChanged(auth,async user=>{
  settings.announcements=true;settings.votes=true;paintSettings();
  permissionBanner.hidden=true;
  if(!user)return;
+ // Show the permission CTA immediately; profile reads or rule deployments must not block it.
+ offerBrowserPermission(user.uid);
  try{
   const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists()||accountUid!==user.uid)return;
   // Apply the new enabled-by-default policy once per existing account.
@@ -115,17 +117,19 @@ onAuthStateChanged(auth,async user=>{
   let prefs=profile.notificationSettings||{};
   if(profile.notificationDefaultsVersion!==2){
    prefs={...prefs,announcements:true,votes:true};
-   await updateDoc(doc(db,'profiles',user.uid),{
-    'notificationSettings.announcements':true,
-    'notificationSettings.votes':true,
-    notificationDefaultsVersion:2
-   });
+   try{
+    await updateDoc(doc(db,'profiles',user.uid),{
+     'notificationSettings.announcements':true,
+     'notificationSettings.votes':true,
+     notificationDefaultsVersion:2
+    });
+   }catch(error){console.warn('Notification preference migration will retry on next visit:',error);}
   }
   if(accountUid!==user.uid)return;
   settings.announcements=prefs.announcements!==false;
   settings.votes=prefs.votes!==false;
   paintSettings();
-  if(settings.announcements||settings.votes)offerBrowserPermission(user.uid);
+  if(!settings.announcements&&!settings.votes)permissionBanner.hidden=true;
   stopDnd=onSnapshot(doc(db,'messagePreferences',user.uid,'settings','messages'),snap=>{
    doNotDisturb=snap.exists()&&snap.data().doNotDisturb===true;
   },err=>console.warn('Do Not Disturb listener unavailable:',err));
