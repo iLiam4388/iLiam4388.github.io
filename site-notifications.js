@@ -20,7 +20,8 @@ const toggle=document.createElement('button');toggle.id='iliam-notify-settings';
 const panel=document.createElement('section');panel.id='iliam-notify-panel';panel.hidden=true;
 panel.innerHTML='<strong>iLiam notifications</strong><label><input type="checkbox" id="noticeAnnouncements">New announcements</label><label><input type="checkbox" id="noticeVotes">Upvotes and featured posts</label><p style="font-size:12px">Browser notifications work only while an iLiam page is open. Turn them on to request permission.</p>';
 document.body.append(panel);
-const settings={announcements:false,votes:false};
+const settings={announcements:true,votes:true};
+let doNotDisturb=false,stopDnd=null;
 const announceCheck=panel.querySelector('#noticeAnnouncements'),votesCheck=panel.querySelector('#noticeVotes');
 let accountUid=null;
 function paintSettings(){announceCheck.checked=settings.announcements;votesCheck.checked=settings.votes;}
@@ -37,7 +38,7 @@ async function updateSetting(key,checked){
 }
 announceCheck.onchange=e=>updateSetting('announcements',e.target.checked);
 votesCheck.onchange=e=>updateSetting('votes',e.target.checked);
-function notify(title,body){if('Notification' in window&&Notification.permission==='granted')new Notification(title,{body});}
+function notify(title,body){if(!doNotDisturb&&'Notification' in window&&Notification.permission==='granted')new Notification(title,{body});}
 function milliseconds(value){return value?.toMillis?.()??(typeof value==='number'?value:0)}
 let announcements=[],dismissed=new Set(),seenAnnouncements=new Set(),annInitial=true;
 function showNotices(){
@@ -68,22 +69,31 @@ let stopVotes=null;
 onAuthStateChanged(auth,async user=>{
  if(stopVotes){stopVotes();stopVotes=null;}
  accountUid=user?.uid||null;
- settings.announcements=false;settings.votes=false;paintSettings();
+ if(stopDnd){stopDnd();stopDnd=null;}
+ doNotDisturb=false;
+ settings.announcements=true;settings.votes=true;paintSettings();
  if(!user)return;
  try{
   const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists()||accountUid!==user.uid)return;
-  let prefs=p.data().notificationSettings;
-  if(!prefs){
-   const oldA=localStorage.getItem('iliam-notify-announcements'),oldV=localStorage.getItem('iliam-notify-votes');
-   if((oldA!==null||oldV!==null)&&confirm('Import this browser\'s previous notification preferences into your current iLiam account?')){
-    prefs={announcements:oldA==='true',votes:oldV==='true'};
-    await updateDoc(doc(db,'profiles',user.uid),{notificationSettings:prefs});
-    localStorage.removeItem('iliam-notify-announcements');
-    localStorage.removeItem('iliam-notify-votes');
-   }
+  // Apply the new enabled-by-default policy once per existing account.
+  // Later user choices are kept because the migration marker is saved.
+  const profile=p.data();
+  let prefs=profile.notificationSettings||{};
+  if(profile.notificationDefaultsVersion!==2){
+   prefs={...prefs,announcements:true,votes:true};
+   await updateDoc(doc(db,'profiles',user.uid),{
+    'notificationSettings.announcements':true,
+    'notificationSettings.votes':true,
+    notificationDefaultsVersion:2
+   });
   }
-  settings.announcements=prefs?.announcements===true;
-  settings.votes=prefs?.votes===true;paintSettings();
+  if(accountUid!==user.uid)return;
+  settings.announcements=prefs.announcements!==false;
+  settings.votes=prefs.votes!==false;
+  paintSettings();
+  stopDnd=onSnapshot(doc(db,'messagePreferences',user.uid,'settings','messages'),snap=>{
+   doNotDisturb=snap.exists()&&snap.data().doNotDisturb===true;
+  },err=>console.warn('Do Not Disturb listener unavailable:',err));
   let first=true,prior=new Map();
   stopVotes=onSnapshot(query(collection(db,'posts'),where('uid','==',user.uid)),snap=>{
    const next=new Map();
