@@ -138,7 +138,8 @@ service cloud.firestore {
         && request.resource.data.username == resource.data.username
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['nickname', 'photoURL', 'hidePostingGuidance', 'notificationSettings'])
+          .affectedKeys().hasOnly(['nickname', 'photoURL', 'hidePostingGuidance', 'notificationSettings', 'notificationDefaultsVersion'])
+        && request.resource.data.get('notificationDefaultsVersion', 2) == 2
         && request.resource.data.get('hidePostingGuidance', false) is bool
         && request.resource.data.get('notificationSettings', {'announcements': false, 'votes': false}) is map
         && request.resource.data.get('notificationSettings', {'announcements': false, 'votes': false}).keys().hasOnly(['announcements', 'votes'])
