@@ -107,7 +107,6 @@ onAuthStateChanged(auth,async user=>{
  settings.announcements=true;settings.votes=true;paintSettings();
  permissionBanner.hidden=true;
  if(!user)return;
- offerBrowserPermission(user.uid);
  try{
   const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists()||accountUid!==user.uid)return;
   // Apply the new enabled-by-default policy once per existing account.
@@ -126,6 +125,7 @@ onAuthStateChanged(auth,async user=>{
   settings.announcements=prefs.announcements!==false;
   settings.votes=prefs.votes!==false;
   paintSettings();
+  if(settings.announcements||settings.votes)offerBrowserPermission(user.uid);
   stopDnd=onSnapshot(doc(db,'messagePreferences',user.uid,'settings','messages'),snap=>{
    doNotDisturb=snap.exists()&&snap.data().doNotDisturb===true;
   },err=>console.warn('Do Not Disturb listener unavailable:',err));
