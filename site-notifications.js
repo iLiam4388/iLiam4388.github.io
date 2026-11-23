@@ -13,13 +13,46 @@ const CSS=`
 #iliam-notify-settings{position:fixed;z-index:8999;right:12px;bottom:12px;padding:10px 13px;border:1px solid cyan;border-radius:13px;background:#001b34ee;color:white;cursor:pointer;font:13px Verdana,Arial}
 #iliam-notify-panel{position:fixed;z-index:9001;right:12px;bottom:55px;width:min(320px,calc(100% - 24px));padding:16px;border:2px solid cyan;border-radius:14px;background:#00182c;color:white;font:14px Verdana,Arial;text-align:left;box-shadow:0 0 24px #00ffff66}
 #iliam-notify-panel label{display:block;margin:12px 0}#iliam-notify-panel input{width:auto;margin-right:8px}
+#iliam-permission-banner{position:fixed;z-index:9002;bottom:70px;left:50%;transform:translateX(-50%);width:min(400px,calc(100% - 32px));box-sizing:border-box;padding:16px;background:#00182c;color:#fff;border:2px solid cyan;border-radius:14px;box-shadow:0 0 24px #00ffff66;font:14px Verdana,Arial;text-align:left}
+#iliam-permission-banner button,#iliam-enable-browser{margin:8px 8px 0 0;padding:9px 12px;border:1px solid cyan;border-radius:9px;background:#003b55;color:#fff;cursor:pointer}
+#iliam-permission-banner button.secondary{border-color:#64748b;background:transparent}
 `;
 document.head.append(Object.assign(document.createElement('style'),{textContent:CSS}));
 const stack=document.createElement('div');stack.id='iliam-announcements';stack.setAttribute('aria-live','polite');document.body.append(stack);
 const toggle=document.createElement('button');toggle.id='iliam-notify-settings';toggle.textContent='🔔 Notifications';document.body.append(toggle);
 const panel=document.createElement('section');panel.id='iliam-notify-panel';panel.hidden=true;
-panel.innerHTML='<strong>iLiam notifications</strong><label><input type="checkbox" id="noticeAnnouncements">New announcements</label><label><input type="checkbox" id="noticeVotes">Upvotes and featured posts</label><p style="font-size:12px">Browser notifications work only while an iLiam page is open. Turn them on to request permission.</p>';
+panel.innerHTML='<strong>iLiam notifications</strong><label><input type="checkbox" id="noticeAnnouncements">New announcements</label><label><input type="checkbox" id="noticeVotes">Upvotes and featured posts</label><p style="font-size:12px">Browser notifications work while an iLiam page is open and require browser permission.</p><button type="button" id="iliam-enable-browser">Enable browser notifications</button><p id="iliam-permission-status" style="font-size:12px" role="status"></p>';
 document.body.append(panel);
+const permissionBanner=document.createElement('aside');permissionBanner.id='iliam-permission-banner';permissionBanner.hidden=true;
+permissionBanner.innerHTML='<strong>Enable iLiam browser notifications?</strong><p>Get announcements and activity alerts while iLiam is open.</p><button type="button" id="iliam-permission-allow">Enable notifications</button><button type="button" class="secondary" id="iliam-permission-later">Not now</button>';
+document.body.append(permissionBanner);
+const browserEnable=panel.querySelector('#iliam-enable-browser'),permissionStatus=panel.querySelector('#iliam-permission-status');
+function browserPermissionAvailable(){return window.isSecureContext&&'Notification' in window;}
+function updatePermissionUI(){
+ const state=!browserPermissionAvailable()?'unsupported':Notification.permission;
+ browserEnable.hidden=state==='granted';
+ permissionStatus.textContent=state==='granted'?'Browser notifications are allowed.':state==='denied'?'Browser notifications are blocked. Change this in your browser site settings.':state==='unsupported'?'Browser notifications are unavailable on this device or connection.':'Browser permission is needed to display system notifications.';
+ if(state!=='default')permissionBanner.hidden=true;
+}
+function offerBrowserPermission(uid){
+ updatePermissionUI();
+ if(browserPermissionAvailable()&&Notification.permission==='default'&&uid&&sessionStorage.getItem('iliam-permission-later-'+uid)!=='1')permissionBanner.hidden=false;
+}
+async function requestBrowserPermission(){
+ if(!browserPermissionAvailable()){updatePermissionUI();return;}
+ if(Notification.permission==='default'){
+  try{await Notification.requestPermission();}catch(err){console.warn('Browser notification permission:',err);}
+ }
+ updatePermissionUI();
+}
+browserEnable.onclick=requestBrowserPermission;
+permissionBanner.querySelector('#iliam-permission-allow').onclick=requestBrowserPermission;
+permissionBanner.querySelector('#iliam-permission-later').onclick=()=>{
+ const uid=auth.currentUser?.uid;
+ if(uid)sessionStorage.setItem('iliam-permission-later-'+uid,'1');
+ permissionBanner.hidden=true;
+};
+updatePermissionUI();
 const settings={announcements:true,votes:true};
 let doNotDisturb=false,stopDnd=null;
 const announceCheck=panel.querySelector('#noticeAnnouncements'),votesCheck=panel.querySelector('#noticeVotes');
@@ -33,7 +66,7 @@ async function updateSetting(key,checked){
  const old=settings[key];settings[key]=checked;paintSettings();
  try{
   await updateDoc(doc(db,'profiles',uid),{['notificationSettings.'+key]:checked});
-  if(checked&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();
+  if(checked)updatePermissionUI();
  }catch(error){settings[key]=old;paintSettings();console.warn('Notification setting not saved:',error);alert('Could not save notification setting to your account.');}
 }
 announceCheck.onchange=e=>updateSetting('announcements',e.target.checked);
@@ -72,7 +105,9 @@ onAuthStateChanged(auth,async user=>{
  if(stopDnd){stopDnd();stopDnd=null;}
  doNotDisturb=false;
  settings.announcements=true;settings.votes=true;paintSettings();
+ permissionBanner.hidden=true;
  if(!user)return;
+ offerBrowserPermission(user.uid);
  try{
   const p=await getDoc(doc(db,'profiles',user.uid));if(!p.exists()||accountUid!==user.uid)return;
   // Apply the new enabled-by-default policy once per existing account.
