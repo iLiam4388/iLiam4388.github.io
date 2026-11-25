@@ -10,7 +10,7 @@ function showWelcome(username){
   const name=typeof username==='string'?username.trim():'';
   if(terminal){terminal.textContent=name?' • USER: @'+name:'';terminal.hidden=!name;}
 }
-onAuthStateChanged(auth,user=>{
+if(terminal)onAuthStateChanged(auth,user=>{
   const generation=++authGeneration;
   if(stopProfile){stopProfile();stopProfile=null;}
   showWelcome('');
@@ -31,6 +31,11 @@ for(const page of ["videos","photos","downloads","community","store","games","ot
   const {badge,label}=makeBadge();link.append(badge);
   badges.set(page,{badge,label});
 }
+const title=document.querySelector('[data-nav-badge-page]');
+const pageId=title?.dataset.navBadgePage;
+if(title&&["videos","photos","downloads","community","store","games","other"].includes(pageId)){
+  const {badge,label}=makeBadge();title.append(badge);badges.set(pageId,{badge,label});
+}
 let records=[],expiryTimer;
 function renderBadges(){
   clearTimeout(expiryTimer);
@@ -46,8 +51,15 @@ function renderBadges(){
   }
   if(Number.isFinite(next))expiryTimer=setTimeout(renderBadges,Math.min(2147483647,Math.max(0,next-Date.now())));
 }
-onSnapshot(collection(db,'navBadges'),snap=>{
-  records=snap.docs.map(d=>({id:d.id,data:d.data()}));renderBadges();
-},error=>{records=[];renderBadges();console.warn('Navigation badges unavailable:',error);});
+function badgeError(error){records=[];renderBadges();console.warn('Navigation badges unavailable:',error);}
+if(pageId&&badges.has(pageId)){
+  onSnapshot(doc(db,'navBadges',pageId),snap=>{
+    records=snap.exists()?[{id:snap.id,data:snap.data()}]:[];renderBadges();
+  },badgeError);
+}else if(badges.size){
+  onSnapshot(collection(db,'navBadges'),snap=>{
+    records=snap.docs.map(d=>({id:d.id,data:d.data()}));renderBadges();
+  },badgeError);
+}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderBadges();});
 window.addEventListener('pageshow',renderBadges);

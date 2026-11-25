@@ -1,0 +1,32 @@
+.new-stuff-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  vertical-align:middle;
+  margin-left:5px;
+  padding:3px 6px;
+  border-radius:7px;
+  background:#ffeb3b;
+  color:#171100;
+  font-size:11px;
+  font-weight:900;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  max-width:180px;
+  box-shadow:0 0 8px #ffeb3b;
+}
+.new-stuff-tag[hidden]{display:none!important}
+.new-stuff-mark{
+  flex-shrink:0;
+  display:inline-block;
+  background:#b50025;
+  color:white;
+  border-radius:50%;
+  width:15px;
+  height:15px;
+  line-height:15px;
+  text-align:center;
+}
+/* Page titles use the same badge without inheriting heading glow or spacing. */
+[data-nav-badge-page] .new-stuff-tag{font-family:Verdana,Arial,sans-serif;font-size:11px;line-height:normal;letter-spacing:normal;text-transform:none;text-shadow:none;margin-left:10px;text-align:center;vertical-align:middle}
+[data-nav-badge-page] .new-stuff-mark{line-height:15px}

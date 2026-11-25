@@ -69,6 +69,7 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
 #adminLoginView{display:none!important}
 </style>
 <link rel="stylesheet" href="account-widget.css">
+<link rel="stylesheet" href="nav-badges.css?v=1">
 </head>
 <body>
 <header>
@@ -81,7 +82,7 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
 </header>
 
 <section class="hero">
-  <h1>GAMES</h1>
+  <h1 data-nav-badge-page="games">GAMES</h1>
   <p>Pick a game and play! AND NO ADS!</p>
 </section>
 <div class="status" id="status">Connecting to Firebase…</div>
@@ -366,6 +367,7 @@ onSnapshot(q,snap=>{
 });
 </script>
 <script type="module" src="account-widget.js"></script>
+<script type="module" src="nav-badges.js?v=5"></script>
 <script type="module" src="site-notifications.js"></script>
 <script type="module" src="iliam-sitewide-calls.js?v=1"></script>
 <script defer src="ui-svg-icons.js?v=2"></script>

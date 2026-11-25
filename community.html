@@ -99,9 +99,10 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 .legacy-label{display:inline-block;padding:5px 10px;margin-bottom:12px;border:1px solid #fff;border-radius:12px;background:#20234b;color:#fff;font-size:13px;font-weight:700;letter-spacing:.08em}
 .post.legacy-post{box-shadow:0 0 12px #ff66ff66;background:linear-gradient(#704083,#34104f)}
 .media-choice{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.media-choice button{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border:2px solid #77d6ff;border-radius:10px;background:#10426d;color:#fff;cursor:pointer;font:inherit}.media-choice button[aria-pressed="true"]{background:#087e94;border-color:#fff}.media-fields[hidden],.media-fields input[hidden]{display:none!important}.media-caption{font-weight:700;color:#a7eafe;margin-top:12px}</style>
+<link rel="stylesheet" href="nav-badges.css?v=1">
 </head>
 <body>
-<h1 class="page-title">COMMUNITY</h1>
+<h1 data-nav-badge-page="community" class="page-title">COMMUNITY</h1>
 
 <div class="top-buttons">
   <a class="back-btn" href="index.html">← BACK HOME</a>
@@ -1070,6 +1071,7 @@ async function renderSavedPosts(){
  }
 }
 </script>
+<script type="module" src="nav-badges.js?v=5"></script>
 <script type="module" src="site-notifications.js?v=permission-fix-3"></script>
 <script type="module" src="community-calls.js?v=11"></script>
 <script type="module" src="community-group-calls.js?v=11"></script>
