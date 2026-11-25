@@ -106,11 +106,6 @@ body{
   box-shadow:0 0 25px cyan;
 }
 
-#new-stuff-for-you[hidden]{display:none!important}
-#new-stuff-list{display:grid;gap:10px}
-#new-stuff-list a{display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:fit-content;max-width:100%;color:#003b77;font-weight:900;text-decoration:none}
-#new-stuff-list a:hover{text-decoration:underline}
-#new-stuff-list .new-stuff-tag{margin-left:0}
 .content-card h1{
   font-size:36px;
   text-shadow:0 0 10px cyan;
@@ -228,22 +223,17 @@ body{
 </div>
 
 <div class="terminal">
-  SYSTEM ONLINE • <span id="terminal-welcome">WELCOME TO iLIAM!</span>
+  SYSTEM ONLINE<span id="terminal-user" hidden></span> • WELCOME TO iLiam!
 </div>
 
 <div class="content-card">
-  <h1 id="home-welcome">WELCOME TO iLIAM</h1>
+  <h1>WELCOME TO iLIAM</h1>
   <p>
     Welcome to my weird internet universe. This site has 
     Videos, Photos, Downloads, Community, Games, a Store, and an Other section!
     And random internet chaos...
   </p>
 </div>
-
-<section class="content-card" id="new-stuff-for-you" hidden>
-  <h1>New stuff for you</h1>
-  <div id="new-stuff-list" aria-live="polite"></div>
-</section>
 
 <div class="content-card">
   <h1>LATEST STUFF</h1>
@@ -267,7 +257,7 @@ body{
 </section>
 
 <footer class="footer">© <span data-copyright-year>2026</span> iLiam</footer>
-<script type="module" src="nav-badges.js?v=3"></script>
+<script type="module" src="nav-badges.js?v=4"></script>
 <script type="module" src="account-widget.js"></script>
 <script type="module" src="reviews.js?v=classic-3"></script>
 <script type="module" src="site-notifications.js?v=permission-fix-3"></script>
