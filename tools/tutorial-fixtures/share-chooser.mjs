@@ -7,8 +7,8 @@ import {setTimeout as delay} from 'node:timers/promises';
 let captureDir, shot, words;
 function word(label){return words.find(w=>w.text===label);}
 function tabRow(){
-  const y=word('Window')?.y??0;
-  return words.find(w=>w.y>y+15 && /community|iliam/i.test(w.text));
+  const y=words.find(w=>/^Wind/i.test(w.text))?.y??0;
+  return words.find(w=>w.y>y+15 && /whiteboard/i.test(w.text));
 }
 function readDesktop(){
   execFileSync('import',['-window','root',shot]);
@@ -20,13 +20,16 @@ export async function prepareShare(page,action){
   if(action.chooser){
     captureDir=await fs.mkdtemp(path.join(os.tmpdir(),'iliam-chooser-'));
     shot=path.join(captureDir,'screen.png');
+    const board=await page.context().newPage();
+    await board.goto('https://iliam4388.github.io/whiteboard.html');
     await page.bringToFront();
     await page.locator('#gc-share').click();
     for(let i=0;i<8;i++){
       words=readDesktop();
-      if(word('Cancel')&&word('Window'))return;
+      if(words.some(w=>/Whiteboard/i.test(w.text)) && words.some(w=>/Tab/i.test(w.text)))return;
       await delay(200);
     }
+    await fs.copyFile(shot,'/tmp/chooser-debug.png');
     throw Error('Native chooser was not visible: '+words.map(w=>w.text).join(' '));
   }
   // Choose a single tab in Chromium's native picker with real keyboard input.
@@ -34,6 +37,7 @@ export async function prepareShare(page,action){
   if(!select) throw Error('No iLiam tab in the sharing chooser');
   await clickWord(select);
   words=readDesktop();
+  await fs.copyFile(shot,'/tmp/chooser-debug.png');
   const share=words.filter(w=>w.text==='Share').at(-1);
   if(!share)throw Error('Native Share button was not visible');
   await clickWord(share);
@@ -52,11 +56,11 @@ x.XSync(d,0)`,String(Math.round(w.x+w.w/2)),String(Math.round(w.y+w.h/2))]);
   await delay(200);
 }
 export async function captureChooser(filename){
-  const cancel=word('Cancel'),win=word('Window');
+  const win=words.find(w=>/^Wind/i.test(w.text)),cancel=words.find(w=>/^Canc/i.test(w.text));
   const tab=tabRow();
-  if(!cancel||!win||!tab)throw Error('Could not locate the native source list');
+  if(!win||!tab)throw Error('Could not locate the native source list');
   const left=Math.max(0,win.x-270),top=Math.max(0,win.y-105);
-  const bottom=cancel.y+cancel.h+35;
+  const bottom=cancel ? cancel.y+cancel.h+35 : top+530;
   execFileSync('convert',[shot,'-fill','none','-stroke','#ffe24a','-strokewidth','4','-draw',
     'roundrectangle '+(tab.x-8)+','+(tab.y-7)+' '+(tab.x+tab.w+10)+','+(tab.y+tab.h+7)+' 4,4',
     '-crop','680x'+(bottom-top)+'+'+left+'+'+top,'+repage',filename]);

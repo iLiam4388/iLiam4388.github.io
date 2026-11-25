@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/tutorial-screenshots.yml'
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: tutorial-screenshots-${{ github.ref }}
   cancel-in-progress: false
@@ -31,6 +31,14 @@ jobs:
         run: |
           export CAPTURE_CHROMIUM="$(command -v google-chrome)"
           xvfb-run -a -s '-screen 0 1440x1000x24' node tools/capture-tutorial-screens.mjs
+      - name: Preserve capture results on the verification branch
+        if: always() && github.ref_name == 'qa/tutorial-capture-nov24'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if test -f /tmp/chooser-debug.png; then cp /tmp/chooser-debug.png tools/chooser-debug.png; git add tools/chooser-debug.png; fi
+          git add images/tutorials
+          if ! git diff --cached --quiet; then git commit -m 'Record native chooser capture results'; git push; fi
       - uses: actions/upload-artifact@v4
         with:
           name: iliam-tutorial-screens
