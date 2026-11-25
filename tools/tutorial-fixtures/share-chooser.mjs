@@ -4,19 +4,27 @@ import os from 'node:os';
 import path from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 
-let captureDir, shot, words;
-function word(label){return words.find(w=>w.text===label);}
-function tabRow(){
-  const y=words.find(w=>/^Wind/i.test(w.text))?.y??0;
-  return words.find(w=>w.y>y+15 && /whiteboard/i.test(w.text));
-}
-function readDesktop(){
+let captureDir, shot, panel, row, buttons;
+function desktopGeometry(){
   execFileSync('import',['-window','root',shot]);
-  const tsv=execFileSync('tesseract',[shot,'stdout','--psm','11','tsv'],{encoding:'utf8',stdio:['ignore','pipe','ignore']});
-  return tsv.trim().split('\n').slice(1).map(row=>row.split('\t')).filter(c=>c[0]==='5').map(c=>({x:+c[6],y:+c[7],w:+c[8],h:+c[9],text:c[11].trim()}));
+  const geometry=execFileSync('convert',[shot,'-colorspace','Gray','-threshold','96%',
+    '-define','connected-components:verbose=true','-define','connected-components:area-threshold=1000',
+    '-connected-components','4','null:'],{encoding:'utf8'});
+  const boxes=[...geometry.matchAll(/(\d+)x(\d+)\+(\d+)\+(\d+)[^\n]*?gray\(([^)]+)\)/g)].map(m=>({w:+m[1],h:+m[2],x:+m[3],y:+m[4],light:['255','100%','1'].includes(m[5])}));
+  panel=boxes.find(b=>b.light&&b.w>=500&&b.w<=850&&b.h>=400&&b.h<=700);
+  if(!panel)return false;
+  buttons=boxes.filter(b=>!b.light&&b.y>panel.y+panel.h-85&&b.y<panel.y+panel.h-10&&b.x>panel.x+panel.w/2&&b.x<panel.x+panel.w&&b.w>55&&b.w<130&&b.h>20&&b.h<58).sort((a,b)=>a.x-b.x);
+  const enlarged=path.join(captureDir,'ocr.png');
+  execFileSync('convert',[shot,'-crop',panel.w+'x'+panel.h+'+'+panel.x+'+'+panel.y,'+repage','-resize','200%','-colorspace','Gray',enlarged]);
+  const tsv=execFileSync('tesseract',[enlarged,'stdout','--psm','11','tsv'],{encoding:'utf8',stdio:['ignore','pipe','ignore']});
+  const words=tsv.trim().split('\n').map(s=>s.split('\t')).filter(c=>c[0]==='5');
+  const name=words.find(c=>/whiteboard/i.test(c[11]));
+  if(!name||!words.some(c=>c[11]==='Window'))return false;
+  row={x:panel.x+Number(name[6])/2,y:panel.y+Number(name[7])/2,w:Number(name[8])/2,h:Number(name[9])/2};
+  return true;
 }
 export async function prepareShare(page,action){
-  if(!process.env.DISPLAY)throw Error('The native sharing chooser requires a headed Chromium window on an isolated display.');
+  if(!process.env.DISPLAY)throw Error('The native sharing chooser requires an isolated desktop display.');
   if(action.chooser){
     captureDir=await fs.mkdtemp(path.join(os.tmpdir(),'iliam-chooser-'));
     shot=path.join(captureDir,'screen.png');
@@ -25,22 +33,14 @@ export async function prepareShare(page,action){
     await page.bringToFront();
     await page.locator('#gc-share').click();
     for(let i=0;i<8;i++){
-      words=readDesktop();
-      if(words.some(w=>/Whiteboard/i.test(w.text)) && words.some(w=>/Tab/i.test(w.text)))return;
+      if(desktopGeometry())return;
       await delay(200);
     }
-    await fs.copyFile(shot,'/tmp/chooser-debug.png');
-    throw Error('Native chooser was not visible: '+words.map(w=>w.text).join(' '));
+    throw Error('The native chooser did not show the Whiteboard tab.');
   }
-  // Choose a single tab in Chromium's native picker with real keyboard input.
-  const select=tabRow();
-  if(!select) throw Error('No iLiam tab in the sharing chooser');
-  await clickWord(select);
-  words=readDesktop();
-  await fs.copyFile(shot,'/tmp/chooser-debug.png');
-  const share=words.filter(w=>w.text==='Share').at(-1);
-  if(!share)throw Error('Native Share button was not visible');
-  await clickWord(share);
+  await clickWord(row);
+  if(!desktopGeometry()||buttons.length!==2)throw Error('Could not locate the two dialog actions after selecting the Whiteboard tab.');
+  await clickWord(buttons[1]);
   await page.getByRole('button',{name:/Stop sharing/i}).waitFor();
   await fs.rm(captureDir,{recursive:true});
 }
@@ -56,12 +56,8 @@ x.XSync(d,0)`,String(Math.round(w.x+w.w/2)),String(Math.round(w.y+w.h/2))]);
   await delay(200);
 }
 export async function captureChooser(filename){
-  const win=words.find(w=>/^Wind/i.test(w.text)),cancel=words.find(w=>/^Canc/i.test(w.text));
-  const tab=tabRow();
-  if(!win||!tab)throw Error('Could not locate the native source list');
-  const left=Math.max(0,win.x-270),top=Math.max(0,win.y-105);
-  const bottom=cancel ? cancel.y+cancel.h+35 : top+530;
+  const {x,y,w,h}=panel;
   execFileSync('convert',[shot,'-fill','none','-stroke','#ffe24a','-strokewidth','4','-draw',
-    'roundrectangle '+(tab.x-8)+','+(tab.y-7)+' '+(tab.x+tab.w+10)+','+(tab.y+tab.h+7)+' 4,4',
-    '-crop','680x'+(bottom-top)+'+'+left+'+'+top,'+repage',filename]);
+    'roundrectangle '+(row.x-40)+','+(row.y-9)+' '+(row.x+row.w+12)+','+(row.y+row.h+9)+' 5,5',
+    '-crop',(w+24)+'x'+(h+24)+'+'+(x-12)+'+'+(y-12),'+repage',filename]);
 }

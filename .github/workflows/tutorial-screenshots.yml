@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - 'tools/tutorial-fixtures/share-chooser.mjs'
       - '.github/workflows/tutorial-screenshots.yml'
 permissions:
   contents: write
