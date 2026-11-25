@@ -2,545 +2,1345 @@
   {
     "id": 1,
     "page": "index.html",
-    "state": "home",
-    "selectors": [
-      "a.community",
-      "a.other",
-      "h1:has-text('LATEST STUFF')"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "a.other",
+        "instruction": "Choose Other on Home to find Tutorials, Whiteboard and the Rider editors."
+      },
+      {
+        "target": ".back-btn",
+        "instruction": "Choose Back Home to return to the main menu.",
+        "before": [
+          "a.other"
+        ]
+      },
+      {
+        "target": "h1:has-text(\"LATEST STUFF\")",
+        "instruction": "Read Latest Stuff on Home to see what changed.",
+        "before": [
+          ".back-btn"
+        ]
+      }
+    ]
   },
   {
     "id": 2,
     "page": "community.html",
-    "state": "signup",
-    "selectors": [
-      "#signupTab",
-      "#authUsernameInput",
-      "#authSubmitButton"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#signupTab",
+        "instruction": "Choose Sign Up in the Community sign-in window."
+      },
+      {
+        "target": "#authUsernameInput",
+        "instruction": "Enter a unique username and a public nickname. Your username is permanent.",
+        "before": [
+          "#signupTab",
+          {
+            "fill": "#authUsernameInput",
+            "value": "demo_studio"
+          },
+          {
+            "fill": "#authNicknameInput",
+            "value": "Demo Studio"
+          }
+        ]
+      },
+      {
+        "target": "#authSubmitButton",
+        "instruction": "Enter and confirm a private password of at least six characters, then select Sign Up.",
+        "before": [
+          {
+            "fill": "#authPasswordInput",
+            "value": "example-only"
+          },
+          {
+            "fill": "#authConfirmPasswordInput",
+            "value": "example-only"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 3,
     "page": "community.html",
-    "state": "login",
-    "selectors": [
-      "#loginTab",
-      "#profileButton",
-      "#saveProfileButton"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#authSubmitButton",
+        "instruction": "Enter your existing username and password, then choose Log In.",
+        "before": [
+          {
+            "fill": "#authUsernameInput",
+            "value": "demo_studio"
+          },
+          {
+            "fill": "#authPasswordInput",
+            "value": "example-only"
+          }
+        ]
+      },
+      {
+        "target": "#profileButton",
+        "instruction": "Select Profile to manage your public details.",
+        "before": [
+          "#authSubmitButton"
+        ]
+      },
+      {
+        "target": "#saveProfileButton",
+        "instruction": "Edit your nickname and choose Save Profile. Use Sign Out when you finish on a shared device.",
+        "before": [
+          "#profileButton",
+          {
+            "fill": "#nicknameInput",
+            "value": "Demo Sketch Studio"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 4,
     "page": "index.html",
-    "state": "notifications",
-    "selectors": [
-      "#iliam-permission-allow",
-      "#noticeAnnouncements",
-      "#noticeVotes"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#iliam-permission-allow",
+        "instruction": "Choose Enable notifications if you want browser alerts. Your browser may ask for permission."
+      },
+      {
+        "target": "#noticeAnnouncements",
+        "instruction": "Open Notifications and choose whether to receive announcements.",
+        "before": [
+          "#iliam-permission-later",
+          "#iliam-notify-settings"
+        ]
+      },
+      {
+        "target": "#iliam-permission-status",
+        "instruction": "Read the permission status. If alerts are blocked, check the site permissions in your browser."
+      }
+    ]
   },
   {
     "id": 5,
     "page": "community.html",
-    "state": "community",
-    "selectors": [
-      ".top-buttons",
-      "#iliam-messages-button",
-      "#posts"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".featured-label",
+        "instruction": "Scroll through Community. Look for the Featured label on highlighted posts."
+      },
+      {
+        "target": ".top-buttons",
+        "instruction": "Use the top buttons to open Saved Posts, calls, Messages, Public Chat or Profile."
+      },
+      {
+        "target": ".post-text >> nth=0",
+        "instruction": "Read a public post in the feed. Use Messages for private conversations."
+      }
+    ]
   },
   {
     "id": 6,
     "page": "community.html",
-    "state": "post",
-    "selectors": [
-      "#postText",
-      ".toolbar",
-      "#postButton"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#postText",
+        "instruction": "Under Post Something, enter the text you want everyone to see.",
+        "before": [
+          {
+            "fill": "#postText",
+            "value": "I just finished my first whiteboard sketch!"
+          }
+        ]
+      },
+      {
+        "target": "#postButton",
+        "instruction": "Check the text and select Post to publish it."
+      },
+      {
+        "target": "#restorePostingGuidance",
+        "instruction": "If you dismissed the posting guidelines, select Show posting guidelines to read them again.",
+        "before": [
+          "#dismissPostingGuidance"
+        ]
+      }
+    ]
   },
   {
     "id": 7,
     "page": "community.html",
-    "state": "link",
-    "selectors": [
-      "#linkButton",
-      "#linkButton",
-      "#postText"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#linkButton",
+        "instruction": "Choose Link. Enter a trusted HTTP or HTTPS address and the text readers should see."
+      },
+      {
+        "target": "#postText",
+        "instruction": "Review the link text and address in the composer.",
+        "before": [
+          {
+            "linkPrompt": true
+          }
+        ]
+      },
+      {
+        "target": ".post-text a",
+        "instruction": "After publishing, readers can open the destination by selecting the linked text.",
+        "before": [
+          "#postButton"
+        ]
+      }
+    ]
   },
   {
     "id": 8,
     "page": "community.html",
-    "state": "image",
-    "selectors": [
-      "#postImageChoice",
-      "#imageUrl",
-      "#postMediaAdd",
-      "#postButton"
-    ],
     "steps": [
-      "Open the Community post composer and select Image.",
-      "Paste a direct public HTTPS image address into the image field.",
-      "Select Add to attach the image. Repeat for more images.",
-      "Check your attachment and select POST to publish."
+      {
+        "target": "#postImageChoice",
+        "instruction": "Choose Image under Post Something."
+      },
+      {
+        "target": "#imageUrl",
+        "instruction": "Paste a direct public HTTPS image address.",
+        "before": [
+          "#postImageChoice",
+          {
+            "fill": "#imageUrl",
+            "value": "https://iliam4388.github.io/images/tpu.png"
+          }
+        ]
+      },
+      {
+        "target": "#postMediaAdd",
+        "instruction": "Choose Add to attach the image."
+      },
+      {
+        "target": "#postButton",
+        "instruction": "Check the attachment chip, then select Post when ready.",
+        "before": [
+          "#postMediaAdd"
+        ]
+      }
     ]
   },
   {
     "id": 9,
     "page": "community.html",
-    "state": "video",
-    "selectors": [
-      "#postVideoChoice",
-      "#videoUrl",
-      "#postMediaAdd",
-      "#postButton"
-    ],
     "steps": [
-      "Select Video in the Community post composer.",
-      "Paste a supported YouTube or direct video address.",
-      "Select Add and check the attachment.",
-      "Select POST when you are ready."
+      {
+        "target": "#postVideoChoice",
+        "instruction": "Choose Video under Post Something."
+      },
+      {
+        "target": "#videoUrl",
+        "instruction": "Paste a supported video address.",
+        "before": [
+          "#postVideoChoice",
+          {
+            "fill": "#videoUrl",
+            "value": "https://iliam4388.github.io/videos/golden-sphere.mp4"
+          }
+        ]
+      },
+      {
+        "target": "#postMediaAdd",
+        "instruction": "Choose Add to attach the video."
+      },
+      {
+        "target": "#postButton",
+        "instruction": "Check the attachment chip, then select Post when ready.",
+        "before": [
+          "#postMediaAdd"
+        ]
+      }
     ]
   },
   {
     "id": 10,
     "page": "community.html",
-    "state": "feed",
-    "selectors": [
-      ".upvote-btn",
-      ".comment-form",
-      ".demo-reply"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".upvote-btn",
+        "instruction": "Choose Upvote on a post you want to support."
+      },
+      {
+        "target": ".comment-form input",
+        "instruction": "Open Comments, type your comment and choose Send.",
+        "before": [
+          ".comments-btn",
+          {
+            "fill": ".comment-form input",
+            "value": "I like the mountain idea."
+          }
+        ]
+      },
+      {
+        "target": ".reply-btn",
+        "instruction": "Choose Show comments, then Reply on the comment you want to answer.",
+        "before": [
+          ".toggle-comments-btn"
+        ]
+      }
+    ]
   },
   {
     "id": 11,
     "page": "community.html",
-    "state": "feed",
-    "selectors": [
-      ".save-btn",
-      "#savedPostsButton",
-      ".username"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".save-btn",
+        "instruction": "Select Save on a post you want to revisit."
+      },
+      {
+        "target": "#savedPostsButton",
+        "instruction": "Open Saved Posts to find your bookmarks.",
+        "before": [
+          ".save-btn"
+        ]
+      },
+      {
+        "target": ".profile-link >> nth=0",
+        "instruction": "Select a name or avatar in the feed to open its public profile. Legacy posts display text only."
+      }
+    ]
   },
   {
     "id": 12,
     "page": "community.html",
-    "state": "feed",
-    "selectors": [
-      ".delete-btn",
-      ".comment-form",
-      ".delete-btn"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".delete-btn",
+        "instruction": "Find Delete Post on your own post. Check which post you selected."
+      },
+      {
+        "target": ".delete-comment",
+        "instruction": "To remove a comment instead, open Comments and Show comments, then choose its Delete button.",
+        "before": [
+          ".comments-btn",
+          ".toggle-comments-btn"
+        ]
+      },
+      {
+        "target": ".save-btn",
+        "instruction": "To remove only a bookmark, use Saved. Deleting content affects other readers.",
+        "before": [
+          ".save-btn"
+        ]
+      }
+    ]
   },
   {
     "id": 13,
     "page": "community.html",
-    "state": "newchat",
-    "selectors": [
-      "#im-add",
-      "#im-search",
-      "#im-create"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#im-add",
+        "instruction": "Open Messages and choose Add user.",
+        "before": [
+          "#iliam-messages-button"
+        ]
+      },
+      {
+        "target": "#im-create",
+        "instruction": "Search for one person, select them and choose Start private chat.",
+        "before": [
+          "#im-add",
+          {
+            "fill": "#im-search",
+            "value": "River"
+          },
+          "#im-people button"
+        ]
+      },
+      {
+        "target": "#im-send",
+        "instruction": "Type a message in the conversation and choose Send.",
+        "before": [
+          "#im-create",
+          {
+            "fill": "#im-input",
+            "value": "Ready to draw?"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 14,
     "page": "community.html",
-    "state": "groupchat",
-    "selectors": [
-      "#im-add",
-      "#im-group-name",
-      "#im-create"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#im-create",
+        "instruction": "In Add user, select two or three people, name the group and choose Create group chat.",
+        "before": [
+          "#iliam-messages-button",
+          "#im-add",
+          "#im-people button:has-text(\"River\")",
+          "#im-people button:has-text(\"Sky\")",
+          {
+            "fill": "#im-group-name",
+            "value": "Art Circle"
+          }
+        ]
+      },
+      {
+        "target": "#im-edit-group",
+        "instruction": "Open the group and choose Edit group.",
+        "before": [
+          "#im-create"
+        ]
+      },
+      {
+        "target": "#im-save-group",
+        "instruction": "Review the group name and member list, then select Save changes.",
+        "before": [
+          "#im-edit-group",
+          {
+            "fill": "#im-edit-title",
+            "value": "Art Circle Studio"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 15,
     "page": "community.html",
-    "state": "message",
-    "selectors": [
-      ".demo-reply",
-      "#im-reply-composer",
-      "#im-send"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".im-reply-action:has-text(\"Reply\") >> nth=0",
+        "instruction": "Select Reply on the specific message you want to answer.",
+        "before": [
+          "#iliam-messages-button",
+          "#im-conversations button:has-text(\"River\")"
+        ]
+      },
+      {
+        "target": "#im-reply-composer",
+        "instruction": "Check the quoted message above the composer. Use × to cancel the reply.",
+        "before": [
+          ".im-reply-action:has-text(\"Reply\") >> nth=0"
+        ]
+      },
+      {
+        "target": "#im-send",
+        "instruction": "Type your answer and choose Send. Keep a separate copy of important messages.",
+        "before": [
+          {
+            "fill": "#im-input",
+            "value": "Yes! I will bring a sketch."
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 16,
     "page": "community.html",
-    "state": "message",
-    "selectors": [
-      "#im-image",
-      "#im-attach-video",
-      "#im-link"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#im-image",
+        "instruction": "In a conversation, choose Image or Video for media, or Link for a website.",
+        "before": [
+          "#iliam-messages-button",
+          "#im-conversations button:has-text(\"River\")"
+        ]
+      },
+      {
+        "target": "#im-media-insert",
+        "instruction": "Paste the media address, then choose Insert.",
+        "before": [
+          "#im-image",
+          {
+            "fill": "#im-media-url",
+            "value": "https://iliam4388.github.io/images/tpu.png"
+          }
+        ]
+      },
+      {
+        "target": "#im-send",
+        "instruction": "Check the attachment and select Send. Use × on the chip to remove it.",
+        "before": [
+          "#im-media-insert"
+        ]
+      }
+    ]
   },
   {
     "id": 17,
     "page": "community.html",
-    "state": "message-settings",
-    "selectors": [
-      "#im-settings-open",
-      "#im-dnd",
-      "#im-block-search"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#im-settings-open",
+        "instruction": "Open Settings in Messages to manage privacy and notifications.",
+        "before": [
+          "#iliam-messages-button"
+        ]
+      },
+      {
+        "target": ".im-dnd-row",
+        "instruction": "Enable Do Not Disturb to mute message notifications. You can also block individual accounts.",
+        "before": [
+          "#im-settings-open"
+        ]
+      },
+      {
+        "target": "#im-delete",
+        "instruction": "To remove a conversation, open it and review the Delete confirmation carefully. Keep copies of important messages.",
+        "before": [
+          "#im-settings-close",
+          "#im-conversations button:has-text(\"River\")"
+        ]
+      }
+    ]
   },
   {
     "id": 18,
     "page": "community.html",
-    "state": "public",
-    "selectors": [
-      "#pc-text",
-      ".demo-reply",
-      "#pc-send"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#pc-text",
+        "instruction": "Open Public Chat and type a message for everyone.",
+        "before": [
+          "#iliam-public-chat-button",
+          {
+            "fill": "#pc-text",
+            "value": "Hello, sketch club!"
+          }
+        ]
+      },
+      {
+        "target": ".pc-message-actions button:has-text(\"Reply\") >> nth=0",
+        "instruction": "Choose Reply on an existing message to answer in context."
+      },
+      {
+        "target": "#pc-send",
+        "instruction": "Check the reply preview and choose Send. Everyone in Public Chat can read it.",
+        "before": [
+          ".pc-message-actions button:has-text(\"Reply\") >> nth=0",
+          {
+            "fill": "#pc-text",
+            "value": "A mountain landscape!"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 19,
     "page": "community.html",
-    "state": "public-media",
-    "selectors": [
-      "#pc-image",
-      "#pc-media-url",
-      "#pc-media-add"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#pc-image",
+        "instruction": "Choose Image or Video for a media address. Choose Link for clickable text.",
+        "before": [
+          "#iliam-public-chat-button"
+        ]
+      },
+      {
+        "target": "#pc-media-add",
+        "instruction": "Paste a public address and choose Add.",
+        "before": [
+          "#pc-image",
+          {
+            "fill": "#pc-media-url",
+            "value": "https://iliam4388.github.io/images/tpu.png"
+          }
+        ]
+      },
+      {
+        "target": "#pc-send",
+        "instruction": "Check the attachment and select Send. Use × to remove the attachment first if needed.",
+        "before": [
+          "#pc-media-add"
+        ]
+      }
+    ]
   },
   {
     "id": 20,
     "page": "community.html",
-    "state": "call",
-    "selectors": [
-      "#gc-search",
-      "#gc-users",
-      "#gc-video"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#gc-search",
+        "instruction": "Choose Call Someone and search for a person who has agreed to join.",
+        "before": [
+          "#iliam-group-button",
+          {
+            "fill": "#gc-search",
+            "value": "River"
+          }
+        ]
+      },
+      {
+        "target": "#gc-video",
+        "instruction": "Select one person for a private call or up to three others for a group. Choose Audio call or Video call.",
+        "before": [
+          "#gc-users button:has-text(\"River\")"
+        ]
+      },
+      {
+        "target": "#im-video",
+        "instruction": "You can also open a Messages conversation and choose Video call from its call menu.",
+        "before": [
+          "#gc-close",
+          "#iliam-messages-button",
+          "#im-conversations button:has-text(\"River\")",
+          "#im-call"
+        ]
+      }
+    ]
   },
   {
     "id": 21,
     "page": "community.html",
-    "state": "incoming",
-    "selectors": [
-      "#gc-accept",
-      "#gc-decline",
-      "#gc-end"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".iliam-call-yes",
+        "instruction": "Check who is calling. Select Accept if you want to join."
+      },
+      {
+        "target": ".iliam-call-no",
+        "instruction": "Select Decline to dismiss the invitation. If you accept, your browser may request microphone or camera access."
+      },
+      {
+        "target": "#gc-end",
+        "instruction": "Select Leave call when you have finished.",
+        "before": [
+          ".iliam-call-yes"
+        ]
+      }
+    ]
   },
   {
     "id": 22,
     "page": "community.html",
-    "state": "active-call",
-    "selectors": [
-      "#gc-mute",
-      "#gc-camera",
-      "#gc-play"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#gc-mute",
+        "instruction": "Select Mute to stop transmitting microphone audio.",
+        "before": [
+          "#iliam-group-button",
+          "#gc-users button:has-text(\"River\")",
+          "#gc-video"
+        ]
+      },
+      {
+        "target": "#gc-camera",
+        "instruction": "Select Camera off to stop sending video. The camera button lets you turn it back on.",
+        "before": [
+          "#gc-mute"
+        ]
+      },
+      {
+        "target": "#gc-play",
+        "instruction": "Select Play audio if incoming sound is silent. Also check your device volume.",
+        "before": [
+          "#gc-camera"
+        ]
+      }
+    ]
   },
   {
     "id": 23,
     "page": "community.html",
-    "state": "active-call",
-    "selectors": [
-      "#gc-share",
-      "#gc-share",
-      "#gc-share"
-    ],
     "steps": [
-      "Select Share screen during an active call.",
-      "Choose the tab, window or screen in your browser’s own sharing dialog. The dialog varies by browser.",
-      "Select Stop sharing when finished."
+      {
+        "target": "#gc-share",
+        "instruction": "During a video call, select Share screen.",
+        "before": [
+          "#iliam-group-button",
+          "#gc-users button:has-text(\"River\")",
+          "#gc-video"
+        ]
+      },
+      {
+        "target": "@chooser",
+        "instruction": "In the browser chooser, select only the tab or window you intend to share. Confirm with Share.",
+        "before": [
+          {
+            "chooser": true
+          }
+        ]
+      },
+      {
+        "target": "#gc-share",
+        "instruction": "Select Stop sharing to return to your camera.",
+        "before": [
+          {
+            "share": true
+          }
+        ]
+      }
     ]
   },
   {
     "id": 24,
     "page": "community.html",
-    "state": "active-call",
-    "selectors": [
-      "#gc-pip",
-      "#gc-grid",
-      "#gc-end"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#gc-grid video >> nth=0",
+        "instruction": "Wait for video to appear in the call before opening a floating player.",
+        "before": [
+          "#iliam-group-button",
+          "#gc-users button:has-text(\"River\")",
+          "#gc-video"
+        ]
+      },
+      {
+        "target": "#gc-pip",
+        "instruction": "Select Picture in Picture to keep video visible while using another tab."
+      },
+      {
+        "target": "#gc-active-status",
+        "instruction": "Check that Picture in Picture is on. Select the same control to return to the call.",
+        "before": [
+          "#gc-pip"
+        ]
+      }
+    ]
   },
   {
     "id": 25,
     "page": "community.html",
-    "state": "call",
-    "selectors": [
-      "#gc-edit",
-      "#gc-dnd",
-      "#gc-allow-notifications"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#gc-edit",
+        "instruction": "Open Call Someone and use Edit to manage blocked people.",
+        "before": [
+          "#iliam-group-button"
+        ]
+      },
+      {
+        "target": ".gc-dnd-footer",
+        "instruction": "Turn on Do Not Disturb when you do not want incoming calls."
+      },
+      {
+        "target": "#gc-allow-notifications",
+        "instruction": "Choose Enable call notifications for call alerts. Check browser permissions if calls or alerts fail."
+      }
+    ]
   },
   {
     "id": 26,
-    "page": "photos.html",
-    "state": "catalog",
-    "selectors": [
-      ".card",
-      ".download-btn",
-      ".download-btn"
-    ],
-    "steps": null
+    "page": "index.html",
+    "steps": [
+      {
+        "target": ".photos",
+        "instruction": "Choose Photos on Home."
+      },
+      {
+        "target": ".card .media >> nth=0",
+        "instruction": "Browse the gallery and find the photo you want.",
+        "before": [
+          ".photos"
+        ]
+      },
+      {
+        "target": ".download-btn >> nth=0",
+        "instruction": "Select Download below the photo. Your browser saves the file."
+      }
+    ]
   },
   {
     "id": 27,
-    "page": "videos.html",
-    "state": "catalog",
-    "selectors": [
-      "video",
-      ".download-btn",
-      ".download-btn"
-    ],
-    "steps": null
+    "page": "index.html",
+    "steps": [
+      {
+        "target": ".videos",
+        "instruction": "Choose Videos on Home."
+      },
+      {
+        "target": "video >> nth=0",
+        "instruction": "Use the video player controls to watch or pause a video.",
+        "before": [
+          ".videos"
+        ]
+      },
+      {
+        "target": ".download-btn >> nth=0",
+        "instruction": "Select Download for a local copy of the video."
+      }
+    ]
   },
   {
     "id": 28,
-    "page": "downloads.html",
-    "state": "catalog",
-    "selectors": [
-      ".card",
-      ".download-btn",
-      ".download-btn"
-    ],
-    "steps": null
+    "page": "index.html",
+    "steps": [
+      {
+        "target": ".downloads",
+        "instruction": "Choose Downloads on Home."
+      },
+      {
+        "target": ".file-name >> nth=0",
+        "instruction": "Read the file name and check the preview before downloading.",
+        "before": [
+          ".downloads"
+        ]
+      },
+      {
+        "target": ".download-btn >> nth=0",
+        "instruction": "Choose Download under the file. Look in your browser’s downloads list to find it."
+      }
+    ]
   },
   {
     "id": 29,
     "page": "games.html",
-    "state": "game",
-    "selectors": [
-      "#reloadGame",
-      "#fullscreenGame",
-      "#closeGame"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".game-card",
+        "instruction": "Find a game, then choose its card to open the player.",
+        "before": [
+          {
+            "fill": "#search",
+            "value": "iLiam in iLiam"
+          }
+        ]
+      },
+      {
+        "target": "#fullscreenGame",
+        "instruction": "Use Full Screen to expand the player. Reload restarts the embedded page.",
+        "before": [
+          ".game-card"
+        ]
+      },
+      {
+        "target": "#closeGame",
+        "instruction": "Choose Close when you want to return to the game list."
+      }
+    ]
   },
   {
     "id": 30,
     "page": "store.html",
-    "state": "catalog",
-    "selectors": [
-      ".card",
-      ".download-btn",
-      ".download-btn"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": ".file-name >> nth=0",
+        "instruction": "Find the product you want in Liam Store and read its description."
+      },
+      {
+        "target": ".item-price >> nth=0",
+        "instruction": "Check the price shown on the card before visiting the seller."
+      },
+      {
+        "target": ".download-btn >> nth=0",
+        "instruction": "Choose Buy Now to visit the external storefront. Review its terms before purchasing."
+      }
+    ]
   },
   {
     "id": 31,
     "page": "index.html",
-    "state": "reviews",
-    "selectors": [
-      "#review-star-row",
-      "#review-input",
-      "#review-submit"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#review-star-row",
+        "instruction": "Find Reviews on Home. Sign in and select a rating from one to five stars."
+      },
+      {
+        "target": "#review-submit",
+        "instruction": "Write your feedback, then choose Post review.",
+        "before": [
+          {
+            "fill": "#review-input",
+            "value": "The whiteboard is fun to use."
+          }
+        ]
+      },
+      {
+        "target": ".review-action:has-text(\"Show replies\") >> nth=0",
+        "instruction": "Select Show replies on a review to read the discussion or add a reply."
+      }
+    ]
   },
   {
     "id": 32,
     "page": "whiteboard.html",
-    "state": "board",
-    "selectors": [
-      "#new-board",
-      "[data-tool='pen']",
-      "#undo"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#board-title",
+        "instruction": "Start a new board and enter a title.",
+        "before": [
+          {
+            "fill": "#board-title",
+            "value": "Mountain sketch"
+          }
+        ]
+      },
+      {
+        "target": "[data-tool=pen]",
+        "instruction": "Select Pen, choose a color and size, then drag across the canvas."
+      },
+      {
+        "target": "#undo",
+        "instruction": "Choose Undo to remove the last stroke, or Redo to bring it back.",
+        "before": [
+          {
+            "draw": "pen"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 33,
     "page": "whiteboard.html",
-    "state": "board",
-    "selectors": [
-      "[data-tool='rect']",
-      "[data-tool='text']",
-      "[data-tool='sticky']"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "[data-tool=rect]",
+        "instruction": "Select Box and drag across the canvas to draw a rectangle."
+      },
+      {
+        "target": "[data-tool=sticky]",
+        "instruction": "Choose Note or Text and click the canvas to add a label.",
+        "before": [
+          {
+            "draw": "rect"
+          }
+        ]
+      },
+      {
+        "target": "#paper-color",
+        "instruction": "Use Paper to change the background and Grid to show or hide the drawing grid.",
+        "before": [
+          {
+            "note": true
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 34,
     "page": "whiteboard.html",
-    "state": "room",
-    "selectors": [
-      "#create-room",
-      "#room-access",
-      "#invite-search"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#create-room",
+        "instruction": "Sign in, open Collaborate and select Create shared board.",
+        "before": [
+          {
+            "fill": "#board-title",
+            "value": "Sketch Club Studio"
+          },
+          "#open-rooms"
+        ]
+      },
+      {
+        "target": "#room-access",
+        "instruction": "Choose General access and invite accounts that should have access.",
+        "before": [
+          "#create-room",
+          {
+            "waitHidden": "#room-modal"
+          },
+          "#open-rooms"
+        ]
+      },
+      {
+        "target": "#copy-link",
+        "instruction": "Use Copy link to share the room with intended collaborators."
+      }
+    ]
   },
   {
     "id": 35,
     "page": "whiteboard.html",
-    "state": "room",
-    "selectors": [
-      "#invited-boards",
-      "#room-code",
-      "#join-room"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#invited-boards",
+        "instruction": "Open Collaborate and look for boards shared with your account.",
+        "before": [
+          "#open-rooms"
+        ]
+      },
+      {
+        "target": "#join-room",
+        "instruction": "Or paste the room link or code, then select Join.",
+        "before": [
+          {
+            "fill": "#room-code",
+            "value": "1234567890abcdef1234567890abcdef"
+          }
+        ]
+      },
+      {
+        "target": "#board-mode",
+        "instruction": "Check the shared-board status before drawing with others.",
+        "before": [
+          "#join-room"
+        ]
+      }
+    ]
   },
   {
     "id": 36,
     "page": "whiteboard.html",
-    "state": "board",
-    "selectors": [
-      "#export-png",
-      "#download-project",
-      "#upload-project"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#export-png",
+        "instruction": "Choose PNG to download an image of the board.",
+        "before": [
+          {
+            "draw": "pen"
+          }
+        ]
+      },
+      {
+        "target": "#download-project",
+        "instruction": "Open the file menu and choose Save .iliamboard file to keep an editable copy.",
+        "before": [
+          "#more-actions"
+        ]
+      },
+      {
+        "target": "#upload-project",
+        "instruction": "Choose Open .iliamboard file to reopen a saved board."
+      }
+    ]
   },
   {
     "id": 37,
     "page": "2d-rider.html",
-    "state": "2d",
-    "selectors": [
-      "[data-panel='buildPanel']",
-      "[data-add='rect']",
-      "[data-panel='editPanel']"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "[data-add=rect]",
+        "instruction": "In Build, choose Rectangle to add your first object."
+      },
+      {
+        "target": "#sceneList button >> nth=0",
+        "instruction": "Select an object in Scene or click it on the canvas.",
+        "before": [
+          "[data-add=rect]"
+        ]
+      },
+      {
+        "target": "#objectName",
+        "instruction": "Use the Edit panel to name the selected object and change its transform.",
+        "before": [
+          {
+            "fill": "#objectName",
+            "value": "First rectangle"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 38,
     "page": "2d-rider.html",
-    "state": "2d",
-    "selectors": [
-      "#color",
-      "#shader",
-      "#textContent"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#color",
+        "instruction": "Select an object and choose its surface Color in Edit.",
+        "before": [
+          "[data-add=rect]"
+        ]
+      },
+      {
+        "target": "#shader",
+        "instruction": "Choose a Shader and preview it on the canvas.",
+        "before": [
+          {
+            "select": "#shader",
+            "value": "neon"
+          }
+        ]
+      },
+      {
+        "target": "#textContent",
+        "instruction": "Add a Text object to edit its words and font.",
+        "before": [
+          "[data-add=text]",
+          {
+            "fill": "#textContent",
+            "value": "Hello iLiam"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 39,
     "page": "2d-rider.html",
-    "state": "2d",
-    "selectors": [
-      "#addKeyframeBtn",
-      "#time",
-      "#playBtn"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#addKeyframeBtn",
+        "instruction": "Select an object and add a keyframe in Edit.",
+        "before": [
+          "[data-add=rect]"
+        ]
+      },
+      {
+        "target": "#time",
+        "instruction": "In Animate, move the time slider before changing a transform and adding another keyframe.",
+        "before": [
+          "#addKeyframeBtn",
+          "[data-panel=timelinePanel]",
+          {
+            "fill": "#time",
+            "value": "2"
+          }
+        ]
+      },
+      {
+        "target": "#playBtn",
+        "instruction": "Choose Play to preview the motion. Reset returns to the beginning.",
+        "before": [
+          {
+            "secondKey2d": true
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 40,
     "page": "2d-rider.html",
-    "state": "2d",
-    "selectors": [
-      "#addLiquidBtn",
-      "#physics",
-      "#playBtn"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#addLiquidBtn",
+        "instruction": "In Build, choose Add liquid to add simulated particles."
+      },
+      {
+        "target": "#physics",
+        "instruction": "Select a shape and choose its physics body type in Edit.",
+        "before": [
+          "#addLiquidBtn",
+          "[data-add=rect]",
+          {
+            "select": "#physics",
+            "value": "rigid"
+          }
+        ]
+      },
+      {
+        "target": "#playBtn",
+        "instruction": "Open Animate and choose Play to test gravity and floor collisions.",
+        "before": [
+          "[data-panel=timelinePanel]"
+        ]
+      }
+    ]
   },
   {
     "id": 41,
     "page": "2d-rider.html",
-    "state": "2d",
-    "selectors": [
-      "#saveBtn",
-      "#openBtn",
-      "#exportBtn"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#saveBtn",
+        "instruction": "Open Project and choose Save project for an editable .2drider file.",
+        "before": [
+          "[data-add=rect]",
+          "#projectMenuBtn"
+        ]
+      },
+      {
+        "target": "#openBtn",
+        "instruction": "Choose Open project to load a saved .2drider file."
+      },
+      {
+        "target": "#exportBtn",
+        "instruction": "Choose Export PNG when you want an image of the scene."
+      }
+    ]
   },
   {
     "id": 42,
     "page": "3d-rider.html",
-    "state": "3d",
-    "selectors": [
-      "[data-add='box']",
-      "#objects",
-      "#px"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "[data-add=box]",
+        "instruction": "In Build, choose Box to add it to the scene."
+      },
+      {
+        "target": "#objects",
+        "instruction": "Choose the object in the Scene collection to inspect its properties.",
+        "before": [
+          "[data-add=box]",
+          "#sceneTab"
+        ]
+      },
+      {
+        "target": "#helpBtn",
+        "instruction": "Open Controls and shortcuts for help with orbit, pan and zoom."
+      }
+    ]
   },
   {
     "id": 43,
     "page": "3d-rider.html",
-    "state": "3d",
-    "selectors": [
-      "#meshEditPanel",
-      "#shapePanel",
-      "[data-display-action='wire']"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "[data-component-mode=face]",
+        "instruction": "Select a mesh and choose Faces to work with its geometry.",
+        "before": [
+          "[data-add=box]"
+        ]
+      },
+      {
+        "target": "#shaderSelect",
+        "instruction": "Use the Material shader controls in the Inspector to change the selected object’s appearance."
+      },
+      {
+        "target": "[data-mode=wire]",
+        "instruction": "Choose Wire to inspect the mesh as a wireframe."
+      }
+    ]
   },
   {
     "id": 44,
     "page": "3d-rider.html",
-    "state": "3d",
-    "selectors": [
-      "[data-add='meta']",
-      "[data-add='light']",
-      "[data-display-action='rendered']"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "[data-add=meta]",
+        "instruction": "In Build, choose Metaball to add an organic shape."
+      },
+      {
+        "target": "[data-add=light]",
+        "instruction": "Choose Point light to illuminate your objects.",
+        "before": [
+          "[data-add=meta]"
+        ]
+      },
+      {
+        "target": "[data-mode=rendered]",
+        "instruction": "Choose Render to inspect materials and lighting.",
+        "before": [
+          "[data-add=light]"
+        ]
+      }
+    ]
   },
   {
     "id": 45,
     "page": "3d-rider.html",
-    "state": "3d",
-    "selectors": [
-      "#animationToggle",
-      "#keyframeBtn",
-      "#physicsType"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#keyframeBtn",
+        "instruction": "Select an object, open Timeline and choose Add keyframe.",
+        "before": [
+          "[data-add=box]"
+        ]
+      },
+      {
+        "target": "#timelineTime",
+        "instruction": "Set a later time, change the object’s transform and add another keyframe.",
+        "before": [
+          "#keyframeBtn",
+          {
+            "fill": "#timelineTime",
+            "value": "2"
+          },
+          {
+            "press": [
+              "#timelineTime",
+              "Enter"
+            ]
+          }
+        ]
+      },
+      {
+        "target": "#physicsType",
+        "instruction": "Choose a body type in Physics and use Play to test the simulation.",
+        "before": [
+          {
+            "select": "#physicsType",
+            "value": "rigid"
+          }
+        ]
+      }
+    ]
   },
   {
     "id": 46,
     "page": "3d-rider.html",
-    "state": "3d",
-    "selectors": [
-      "#saveBtn",
-      "#renderBtn",
-      "#exportStlBtn"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#saveBtn",
+        "instruction": "Choose Save to keep an editable 3D Rider project.",
+        "before": [
+          "[data-add=box]"
+        ]
+      },
+      {
+        "target": "#renderBtn",
+        "instruction": "Open Export and choose Render PNG for a still image. GIF and MP4 are available for animation.",
+        "before": [
+          ".export-menu summary"
+        ]
+      },
+      {
+        "target": "#exportStlBtn",
+        "instruction": "Choose Export STL or Export OBJ for use in compatible 3D tools."
+      }
+    ]
   },
   {
     "id": 47,
-    "page": "index.html",
-    "state": "home",
-    "selectors": [
-      ".other",
-      ".community",
-      ".other"
-    ],
-    "steps": null
+    "page": "2d-rider.html",
+    "steps": [
+      {
+        "target": "#saveBtn",
+        "instruction": "Before refreshing a stuck editor, save a local copy of your work.",
+        "before": [
+          "#projectMenuBtn"
+        ]
+      },
+      {
+        "target": "#iliam-permission-status",
+        "instruction": "Open Notifications to check the browser permission status.",
+        "before": [
+          {
+            "page": "index.html"
+          },
+          "#iliam-notify-settings"
+        ]
+      },
+      {
+        "target": "#im-live-status",
+        "instruction": "For a messaging issue, check the sync status and include it, the page name and what you tried in your report.",
+        "before": [
+          {
+            "page": "community.html"
+          },
+          "#iliam-messages-button",
+          "#im-conversations button:has-text(\"River\")"
+        ]
+      }
+    ]
   },
   {
     "id": 48,
     "page": "community.html",
-    "state": "profile",
-    "selectors": [
-      "#signOutButton",
-      "#profileButton",
-      "#profileButton"
-    ],
-    "steps": null
+    "steps": [
+      {
+        "target": "#signOutButton",
+        "instruction": "On a shared device, open Profile and choose Sign Out when you finish.",
+        "before": [
+          "#profileButton"
+        ]
+      },
+      {
+        "target": ".im-dnd-row",
+        "instruction": "Use Do Not Disturb or block unwanted contact in Messages settings.",
+        "before": [
+          "#closeProfileButton",
+          "#iliam-messages-button",
+          "#im-settings-open"
+        ]
+      },
+      {
+        "target": "#download-project",
+        "instruction": "Keep an editable local copy of important creative work. In Whiteboard, use Save .iliamboard file.",
+        "before": [
+          {
+            "page": "whiteboard.html"
+          },
+          "#more-actions"
+        ]
+      }
+    ]
   }
 ]

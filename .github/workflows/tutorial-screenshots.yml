@@ -5,9 +5,9 @@ on:
     paths:
       - '.github/workflows/tutorial-screenshots.yml'
 permissions:
-  contents: write
+  contents: read
 concurrency:
-  group: tutorial-screenshots
+  group: tutorial-screenshots-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   capture:
@@ -18,24 +18,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install screenshot tools
+      - name: Install capture dependencies
         run: |
-          npm install --no-save --package-lock=false playwright@1.51.1
-          npx playwright install --with-deps chromium
-      - name: Capture screenshots with demo data
-        run: node tools/capture-tutorial-screens.mjs
-      - name: Upload screenshots as build artifact
-        uses: actions/upload-artifact@v4
+          npm install --no-save --package-lock=false playwright@1.56.1 three@0.180.0
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb imagemagick tesseract-ocr
+      - name: Capture with the installed Chrome browser
+        env:
+          CAPTURE_HEADED: '1'
+          CAPTURE_WORKERS: '1'
+          CAPTURE_LESSONS: '23'
+        run: |
+          export CAPTURE_CHROMIUM="$(command -v google-chrome)"
+          xvfb-run -a -s '-screen 0 1440x1000x24' node tools/capture-tutorial-screens.mjs
+      - uses: actions/upload-artifact@v4
         with:
           name: iliam-tutorial-screens
-          path: images/tutorials/
-      - name: Commit PNG images to the site
-        if: github.ref_name == github.event.repository.default_branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add images/tutorials
-          if ! git diff --cached --quiet; then
-            git commit -m "Update iLiam tutorial PNG screenshots"
-            git push origin HEAD
-          fi
+          path: images/tutorials/*.png
