@@ -124,7 +124,8 @@ service cloud.firestore {
       allow create, update: if isAdmin()
         && page in ['videos', 'photos', 'downloads', 'community', 'store', 'games', 'other']
         && request.resource.data.keys().hasAll(['enabled', 'text'])
-        && request.resource.data.keys().hasOnly(['enabled', 'text'])
+        && request.resource.data.keys().hasOnly(['enabled', 'text', 'endsAt'])
+        && (request.resource.data.get('endsAt', null) == null || request.resource.data.endsAt is timestamp)
         && request.resource.data.enabled is bool
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0

@@ -25,6 +25,11 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
       <label for="adminTagPage">Page</label><select id="adminTagPage"><option value="videos">Videos</option><option value="photos">Photos</option><option value="downloads">Downloads</option><option value="community">Community</option><option value="store">Store</option><option value="games">Games</option><option value="other">Other</option></select>
       <label><input id="adminTagEnabled" type="checkbox" style="width:auto"> Show tag</label>
       <label for="adminTagText">Tag text</label><input id="adminTagText" maxlength="80" value="New stuff">
+      <label><input id="adminTagTemporary" type="checkbox" style="width:auto"> Temporary tag</label>
+      <label for="adminTagDuration">Duration (from saving)</label>
+      <div style="display:flex;gap:8px"><input id="adminTagDuration" type="number" min="1" step="1" value="30" style="flex:1"><select id="adminTagUnit" style="flex:1"><option value="seconds">Seconds</option><option value="minutes">Minutes</option><option value="hours">Hours</option><option value="days">Days</option></select></div>
+      <label for="adminTagEnd">Or choose exact end time (local)</label><input id="adminTagEnd" type="datetime-local" step="1">
+      <p class="hint">Exact end time takes priority. Expired tags disappear automatically; uncheck Temporary tag to keep a tag indefinitely.</p>
       <div class="control-actions"><button class="small-btn" id="adminTagLoad" type="button">Load tag</button><button class="small-btn" id="adminTagSave" type="button" disabled>Save tag</button></div>
       <p id="adminTagStatus" class="hint" role="status"></p>
     </section>
@@ -89,14 +94,21 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
   action('adminPromote',async()=>{const uid=targetUID();if(!confirm('Give '+uid+' full community control, including promoting and removing other admins?'))return;if(!(await getDoc(doc(db,'profiles',uid))).exists())throw Error('Profile not found.');await setDoc(doc(db,'admins',uid),{grantedBy:getUser().uid,grantedAt:serverTimestamp()},{merge:true});notify('Real admin granted.');});
   action('adminDemote',async()=>{const uid=targetUID();if(uid===getUser().uid)throw Error('Self-removal is blocked to prevent lockout.');if(!confirm('Revoke real admin for '+uid+'?'))return;await deleteDoc(doc(db,'admins',uid));notify('Admin revoked. Cosmetic badges are separate.');});
   let tagLoadVersion=0,loadedTagPage=null;
-  function resetTag(){tagLoadVersion++;loadedTagPage=null;$('adminTagEnabled').checked=false;$('adminTagText').value='New stuff';$('adminTagSave').disabled=true;$('adminTagStatus').textContent='Load the selected tag before saving.';}
+  function resetTag(){tagLoadVersion++;loadedTagPage=null;$('adminTagEnabled').checked=false;$('adminTagText').value='New stuff';$('adminTagTemporary').checked=false;$('adminTagDuration').value='30';$('adminTagUnit').value='minutes';$('adminTagEnd').value='';$('adminTagSave').disabled=true;$('adminTagStatus').textContent='Load the selected tag before saving.';}
   async function loadTag(){
     resetTag();const page=$('adminTagPage').value,version=tagLoadVersion;
     const snap=await getDoc(doc(db,'navBadges',page));
     if(version!==tagLoadVersion||page!==$('adminTagPage').value)return;
     const data=snap.exists()?snap.data():{};
     $('adminTagEnabled').checked=data.enabled===true;$('adminTagText').value=typeof data.text==='string'?data.text:'New stuff';
-    loadedTagPage=page;$('adminTagSave').disabled=false;$('adminTagStatus').textContent='Loaded '+page+' tag.';
+    const end=data.endsAt?.toDate?.();
+    if(end&&Number.isFinite(end.getTime())){
+      $('adminTagTemporary').checked=true;
+      const local=new Date(end.getTime()-end.getTimezoneOffset()*60000);
+      $('adminTagEnd').value=local.toISOString().slice(0,19);
+      if(end.getTime()<=Date.now())$('adminTagEnabled').checked=false;
+    }
+    loadedTagPage=page;$('adminTagSave').disabled=false;$('adminTagStatus').textContent='Loaded '+page+' tag.'+(end&&end.getTime()<=Date.now()?' (Expired)':'');
   }
   $('adminTagPage').onchange=resetTag;
   action('adminTagLoad',loadTag);
@@ -104,8 +116,24 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
     const button=$('adminTagSave'),page=$('adminTagPage').value,version=tagLoadVersion;
     if(loadedTagPage!==page)return;
     const enabled=$('adminTagEnabled').checked,text=$('adminTagText').value.trim()||'New stuff';
+    const temporary=$('adminTagTemporary').checked,exact=$('adminTagEnd').value,duration=Number($('adminTagDuration').value),unit=$('adminTagUnit').value;
     button.disabled=true;
-    try{await requireAdmin();if(version!==tagLoadVersion)return;await setDoc(doc(db,'navBadges',page),{enabled,text});if(version===tagLoadVersion)$('adminTagStatus').textContent='Saved '+page+' tag.';}
+    try{
+      await requireAdmin();if(version!==tagLoadVersion)return;
+      let endsAt=null;
+      if(enabled&&temporary){
+        const units={seconds:1000,minutes:60000,hours:3600000,days:86400000};
+        const end=exact?new Date(exact).getTime():Date.now()+duration*units[unit];
+        if((!exact&&(!Number.isSafeInteger(duration)||duration<1))||!Number.isFinite(end)||end<=Date.now()||end>253402300799999)throw Error('Choose a valid future end time or positive duration.');
+        endsAt=Timestamp.fromMillis(end);
+      }
+      await setDoc(doc(db,'navBadges',page),{enabled,text,endsAt});
+      if(version===tagLoadVersion){
+        $('adminTagStatus').textContent='Saved '+page+' tag.'+(endsAt?' Expires '+endsAt.toDate().toLocaleString()+'.':'');
+        if(endsAt){const end=endsAt.toDate();$('adminTagEnd').value=new Date(end.getTime()-end.getTimezoneOffset()*60000).toISOString().slice(0,19);}
+        else $('adminTagEnd').value='';
+      }
+    }
     catch(error){notify(error.message);}finally{if(version===tagLoadVersion&&loadedTagPage===page)button.disabled=false;}
   };
   action('adminPublish',async()=>{
