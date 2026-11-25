@@ -1,0 +1,41 @@
+name: Capture iLiam tutorial screenshots
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/tutorial-screenshots.yml'
+permissions:
+  contents: write
+concurrency:
+  group: tutorial-screenshots
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install screenshot tools
+        run: |
+          npm install --no-save --package-lock=false playwright@1.51.1
+          npx playwright install --with-deps chromium
+      - name: Capture screenshots with demo data
+        run: node tools/capture-tutorial-screens.mjs
+      - name: Upload screenshots as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iliam-tutorial-screens
+          path: images/tutorials/
+      - name: Commit PNG images to the site
+        if: github.ref_name == github.event.repository.default_branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add images/tutorials
+          if ! git diff --cached --quiet; then
+            git commit -m "Update iLiam tutorial PNG screenshots"
+            git push origin HEAD
+          fi
