@@ -1,0 +1,546 @@
+[
+  {
+    "id": 1,
+    "page": "index.html",
+    "state": "home",
+    "selectors": [
+      "a.community",
+      "a.other",
+      "h1:has-text('LATEST STUFF')"
+    ],
+    "steps": null
+  },
+  {
+    "id": 2,
+    "page": "community.html",
+    "state": "signup",
+    "selectors": [
+      "#signupTab",
+      "#authUsernameInput",
+      "#authSubmitButton"
+    ],
+    "steps": null
+  },
+  {
+    "id": 3,
+    "page": "community.html",
+    "state": "login",
+    "selectors": [
+      "#loginTab",
+      "#profileButton",
+      "#saveProfileButton"
+    ],
+    "steps": null
+  },
+  {
+    "id": 4,
+    "page": "index.html",
+    "state": "notifications",
+    "selectors": [
+      "#iliam-permission-allow",
+      "#noticeAnnouncements",
+      "#noticeVotes"
+    ],
+    "steps": null
+  },
+  {
+    "id": 5,
+    "page": "community.html",
+    "state": "community",
+    "selectors": [
+      ".top-buttons",
+      "#iliam-messages-button",
+      "#posts"
+    ],
+    "steps": null
+  },
+  {
+    "id": 6,
+    "page": "community.html",
+    "state": "post",
+    "selectors": [
+      "#postText",
+      ".toolbar",
+      "#postButton"
+    ],
+    "steps": null
+  },
+  {
+    "id": 7,
+    "page": "community.html",
+    "state": "link",
+    "selectors": [
+      "#linkButton",
+      "#linkButton",
+      "#postText"
+    ],
+    "steps": null
+  },
+  {
+    "id": 8,
+    "page": "community.html",
+    "state": "image",
+    "selectors": [
+      "#postImageChoice",
+      "#imageUrl",
+      "#postMediaAdd",
+      "#postButton"
+    ],
+    "steps": [
+      "Open the Community post composer and select Image.",
+      "Paste a direct public HTTPS image address into the image field.",
+      "Select Add to attach the image. Repeat for more images.",
+      "Check your attachment and select POST to publish."
+    ]
+  },
+  {
+    "id": 9,
+    "page": "community.html",
+    "state": "video",
+    "selectors": [
+      "#postVideoChoice",
+      "#videoUrl",
+      "#postMediaAdd",
+      "#postButton"
+    ],
+    "steps": [
+      "Select Video in the Community post composer.",
+      "Paste a supported YouTube or direct video address.",
+      "Select Add and check the attachment.",
+      "Select POST when you are ready."
+    ]
+  },
+  {
+    "id": 10,
+    "page": "community.html",
+    "state": "feed",
+    "selectors": [
+      ".upvote-btn",
+      ".comment-form",
+      ".demo-reply"
+    ],
+    "steps": null
+  },
+  {
+    "id": 11,
+    "page": "community.html",
+    "state": "feed",
+    "selectors": [
+      ".save-btn",
+      "#savedPostsButton",
+      ".username"
+    ],
+    "steps": null
+  },
+  {
+    "id": 12,
+    "page": "community.html",
+    "state": "feed",
+    "selectors": [
+      ".delete-btn",
+      ".comment-form",
+      ".delete-btn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 13,
+    "page": "community.html",
+    "state": "newchat",
+    "selectors": [
+      "#im-add",
+      "#im-search",
+      "#im-create"
+    ],
+    "steps": null
+  },
+  {
+    "id": 14,
+    "page": "community.html",
+    "state": "groupchat",
+    "selectors": [
+      "#im-add",
+      "#im-group-name",
+      "#im-create"
+    ],
+    "steps": null
+  },
+  {
+    "id": 15,
+    "page": "community.html",
+    "state": "message",
+    "selectors": [
+      ".demo-reply",
+      "#im-reply-composer",
+      "#im-send"
+    ],
+    "steps": null
+  },
+  {
+    "id": 16,
+    "page": "community.html",
+    "state": "message",
+    "selectors": [
+      "#im-image",
+      "#im-attach-video",
+      "#im-link"
+    ],
+    "steps": null
+  },
+  {
+    "id": 17,
+    "page": "community.html",
+    "state": "message-settings",
+    "selectors": [
+      "#im-settings-open",
+      "#im-dnd",
+      "#im-block-search"
+    ],
+    "steps": null
+  },
+  {
+    "id": 18,
+    "page": "community.html",
+    "state": "public",
+    "selectors": [
+      "#pc-text",
+      ".demo-reply",
+      "#pc-send"
+    ],
+    "steps": null
+  },
+  {
+    "id": 19,
+    "page": "community.html",
+    "state": "public-media",
+    "selectors": [
+      "#pc-image",
+      "#pc-media-url",
+      "#pc-media-add"
+    ],
+    "steps": null
+  },
+  {
+    "id": 20,
+    "page": "community.html",
+    "state": "call",
+    "selectors": [
+      "#gc-search",
+      "#gc-users",
+      "#gc-video"
+    ],
+    "steps": null
+  },
+  {
+    "id": 21,
+    "page": "community.html",
+    "state": "incoming",
+    "selectors": [
+      "#gc-accept",
+      "#gc-decline",
+      "#gc-end"
+    ],
+    "steps": null
+  },
+  {
+    "id": 22,
+    "page": "community.html",
+    "state": "active-call",
+    "selectors": [
+      "#gc-mute",
+      "#gc-camera",
+      "#gc-play"
+    ],
+    "steps": null
+  },
+  {
+    "id": 23,
+    "page": "community.html",
+    "state": "active-call",
+    "selectors": [
+      "#gc-share",
+      "#gc-share",
+      "#gc-share"
+    ],
+    "steps": [
+      "Select Share screen during an active call.",
+      "Choose the tab, window or screen in your browser’s own sharing dialog. The dialog varies by browser.",
+      "Select Stop sharing when finished."
+    ]
+  },
+  {
+    "id": 24,
+    "page": "community.html",
+    "state": "active-call",
+    "selectors": [
+      "#gc-pip",
+      "#gc-grid",
+      "#gc-end"
+    ],
+    "steps": null
+  },
+  {
+    "id": 25,
+    "page": "community.html",
+    "state": "call",
+    "selectors": [
+      "#gc-edit",
+      "#gc-dnd",
+      "#gc-allow-notifications"
+    ],
+    "steps": null
+  },
+  {
+    "id": 26,
+    "page": "photos.html",
+    "state": "catalog",
+    "selectors": [
+      ".card",
+      ".download-btn",
+      ".download-btn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 27,
+    "page": "videos.html",
+    "state": "catalog",
+    "selectors": [
+      "video",
+      ".download-btn",
+      ".download-btn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 28,
+    "page": "downloads.html",
+    "state": "catalog",
+    "selectors": [
+      ".card",
+      ".download-btn",
+      ".download-btn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 29,
+    "page": "games.html",
+    "state": "game",
+    "selectors": [
+      "#reloadGame",
+      "#fullscreenGame",
+      "#closeGame"
+    ],
+    "steps": null
+  },
+  {
+    "id": 30,
+    "page": "store.html",
+    "state": "catalog",
+    "selectors": [
+      ".card",
+      ".download-btn",
+      ".download-btn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 31,
+    "page": "index.html",
+    "state": "reviews",
+    "selectors": [
+      "#review-star-row",
+      "#review-input",
+      "#review-submit"
+    ],
+    "steps": null
+  },
+  {
+    "id": 32,
+    "page": "whiteboard.html",
+    "state": "board",
+    "selectors": [
+      "#new-board",
+      "[data-tool='pen']",
+      "#undo"
+    ],
+    "steps": null
+  },
+  {
+    "id": 33,
+    "page": "whiteboard.html",
+    "state": "board",
+    "selectors": [
+      "[data-tool='rect']",
+      "[data-tool='text']",
+      "[data-tool='sticky']"
+    ],
+    "steps": null
+  },
+  {
+    "id": 34,
+    "page": "whiteboard.html",
+    "state": "room",
+    "selectors": [
+      "#create-room",
+      "#room-access",
+      "#invite-search"
+    ],
+    "steps": null
+  },
+  {
+    "id": 35,
+    "page": "whiteboard.html",
+    "state": "room",
+    "selectors": [
+      "#invited-boards",
+      "#room-code",
+      "#join-room"
+    ],
+    "steps": null
+  },
+  {
+    "id": 36,
+    "page": "whiteboard.html",
+    "state": "board",
+    "selectors": [
+      "#export-png",
+      "#download-project",
+      "#upload-project"
+    ],
+    "steps": null
+  },
+  {
+    "id": 37,
+    "page": "2d-rider.html",
+    "state": "2d",
+    "selectors": [
+      "[data-panel='buildPanel']",
+      "[data-add='rect']",
+      "[data-panel='editPanel']"
+    ],
+    "steps": null
+  },
+  {
+    "id": 38,
+    "page": "2d-rider.html",
+    "state": "2d",
+    "selectors": [
+      "#color",
+      "#shader",
+      "#textContent"
+    ],
+    "steps": null
+  },
+  {
+    "id": 39,
+    "page": "2d-rider.html",
+    "state": "2d",
+    "selectors": [
+      "#addKeyframeBtn",
+      "#time",
+      "#playBtn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 40,
+    "page": "2d-rider.html",
+    "state": "2d",
+    "selectors": [
+      "#addLiquidBtn",
+      "#physics",
+      "#playBtn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 41,
+    "page": "2d-rider.html",
+    "state": "2d",
+    "selectors": [
+      "#saveBtn",
+      "#openBtn",
+      "#exportBtn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 42,
+    "page": "3d-rider.html",
+    "state": "3d",
+    "selectors": [
+      "[data-add='box']",
+      "#objects",
+      "#px"
+    ],
+    "steps": null
+  },
+  {
+    "id": 43,
+    "page": "3d-rider.html",
+    "state": "3d",
+    "selectors": [
+      "#meshEditPanel",
+      "#shapePanel",
+      "[data-display-action='wire']"
+    ],
+    "steps": null
+  },
+  {
+    "id": 44,
+    "page": "3d-rider.html",
+    "state": "3d",
+    "selectors": [
+      "[data-add='meta']",
+      "[data-add='light']",
+      "[data-display-action='rendered']"
+    ],
+    "steps": null
+  },
+  {
+    "id": 45,
+    "page": "3d-rider.html",
+    "state": "3d",
+    "selectors": [
+      "#animationToggle",
+      "#keyframeBtn",
+      "#physicsType"
+    ],
+    "steps": null
+  },
+  {
+    "id": 46,
+    "page": "3d-rider.html",
+    "state": "3d",
+    "selectors": [
+      "#saveBtn",
+      "#renderBtn",
+      "#exportStlBtn"
+    ],
+    "steps": null
+  },
+  {
+    "id": 47,
+    "page": "index.html",
+    "state": "home",
+    "selectors": [
+      ".other",
+      ".community",
+      ".other"
+    ],
+    "steps": null
+  },
+  {
+    "id": 48,
+    "page": "community.html",
+    "state": "profile",
+    "selectors": [
+      "#signOutButton",
+      "#profileButton",
+      "#profileButton"
+    ],
+    "steps": null
+  }
+]
