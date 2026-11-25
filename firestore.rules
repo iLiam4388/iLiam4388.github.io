@@ -118,6 +118,20 @@ service cloud.firestore {
         && root in ['profiles', 'posts', 'announcements', 'usernames', 'reviews'];
     }
 
+    // Public navigation badges; only real administrators may change them.
+    match /navBadges/{page} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && page in ['videos', 'photos', 'downloads', 'community', 'store', 'games', 'other']
+        && request.resource.data.keys().hasAll(['enabled', 'text'])
+        && request.resource.data.keys().hasOnly(['enabled', 'text'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 80;
+      allow delete: if isAdmin();
+    }
+
     match /announcements/{announcementId} {
       // Sitewide announcements appear to visitors before login.
       allow read: if true;

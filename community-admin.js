@@ -20,6 +20,14 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
       <div class="control-actions"><button class="small-btn" id="adminEditProfile">Edit profile</button><button class="small-btn" id="adminFakeOn">Add cosmetic ADMIN</button><button class="small-btn" id="adminFakeOff">Remove cosmetic ADMIN</button><button class="small-btn" id="adminPromote">Make real admin</button><button class="small-btn danger" id="adminDemote">Remove real admin</button></div>
       <p class="hint">Profile username changes affect public identity, not the original login username. Firebase Auth passwords, emails, and account deletion require a trusted backend or Firebase Console. Never put an Admin SDK key here.</p>
     </section>
+    <section class="control-section"><h3>New stuff tags</h3>
+      <p class="hint">Choose a home page navigation button, enable or disable its tag, and customize its text. Changes appear live for visitors.</p>
+      <label for="adminTagPage">Page</label><select id="adminTagPage"><option value="videos">Videos</option><option value="photos">Photos</option><option value="downloads">Downloads</option><option value="community">Community</option><option value="store">Store</option><option value="games">Games</option><option value="other">Other</option></select>
+      <label><input id="adminTagEnabled" type="checkbox" style="width:auto"> Show tag</label>
+      <label for="adminTagText">Tag text</label><input id="adminTagText" maxlength="80" value="New stuff">
+      <div class="control-actions"><button class="small-btn" id="adminTagLoad" type="button">Load tag</button><button class="small-btn" id="adminTagSave" type="button" disabled>Save tag</button></div>
+      <p id="adminTagStatus" class="hint" role="status"></p>
+    </section>
     <section class="control-section"><h3>Announcements</h3>
       <label for="adminAnnTitle">Title</label><input id="adminAnnTitle" maxlength="100">
       <label for="adminAnnText">Message</label><textarea id="adminAnnText" maxlength="2000"></textarea>
@@ -80,6 +88,26 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
   for(const [id,value] of [['adminFakeOn',true],['adminFakeOff',false]])action(id,async()=>{const ref=doc(db,'profiles',targetUID());await runTransaction(db,async tx=>{if(!(await tx.get(ref)).exists())throw Error('Profile not found.');tx.update(ref,{fakeAdmin:value});});notify('Cosmetic badge '+(value?'added':'removed')+'. No permissions changed.');});
   action('adminPromote',async()=>{const uid=targetUID();if(!confirm('Give '+uid+' full community control, including promoting and removing other admins?'))return;if(!(await getDoc(doc(db,'profiles',uid))).exists())throw Error('Profile not found.');await setDoc(doc(db,'admins',uid),{grantedBy:getUser().uid,grantedAt:serverTimestamp()},{merge:true});notify('Real admin granted.');});
   action('adminDemote',async()=>{const uid=targetUID();if(uid===getUser().uid)throw Error('Self-removal is blocked to prevent lockout.');if(!confirm('Revoke real admin for '+uid+'?'))return;await deleteDoc(doc(db,'admins',uid));notify('Admin revoked. Cosmetic badges are separate.');});
+  let tagLoadVersion=0,loadedTagPage=null;
+  function resetTag(){tagLoadVersion++;loadedTagPage=null;$('adminTagEnabled').checked=false;$('adminTagText').value='New stuff';$('adminTagSave').disabled=true;$('adminTagStatus').textContent='Load the selected tag before saving.';}
+  async function loadTag(){
+    resetTag();const page=$('adminTagPage').value,version=tagLoadVersion;
+    const snap=await getDoc(doc(db,'navBadges',page));
+    if(version!==tagLoadVersion||page!==$('adminTagPage').value)return;
+    const data=snap.exists()?snap.data():{};
+    $('adminTagEnabled').checked=data.enabled===true;$('adminTagText').value=typeof data.text==='string'?data.text:'New stuff';
+    loadedTagPage=page;$('adminTagSave').disabled=false;$('adminTagStatus').textContent='Loaded '+page+' tag.';
+  }
+  $('adminTagPage').onchange=resetTag;
+  action('adminTagLoad',loadTag);
+  $('adminTagSave').onclick=async()=>{
+    const button=$('adminTagSave'),page=$('adminTagPage').value,version=tagLoadVersion;
+    if(loadedTagPage!==page)return;
+    const enabled=$('adminTagEnabled').checked,text=$('adminTagText').value.trim()||'New stuff';
+    button.disabled=true;
+    try{await requireAdmin();if(version!==tagLoadVersion)return;await setDoc(doc(db,'navBadges',page),{enabled,text});if(version===tagLoadVersion)$('adminTagStatus').textContent='Saved '+page+' tag.';}
+    catch(error){notify(error.message);}finally{if(version===tagLoadVersion&&loadedTagPage===page)button.disabled=false;}
+  };
   action('adminPublish',async()=>{
     const title=$('adminAnnTitle').value.trim(),text=$('adminAnnText').value.trim();
     if(!title||!text)throw Error('Enter a title and message.');
@@ -114,7 +142,7 @@ export function installAdmin({db,getUser,onRole,escapeHtml,richText}) {
     }drawBadge(el);
   });}
   function decorate(root,path){if(!role)return;const actions=root.querySelector('.actions,.comment-actions');if(actions)actions.append(button('Admin edit',()=>openDocument(path)));}
-  function stop(){session++;stops.forEach(fn=>fn());stops=[];badgeStops.forEach(fn=>fn());badgeStops.clear();profileBadges.clear();realAdmins.clear();role=false;users=[];$('adminUsers').replaceChildren();$('adminDocuments').replaceChildren();$('adminJSON').value='{}';$('adminUID').value='';$('adminModal').classList.remove('show');}
+  function stop(){resetTag();session++;stops.forEach(fn=>fn());stops=[];badgeStops.forEach(fn=>fn());badgeStops.clear();profileBadges.clear();realAdmins.clear();role=false;users=[];$('adminUsers').replaceChildren();$('adminDocuments').replaceChildren();$('adminJSON').value='{}';$('adminUID').value='';$('adminModal').classList.remove('show');}
   function start(uid){stop();const active=session;
     stops.push(onSnapshot(doc(db,'admins',uid),snap=>{if(active!==session)return;role=snap.exists();onRole(role);if(!role)$('adminModal').classList.remove('show');},e=>{role=false;onRole(false);notify(e.message);}));
     stops.push(onSnapshot(collection(db,'admins'),snap=>{realAdmins.clear();snap.forEach(d=>realAdmins.add(d.id));badges();renderUsers();},()=>{}));
