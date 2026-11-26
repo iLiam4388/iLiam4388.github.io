@@ -19,6 +19,475 @@ const catalog=[
  ['texture','Starfield Texture',150,'Extras','Decorate your iLiam background.',{}],
  ['wallpaper','iDot Wallpaper',75,'Downloads','Download an iDot PNG wallpaper.',{}]
 ];
+const achievements=[
+ {
+  "id": "firstPost",
+  "name": "First Post",
+  "description": "Publish your first community post",
+  "reward": 25,
+  "kind": "post",
+  "target": 1
+ },
+ {
+  "id": "artist",
+  "name": "Artist",
+  "description": "Share an image in a post",
+  "reward": 50,
+  "kind": "image",
+  "target": 1
+ },
+ {
+  "id": "messages50",
+  "name": "Chatter",
+  "description": "Send 50 messages",
+  "reward": 50,
+  "kind": "messages",
+  "target": 50
+ },
+ {
+  "id": "messages100",
+  "name": "Conversation Pro",
+  "description": "Send 100 messages",
+  "reward": 100,
+  "kind": "messages",
+  "target": 100
+ },
+ {
+  "id": "messages10",
+  "name": "Icebreaker",
+  "description": "Send 10 messages",
+  "reward": 10,
+  "kind": "messages",
+  "target": 10
+ },
+ {
+  "id": "messages25",
+  "name": "Getting Chatty",
+  "description": "Send 25 messages",
+  "reward": 25,
+  "kind": "messages",
+  "target": 25
+ },
+ {
+  "id": "messages150",
+  "name": "Social Butterfly",
+  "description": "Send 150 messages",
+  "reward": 75,
+  "kind": "messages",
+  "target": 150
+ },
+ {
+  "id": "messages250",
+  "name": "Regular",
+  "description": "Send 250 messages",
+  "reward": 100,
+  "kind": "messages",
+  "target": 250
+ },
+ {
+  "id": "messages500",
+  "name": "Chatterbox",
+  "description": "Send 500 messages",
+  "reward": 150,
+  "kind": "messages",
+  "target": 500
+ },
+ {
+  "id": "messages750",
+  "name": "Wordsmith",
+  "description": "Send 750 messages",
+  "reward": 200,
+  "kind": "messages",
+  "target": 750
+ },
+ {
+  "id": "messages1000",
+  "name": "Conversation Champion",
+  "description": "Send 1,000 messages",
+  "reward": 250,
+  "kind": "messages",
+  "target": 1000
+ },
+ {
+  "id": "messages2000",
+  "name": "Messaging Master",
+  "description": "Send 2,000 messages",
+  "reward": 350,
+  "kind": "messages",
+  "target": 2000
+ },
+ {
+  "id": "messages5000",
+  "name": "Talk of the Town",
+  "description": "Send 5,000 messages",
+  "reward": 500,
+  "kind": "messages",
+  "target": 5000
+ },
+ {
+  "id": "messages10000",
+  "name": "Living Legend",
+  "description": "Send 10,000 messages",
+  "reward": 750,
+  "kind": "messages",
+  "target": 10000
+ },
+ {
+  "id": "votes1",
+  "name": "First Fan",
+  "description": "Receive 1 upvotes on one post",
+  "reward": 10,
+  "kind": "votes",
+  "target": 1
+ },
+ {
+  "id": "votes5",
+  "name": "Crowd Pleaser",
+  "description": "Receive 5 upvotes on one post",
+  "reward": 20,
+  "kind": "votes",
+  "target": 5
+ },
+ {
+  "id": "votes10",
+  "name": "Rising Star",
+  "description": "Receive 10 upvotes on one post",
+  "reward": 30,
+  "kind": "votes",
+  "target": 10
+ },
+ {
+  "id": "votes25",
+  "name": "Trending",
+  "description": "Receive 25 upvotes on one post",
+  "reward": 60,
+  "kind": "votes",
+  "target": 25
+ },
+ {
+  "id": "votes50",
+  "name": "Community Favorite",
+  "description": "Receive 50 upvotes on one post",
+  "reward": 100,
+  "kind": "votes",
+  "target": 50
+ },
+ {
+  "id": "votes75",
+  "name": "Spotlight",
+  "description": "Receive 75 upvotes on one post",
+  "reward": 150,
+  "kind": "votes",
+  "target": 75
+ },
+ {
+  "id": "votes100",
+  "name": "Going Viral",
+  "description": "Receive 100 upvotes on one post",
+  "reward": 200,
+  "kind": "votes",
+  "target": 100
+ },
+ {
+  "id": "votes250",
+  "name": "Internet Sensation",
+  "description": "Receive 250 upvotes on one post",
+  "reward": 400,
+  "kind": "votes",
+  "target": 250
+ },
+ {
+  "id": "video",
+  "name": "Filmmaker",
+  "description": "Publish a post with a video",
+  "reward": 50,
+  "kind": "video",
+  "target": 1
+ },
+ {
+  "id": "gallery2",
+  "name": "Gallery Curator",
+  "description": "Share two images in one post",
+  "reward": 40,
+  "kind": "image",
+  "target": 2
+ },
+ {
+  "id": "gallery3",
+  "name": "Photo Exhibition",
+  "description": "Share three images in one post",
+  "reward": 60,
+  "kind": "image",
+  "target": 3
+ },
+ {
+  "id": "mixedMedia",
+  "name": "Mixed Media",
+  "description": "Share an image and a video in one post",
+  "reward": 75,
+  "kind": "mixed",
+  "target": 1
+ },
+ {
+  "id": "video2",
+  "name": "Double Feature",
+  "description": "Share two videos in one post",
+  "reward": 60,
+  "kind": "video",
+  "target": 2
+ },
+ {
+  "id": "owned1",
+  "name": "First Purchase",
+  "description": "Own 1 different store or cosmetic items",
+  "reward": 10,
+  "kind": "owned",
+  "target": 1
+ },
+ {
+  "id": "owned2",
+  "name": "Window Shopper",
+  "description": "Own 2 different store or cosmetic items",
+  "reward": 15,
+  "kind": "owned",
+  "target": 2
+ },
+ {
+  "id": "owned3",
+  "name": "Collector",
+  "description": "Own 3 different store or cosmetic items",
+  "reward": 25,
+  "kind": "owned",
+  "target": 3
+ },
+ {
+  "id": "owned5",
+  "name": "Treasure Hunter",
+  "description": "Own 5 different store or cosmetic items",
+  "reward": 40,
+  "kind": "owned",
+  "target": 5
+ },
+ {
+  "id": "owned7",
+  "name": "Cosmetic Enthusiast",
+  "description": "Own 7 different store or cosmetic items",
+  "reward": 60,
+  "kind": "owned",
+  "target": 7
+ },
+ {
+  "id": "owned10",
+  "name": "Master Collector",
+  "description": "Own 10 different store or cosmetic items",
+  "reward": 100,
+  "kind": "owned",
+  "target": 10
+ },
+ {
+  "id": "owned13",
+  "name": "Completionist",
+  "description": "Own 13 different store or cosmetic items",
+  "reward": 200,
+  "kind": "owned",
+  "target": 13
+ },
+ {
+  "id": "age7",
+  "name": "One Week In",
+  "description": "Have an account for 7 days",
+  "reward": 15,
+  "kind": "age",
+  "target": 7
+ },
+ {
+  "id": "age14",
+  "name": "Two Weeks Strong",
+  "description": "Have an account for 14 days",
+  "reward": 20,
+  "kind": "age",
+  "target": 14
+ },
+ {
+  "id": "age30",
+  "name": "Month of iLiam",
+  "description": "Have an account for 30 days",
+  "reward": 40,
+  "kind": "age",
+  "target": 30
+ },
+ {
+  "id": "age60",
+  "name": "Familiar Face",
+  "description": "Have an account for 60 days",
+  "reward": 60,
+  "kind": "age",
+  "target": 60
+ },
+ {
+  "id": "age90",
+  "name": "Quarter Year Club",
+  "description": "Have an account for 90 days",
+  "reward": 90,
+  "kind": "age",
+  "target": 90
+ },
+ {
+  "id": "age180",
+  "name": "Half-Year Hero",
+  "description": "Have an account for 180 days",
+  "reward": 150,
+  "kind": "age",
+  "target": 180
+ },
+ {
+  "id": "age365",
+  "name": "iLiam Veteran",
+  "description": "Have an account for 365 days",
+  "reward": 250,
+  "kind": "age",
+  "target": 365
+ },
+ {
+  "id": "age730",
+  "name": "Two-Year Legend",
+  "description": "Have an account for 730 days",
+  "reward": 500,
+  "kind": "age",
+  "target": 730
+ },
+ {
+  "id": "styleDuo",
+  "name": "Fashion Icon",
+  "description": "Own iDot sunglasses and beanie",
+  "reward": 35,
+  "kind": "items",
+  "target": [
+   "glasses",
+   "hat"
+  ]
+ },
+ {
+  "id": "colorCollector",
+  "name": "Color Collector",
+  "description": "Own all three premium iDot colors",
+  "reward": 60,
+  "kind": "items",
+  "target": [
+   "purple",
+   "green",
+   "gold"
+  ]
+ },
+ {
+  "id": "buddyOwner",
+  "name": "Best Buddies",
+  "description": "Own the iDot Assistant",
+  "reward": 50,
+  "kind": "items",
+  "target": [
+   "follower"
+  ]
+ },
+ {
+  "id": "cursorOwner",
+  "name": "Pointer Power",
+  "description": "Own the Neon Cursor",
+  "reward": 25,
+  "kind": "items",
+  "target": [
+   "cursor"
+  ]
+ },
+ {
+  "id": "textureOwner",
+  "name": "Star Explorer",
+  "description": "Own the Starfield Texture",
+  "reward": 25,
+  "kind": "items",
+  "target": [
+   "texture"
+  ]
+ },
+ {
+  "id": "wallpaperOwner",
+  "name": "Desktop Decorator",
+  "description": "Own the iDot Wallpaper",
+  "reward": 15,
+  "kind": "items",
+  "target": [
+   "wallpaper"
+  ]
+ },
+ {
+  "id": "frameOwner",
+  "name": "Picture Perfect",
+  "description": "Own the Golden Profile Frame",
+  "reward": 20,
+  "kind": "items",
+  "target": [
+   "frame"
+  ]
+ },
+ {
+  "id": "gradientOwner",
+  "name": "Colorful Character",
+  "description": "Own the Gradient Display Name",
+  "reward": 25,
+  "kind": "items",
+  "target": [
+   "gradient"
+  ]
+ },
+ {
+  "id": "usernameOwner",
+  "name": "True Blue",
+  "description": "Own the Blue Username",
+  "reward": 15,
+  "kind": "items",
+  "target": [
+   "username"
+  ]
+ },
+ {
+  "id": "tagOwner",
+  "name": "Club Member",
+  "description": "Own the iDot Club Tag",
+  "reward": 20,
+  "kind": "items",
+  "target": [
+   "tag"
+  ]
+ },
+ {
+  "id": "extrasCollector",
+  "name": "Extra Everything",
+  "description": "Own all four Liam Store extras",
+  "reward": 100,
+  "kind": "items",
+  "target": [
+   "follower",
+   "cursor",
+   "texture",
+   "wallpaper"
+  ]
+ },
+ {
+  "id": "profileCollector",
+  "name": "Profile Perfection",
+  "description": "Own all four profile appearance items",
+  "reward": 80,
+  "kind": "items",
+  "target": [
+   "frame",
+   "gradient",
+   "username",
+   "tag"
+  ]
+ }
+];
+const achievementById=new Map(achievements.map(a=>[a.id,a]));
+let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='',dailyTimer=0,messageCount=0;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
@@ -99,11 +568,24 @@ function customize(){
   custom.append(button(postReady?'Publish a post · Claim +5 LC':'Post reward · available after one hour',()=>claim('postReward',5),!postReady||busy));
   custom.append(button('Featured post · Claim +150 LC per post',()=>claim('featuredReward',150),!wallet||busy));
   custom.append(element('p','Each post can be rewarded once. Regular post rewards are limited to one per hour to discourage spam.'));
-  custom.append(element('h4','Achievements'));
-  for(const [id,label,amount,target] of [['firstPost','First Post',25,0],['artist','Artist · Share a post with an image',50,0],['messages50','Chatter · Send 50 messages',50,50],['messages100','Conversation Pro · Send 100 messages',100,100]]){
-   const claimed=wallet?.claims?.includes(id);const progress=target?' · '+Math.min(messageCount,target)+'/'+target:'';
-   custom.append(button(claimed?label+' · Claimed':label+progress+' · Claim '+amount+' LC',()=>claim(id,amount),!wallet||busy||claimed||(target>0&&messageCount<target)));
+  custom.append(element('h4','Achievements · '+achievements.filter(a=>wallet?.claims?.includes(a.id)).length+'/'+achievements.length));
+  const groupFor=a=>a.kind==='messages'?'Messages':['votes','post'].includes(a.kind)?'Community':['image','video','mixed'].includes(a.kind)?'Creativity':a.kind==='age'?'Milestones':'Collection';
+  const filters=element('div','','lc-filters');for(const name of ['All','Community','Messages','Creativity','Collection','Milestones']){const b=button(name,()=>{achievementFilter=name;customize()});b.setAttribute('aria-pressed',String(name===achievementFilter));filters.append(b)}custom.append(filters);
+  const list=element('div','','lc-achievements');
+  for(const a of achievements){
+   if(achievementFilter!=='All'&&groupFor(a)!==achievementFilter)continue;
+   const claimed=wallet?.claims?.includes(a.id);let progress=null;
+   if(a.kind==='messages')progress=messageCount;
+   if(a.kind==='owned')progress=wallet?.owned?.length||0;
+   if(a.kind==='age')progress=profileCreatedAt?Math.max(0,Math.floor((Date.now()-profileCreatedAt)/86400000)):0;
+   if(a.kind==='items')progress=a.target.filter(has).length;
+   const target=Array.isArray(a.target)?a.target.length:a.target;
+   const row=element('div','','lc-achievement-row');const info=element('div');
+   info.append(element('strong',a.name),element('p',a.description+(progress===null?'':' · '+Math.min(progress,target)+'/'+target)));
+   row.append(info,button(claimed?'Claimed':'+'+a.reward+' LC · Claim',()=>claim(a.id,a.reward),!wallet||busy||claimed||(progress!==null&&progress<target)));
+   list.append(row);
   }
+  custom.append(list);
   return;
  }
  const controls=element('div','','lc-controls');
@@ -133,11 +615,18 @@ async function claimDaily(){return operate(async()=>{const ref=doc(db,'liamWalle
 async function claim(id,amount){return operate(async()=>{
  const uid=user.uid;let postId='';
  const repeat=id==='postReward'||id==='featuredReward';
- if(!['messages50','messages100'].includes(id)){
+ const a=achievementById.get(id);
+ if(repeat||a&&['post','image','video','mixed','votes'].includes(a.kind)){
   const posts=await getDocs(query(collection(db,'posts'),where('uid','==',uid),limit(250)));
   const eligible=posts.docs.filter(p=>{
-   if(id==='featuredReward'&&p.data().featured!==true)return false;
-   if(id==='artist'&&!/⟦iLiam-media:v1:Image:[^⟧]+⟧/.test(p.data().text||''))return false;
+   const data=p.data(),raw=data.text||'';
+   if(id==='featuredReward'&&data.featured!==true)return false;
+   if(a?.kind==='votes'&&Number(data.upvotes||0)<a.target)return false;
+   const images=(raw.match(/⟦iLiam-media:v1:Image:[^⟧]+⟧/g)||[]).length;
+   const videos=(raw.match(/⟦iLiam-media:v1:Video:[^⟧]+⟧/g)||[]).length;
+   if(a?.kind==='image'&&images<a.target)return false;
+   if(a?.kind==='video'&&videos<a.target)return false;
+   if(a?.kind==='mixed'&&(!images||!videos))return false;
    return !repeat||!wallet.claims.includes(id+':'+p.id);
   });
   if(!eligible.length)throw Error('No eligible unclaimed post yet.');
@@ -151,13 +640,13 @@ async function claim(id,amount){return operate(async()=>{
  });
 })}
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);wallet=null;messageCount=0;profileTab='';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);wallet=null;messageCount=0;profileCreatedAt=null;achievementFilter='All';profileTab='';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
  if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize()}},()=>{}));
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
   if(g!==generation||!p.exists())return;
-  appearance={...defaultAppearance,...p.data().liamAppearance};render();if(started)return;started=true;
+  profileCreatedAt=p.data().createdAt?.toMillis?.()||null;appearance={...defaultAppearance,...p.data().liamAppearance};render();if(started)return;started=true;
   try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
    stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
