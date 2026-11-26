@@ -186,6 +186,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <input id="profilePictureInput" type="hidden">
 <button class="post-btn" id="saveProfileButton" type="button">SAVE PROFILE</button>
 <p class="hint" id="profileError"></p>
+<section id="liam-customize" aria-label="Profile customization"></section>
 <div class="account-actions" id="accountActions" hidden>
 <button class="small-btn" id="signOutButton" type="button">Sign Out</button>
 <button class="small-btn danger" id="deleteAccountButton" type="button">Delete Account</button>
@@ -231,6 +232,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <script type="module">
 import {installAdmin} from './community-admin.js?v=nav-badges-2';
+import {dotAvatar,styleIdentity} from "./idot-render.js";
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import{getFirestore,doc,getDoc,addDoc,setDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -320,7 +322,7 @@ function fallbackAvatar(profile){
  const initial=Array.from(profile?.nickname||profile?.username||"User")[0].toUpperCase();
  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#142b52"/><text x="40" y="52" text-anchor="middle" font-family="sans-serif" font-size="38" fill="white">${escapeHtml(initial)}</text></svg>`);
 }
-function avatarUrl(profile){return safeUrl(profile?.photoURL||"")||fallbackAvatar(profile)}
+function avatarUrl(profile){return profile?.liamAppearance?.avatar===true?dotAvatar(profile.liamAppearance):safeUrl(profile?.photoURL||"")||fallbackAvatar(profile)}
 function watchAvatar(uid){
  if(!uid||!currentUser||avatarListeners.has(uid))return;
  const stop=onSnapshot(doc(db,"profiles",uid),snap=>{
@@ -335,6 +337,7 @@ function watchAvatar(uid){
    const latest=profile||{nickname:img.dataset.avatarName};
    img.dataset.avatarFallback=fallbackAvatar(latest);
    const src=avatarUrl(latest);if(img.getAttribute("src")!==src)img.src=src;
+   styleIdentity(img.closest(".profile-link,.profile-summary")||img.parentElement,latest.liamAppearance||{});
   });
  },error=>console.warn("Could not refresh profile picture:",error.code));
  avatarListeners.set(uid,stop);
@@ -360,6 +363,7 @@ function openProfileModal(){
  profileSummary.innerHTML=`${avatarMarkup(currentUser.uid,currentProfile)}<div><strong>${escapeHtml(currentProfile.nickname)}</strong><div>@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
  onSnapshot(collection(db,"profiles",currentUser.uid,"followers"),x=>{const e=$("ownFollowers");if(e)e.textContent=`Followers: ${x.size}`});
  onSnapshot(collection(db,"profiles",currentUser.uid,"following"),x=>{const e=$("ownFollowing");if(e)e.textContent=`Following: ${x.size}`});}
+ styleIdentity(profileSummary,currentProfile?.liamAppearance||{});
  profileModal.classList.add("show");
 }
 
@@ -378,6 +382,7 @@ async function openPublicProfile(uid,fallback={}){
   const followingSnap=await getDocs(collection(db,"profiles",uid,"following"));
   publicProfileTitle.textContent=profile.nickname||"User Profile";
  publicProfileSummary.innerHTML=`${avatarMarkup(uid,profile)}<div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
+ styleIdentity(publicProfileSummary,profile.liamAppearance||{});
  const badge=document.createElement('span');badge.className='admin-badge';badge.dataset.communityBadge=uid;publicProfileSummary.append(badge);adminControl.badges();
  if(profile.bio){const bio=document.createElement('p');bio.textContent=profile.bio;publicProfileSummary.append(bio);}
   if(uid===currentUser.uid){
@@ -749,6 +754,7 @@ function listenForPosts(){
   if(!chronological.length){postsElement.innerHTML='<div class="empty">No posts yet. Be the first!</div>';return}
   postsElement.innerHTML="";
   active.forEach(renderPost);
+  postsElement.querySelectorAll(".profile-link").forEach(el=>{const uid=el.querySelector("img[data-avatar-uid]")?.dataset.avatarUid;styleIdentity(el,avatarProfiles.get(uid)?.liamAppearance||{})});
   legacy.forEach(renderPost);
  },error=>setStatus("Could not load posts: "+error.message,true));
 }
