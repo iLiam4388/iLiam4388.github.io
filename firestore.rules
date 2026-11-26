@@ -102,6 +102,85 @@ service cloud.firestore {
         && request.resource.data.order is number;
     }
 
+
+    // Liam Coins: all balance changes and unlocks are checked server-side.
+    function lcWallet(uid) {
+      return /databases/$(database)/documents/liamWallets/$(uid);
+    }
+    function lcOwn(uid, item) {
+      return exists(lcWallet(uid)) && item in get(lcWallet(uid)).data.owned;
+    }
+    function lcPrice(item, price) {
+      return (item == 'follower' && price == 250)
+          || (item == 'glasses' && price == 75)
+          || (item == 'hat' && price == 75)
+          || (item == 'purple' && price == 50)
+          || (item == 'green' && price == 50)
+          || (item == 'gold' && price == 100)
+          || (item == 'frame' && price == 100)
+          || (item == 'gradient' && price == 125)
+          || (item == 'username' && price == 75)
+          || (item == 'cursor' && price == 150)
+          || (item == 'texture' && price == 150)
+          || (item == 'tag' && price == 100)
+          || (item == 'wallpaper' && price == 75);
+    }
+    function lcPost(uid, postId, featured) {
+      return postId is string && postId.size() > 0 && postId.size() < 100
+        && exists(/databases/$(database)/documents/posts/$(postId))
+        && get(/databases/$(database)/documents/posts/$(postId)).data.uid == uid
+        && (!featured || get(/databases/$(database)/documents/posts/$(postId)).data.featured == true);
+    }
+    match /liamWallets/{uid} {
+      allow read: if isSelf(uid);
+      allow create: if isSelf(uid) && hasProfile()
+        && request.resource.data.keys().hasOnly(['balance','owned','claims','action','postId'])
+        && request.resource.data.balance == 100
+        && request.resource.data.owned == []
+        && request.resource.data.claims == []
+        && request.resource.data.action == 'starter'
+        && request.resource.data.postId == '';
+      allow update: if isSelf(uid) && hasProfile()
+        && request.resource.data.keys().hasOnly(['balance','owned','claims','action','postId'])
+        && request.resource.data.balance is int && request.resource.data.balance >= 0
+        && request.resource.data.owned is list && request.resource.data.claims is list
+        && (
+          (request.resource.data.claims == resource.data.claims
+            && !(request.resource.data.action in resource.data.owned)
+            && request.resource.data.owned == resource.data.owned.concat([request.resource.data.action])
+            && request.resource.data.postId == ''
+            && lcPrice(request.resource.data.action, resource.data.balance - request.resource.data.balance))
+          || (request.resource.data.owned == resource.data.owned
+            && request.resource.data.action in ['firstPost','featured']
+            && !(request.resource.data.action in resource.data.claims)
+            && request.resource.data.claims == resource.data.claims.concat([request.resource.data.action])
+            && lcPost(uid, request.resource.data.postId, request.resource.data.action == 'featured')
+            && request.resource.data.balance == resource.data.balance + (request.resource.data.action == 'featured' ? 150 : 25))
+        );
+      allow delete: if false;
+    }
+    function lcAppearance(uid) {
+      let c = request.resource.data.liamAppearance;
+      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag'])
+        && c.keys().hasAll(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag'])
+        && c.avatar is bool
+        && (c.color == 'blue' || (c.color in ['purple','green','gold'] && lcOwn(uid,c.color)))
+        && c.glasses is bool && (!c.glasses || lcOwn(uid,'glasses'))
+        && c.hat is bool && (!c.hat || lcOwn(uid,'hat'))
+        && c.follower is bool && (!c.follower || lcOwn(uid,'follower'))
+        && c.frame is bool && (!c.frame || lcOwn(uid,'frame'))
+        && c.gradient is bool && (!c.gradient || lcOwn(uid,'gradient'))
+        && c.username is bool && (!c.username || lcOwn(uid,'username'))
+        && c.cursor is bool && (!c.cursor || lcOwn(uid,'cursor'))
+        && c.texture is bool && (!c.texture || lcOwn(uid,'texture'))
+        && c.tag is bool && (!c.tag || lcOwn(uid,'tag'));
+    }
+    match /profiles/{uid} {
+      allow update: if isSelf(uid) && hasProfile()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['liamAppearance'])
+        && lcAppearance(uid);
+    }
+
     match /admins/{uid} {
       // Membership alone grants authority. Cosmetic profile badges never do.
       // First admin is bootstrapped in Firebase Console, never by the client.
