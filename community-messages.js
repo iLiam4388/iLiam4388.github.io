@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {getAuth,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,writeBatch,getDocsFromServer} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+import {getFirestore,collection,doc,getDoc,getDocs,setDoc,addDoc,deleteDoc,updateDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,writeBatch,getDocsFromServer,increment} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 // Messages is separate from Community posts and from the Calls screen.
@@ -729,7 +729,17 @@ const messageAttachments=[],messageChips=document.createElement("div");messageCh
   const btn=$("im-send");btn.disabled=true;
   try{
    const reply=replyTarget?{replyTo:replyTarget}:{};
-   await addDoc(collection(db,"chats",current.id,"messages"),{uid:user.uid,text,createdAt:serverTimestamp(),...reply});
+   const uid=user.uid,chatId=current.id;
+   const message=doc(collection(db,"chats",chatId,"messages"));
+   const data={uid,text,createdAt:serverTimestamp(),...reply};
+   const batch=writeBatch(db);
+   batch.set(message,data);
+   batch.set(doc(db,"liamMessageStats",uid),{count:increment(1),chatId,messageId:message.id},{merge:true});
+   try{await batch.commit()}catch(err){
+    // Until new economy rules are deployed, preserve existing messaging.
+    if(err.code!=="permission-denied")throw err;
+    await setDoc(message,data);
+   }
    clearReply();
    $("im-input").value="";
   }catch(err){alert("Message not sent: "+err.message);}
