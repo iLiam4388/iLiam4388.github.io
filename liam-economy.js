@@ -575,7 +575,12 @@ function zipBytes(files){
 async function downloadPack(id){
  if(!has(id))return;
  const files=[],add=async(name,url)=>{const bytes=Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0));files.push({name,bytes})};
- if(id==='packGalaxy'){for(const [i,theme] of ['themeGalaxy','themeAurora','themeMidnight'].entries())await add(theme+'.png',await png(theme,{},1920,1080));}
+ if(id==='packGalaxy'){for(const [i,theme] of ['themeGalaxy','themeAurora','themeMidnight'].entries()){
+  const canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;const ctx=canvas.getContext('2d'),v=themeVars(theme),g=ctx.createLinearGradient(0,0,1920,1080);g.addColorStop(0,v.bg);g.addColorStop(.52,v.panel);g.addColorStop(1,v.bg);ctx.fillStyle=g;ctx.fillRect(0,0,1920,1080);
+  const glow=ctx.createRadialGradient(1320,370,0,1320,370,850);glow.addColorStop(0,v.accent+'99');glow.addColorStop(1,v.bg+'00');ctx.fillStyle=glow;ctx.fillRect(0,0,1920,1080);
+  for(let j=0;j<420;j++){const x=(j*197+91)%1920,y=(j*j*37+27)%1080;ctx.globalAlpha=.18+(j%7)*.11;ctx.fillStyle=j%4===0?v.light:'#fff';ctx.beginPath();ctx.arc(x,y,j%17===0?3:1.2,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+  const dot=await svgImage(dotSVG({color:['purple','green','blue'][i]}));ctx.globalAlpha=.88;ctx.drawImage(dot,820,400,280,280);ctx.globalAlpha=1;await add(theme+'.png',canvas.toDataURL('image/png'));
+ }}
  else if(id==='packSticker'){for(const [i,accessory] of ['accHeart','accHalo','accGamer','accCrown','accWings'].entries()){const canvas=document.createElement('canvas');canvas.width=canvas.height=512;canvas.getContext('2d').drawImage(await svgImage(dotSVG({color:['blue','purple','green','gold','blue'][i],accessory})),0,0,512,512);await add(accessory+'.png',canvas.toDataURL('image/png'));}}
  else if(id==='packIcons'){const icon=new Image();await new Promise((res,rej)=>{icon.onload=res;icon.onerror=rej;icon.src='images/favicon.png'});for(const size of [32,64,128,256,512]){const canvas=document.createElement('canvas');canvas.width=canvas.height=size;canvas.getContext('2d').drawImage(icon,0,0,size,size);await add('iliam-'+size+'.png',canvas.toDataURL('image/png'));}}
  if(!files.length)return;const url=URL.createObjectURL(zipBytes(files));const link=element('a');link.href=url;link.download=id+'.zip';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
