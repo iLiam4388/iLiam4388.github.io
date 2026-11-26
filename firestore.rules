@@ -132,15 +132,45 @@ service cloud.firestore {
         && (!featured || get(/databases/$(database)/documents/posts/$(postId)).data.featured == true);
     }
     function lcAchievementAmount(action) {
-      return action == 'artist' ? 50 : action == 'messages50' ? 50 : action == 'messages100' ? 100 : 25;
+      return {'firstPost': 25, 'artist': 50, 'messages50': 50, 'messages100': 100, 'messages10': 10, 'messages25': 25, 'messages150': 75, 'messages250': 100, 'messages500': 150, 'messages750': 200, 'messages1000': 250, 'messages2000': 350, 'messages5000': 500, 'messages10000': 750, 'votes1': 10, 'votes5': 20, 'votes10': 30, 'votes25': 60, 'votes50': 100, 'votes75': 150, 'votes100': 200, 'votes250': 400, 'video': 50, 'gallery2': 40, 'gallery3': 60, 'mixedMedia': 75, 'video2': 60, 'owned1': 10, 'owned2': 15, 'owned3': 25, 'owned5': 40, 'owned7': 60, 'owned10': 100, 'owned13': 200, 'age7': 15, 'age14': 20, 'age30': 40, 'age60': 60, 'age90': 90, 'age180': 150, 'age365': 250, 'age730': 500, 'styleDuo': 35, 'colorCollector': 60, 'buddyOwner': 50, 'cursorOwner': 25, 'textureOwner': 25, 'wallpaperOwner': 15, 'frameOwner': 20, 'gradientOwner': 25, 'usernameOwner': 15, 'tagOwner': 20, 'extrasCollector': 100, 'profileCollector': 80}.get(action, 0);
+    }
+    function lcAchievementMessage(uid, action) {
+      let target = {'messages50': 50, 'messages100': 100, 'messages10': 10, 'messages25': 25, 'messages150': 150, 'messages250': 250, 'messages500': 500, 'messages750': 750, 'messages1000': 1000, 'messages2000': 2000, 'messages5000': 5000, 'messages10000': 10000}.get(action, 0);
+      let path = /databases/$(database)/documents/liamMessageStats/$(uid);
+      return target > 0 && exists(path) && get(path).data.count >= target;
+    }
+    function lcAchievementCollection(uid, action) {
+      let target = {'owned1': 1, 'owned2': 2, 'owned3': 3, 'owned5': 5, 'owned7': 7, 'owned10': 10, 'owned13': 13}.get(action, 0);
+      let items = {'styleDuo': ['glasses', 'hat'], 'colorCollector': ['purple', 'green', 'gold'], 'buddyOwner': ['follower'], 'cursorOwner': ['cursor'], 'textureOwner': ['texture'], 'wallpaperOwner': ['wallpaper'], 'frameOwner': ['frame'], 'gradientOwner': ['gradient'], 'usernameOwner': ['username'], 'tagOwner': ['tag'], 'extrasCollector': ['follower', 'cursor', 'texture', 'wallpaper'], 'profileCollector': ['frame', 'gradient', 'username', 'tag']}.get(action, []);
+      return (target > 0 && get(lcWallet(uid)).data.owned.size() >= target)
+        || (items.size() > 0 && get(lcWallet(uid)).data.owned.hasAll(items));
+    }
+    function lcAchievementAge(uid, action) {
+      let days = {'age7': 7, 'age14': 14, 'age30': 30, 'age60': 60, 'age90': 90, 'age180': 180, 'age365': 365, 'age730': 730}.get(action, 0);
+      let profile = get(/databases/$(database)/documents/profiles/$(uid)).data;
+      return days > 0 && profile.createdAt is timestamp
+        && request.time >= profile.createdAt + duration.value(days * 24, 'h');
+    }
+    function lcAchievementPost(uid, action, postId) {
+      let p = get(/databases/$(database)/documents/posts/$(postId)).data;
+      let votes = {'votes1': 1, 'votes5': 5, 'votes10': 10, 'votes25': 25, 'votes50': 50, 'votes75': 75, 'votes100': 100, 'votes250': 250}.get(action, 0);
+      return lcPost(uid, postId, false) && (
+        action == 'firstPost'
+        || (votes > 0 && p.upvotes is int && p.upvotes >= votes)
+        || (action == 'artist' && p.text.matches('(?s).*⟦iLiam-media:v1:Image:[^⟧]+⟧.*'))
+        || (action == 'gallery2' && p.text.matches('(?s).*(⟦iLiam-media:v1:Image:[^⟧]+⟧.*){2}'))
+        || (action == 'gallery3' && p.text.matches('(?s).*(⟦iLiam-media:v1:Image:[^⟧]+⟧.*){3}'))
+        || (action == 'video' && p.text.matches('(?s).*⟦iLiam-media:v1:Video:[^⟧]+⟧.*'))
+        || (action == 'video2' && p.text.matches('(?s).*(⟦iLiam-media:v1:Video:[^⟧]+⟧.*){2}'))
+        || (action == 'mixedMedia'
+          && p.text.matches('(?s).*⟦iLiam-media:v1:Image:[^⟧]+⟧.*')
+          && p.text.matches('(?s).*⟦iLiam-media:v1:Video:[^⟧]+⟧.*'))
+      );
     }
     function lcAchievement(uid, action, postId) {
-      return (action == 'firstPost' && lcPost(uid, postId, false))
-        || (action == 'artist' && lcPost(uid, postId, false)
-          && get(/databases/$(database)/documents/posts/$(postId)).data.text.matches('(?s).*⟦iLiam-media:v1:Image:[^⟧]+⟧.*'))
-        || (action in ['messages50','messages100'] && postId == ''
-          && exists(/databases/$(database)/documents/liamMessageStats/$(uid))
-          && get(/databases/$(database)/documents/liamMessageStats/$(uid)).data.count >= (action == 'messages50' ? 50 : 100));
+      return postId == ''
+        ? (lcAchievementMessage(uid, action) || lcAchievementCollection(uid, action) || lcAchievementAge(uid, action))
+        : lcAchievementPost(uid, action, postId);
     }
     function lcNewMessage(uid) {
       let d = request.resource.data;
@@ -182,7 +212,7 @@ service cloud.firestore {
           || (request.resource.data.get('lastPostReward', null) == resource.data.get('lastPostReward', null)
             && request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
             && request.resource.data.owned == resource.data.owned
-            && request.resource.data.action in ['firstPost','artist','messages50','messages100']
+            && lcAchievementAmount(request.resource.data.action) > 0
             && !(request.resource.data.action in resource.data.claims)
             && request.resource.data.claims == resource.data.claims.concat([request.resource.data.action])
             && lcAchievement(uid, request.resource.data.action, request.resource.data.postId)
