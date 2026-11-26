@@ -178,6 +178,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 <div class="modal-card">
 <div class="modal-head"><h2 id="profileModalTitle">Create your iLiam profile</h2><button class="small-btn close-modal" id="closeProfileButton" type="button" aria-label="Close">✕</button></div>
 <div class="profile-summary" id="profileSummary" hidden></div>
+<button class="small-btn" id="viewOwnPublicProfile" type="button">View public profile</button>
 <p class="hint">Your username is permanent. Your nickname can be changed later. Your profile picture setting is hidden here; if no image is stored in Firebase, an automatic avatar is used.</p>
 <label for="usernameInput">Unique username <span class="hint" id="usernameLockHint"></span></label>
 <input id="usernameInput" maxlength="20" autocomplete="off" placeholder="Example: geometryking">
@@ -232,7 +233,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <script type="module">
 import {installAdmin} from './community-admin.js?v=nav-badges-2';
-import {dotAvatar,styleIdentity} from "./idot-render.js";
+import {dotAvatar,styleIdentity,appearanceForProfile} from "./idot-render.js?v=2";
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import{getFirestore,doc,getDoc,addDoc,setDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -322,7 +323,7 @@ function fallbackAvatar(profile){
  const initial=Array.from(profile?.nickname||profile?.username||"User")[0].toUpperCase();
  return "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#142b52"/><text x="40" y="52" text-anchor="middle" font-family="sans-serif" font-size="38" fill="white">${escapeHtml(initial)}</text></svg>`);
 }
-function avatarUrl(profile){return profile?.liamAppearance?.avatar===true?dotAvatar(profile.liamAppearance):safeUrl(profile?.photoURL||"")||fallbackAvatar(profile)}
+function avatarUrl(profile){return profile?.liamAppearance?.avatar===true?dotAvatar(appearanceForProfile(profile)):safeUrl(profile?.photoURL||"")||fallbackAvatar(profile)}
 function watchAvatar(uid){
  if(!uid||!currentUser||avatarListeners.has(uid))return;
  const stop=onSnapshot(doc(db,"profiles",uid),snap=>{
@@ -360,7 +361,7 @@ function openProfileModal(){
  usernameInput.readOnly=true;usernameLockHint.textContent="(permanent)";
  closeProfileButton.hidden=false;accountActions.hidden=false;profileSummary.hidden=false;
  if(currentProfile){usernameInput.value=currentProfile.username||"";usernameInput.readOnly=true;usernameInput.setAttribute("aria-readonly","true");usernameLockHint.textContent="(permanent)";nicknameInput.value=currentProfile.nickname||"";profilePictureInput.value=currentProfile.photoURL||"";
- profileSummary.innerHTML=`${avatarMarkup(currentUser.uid,currentProfile)}<div><strong>${escapeHtml(currentProfile.nickname)}</strong><div>@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
+ profileSummary.innerHTML=`${avatarMarkup(currentUser.uid,currentProfile)}<div><strong>${escapeHtml(currentProfile.nickname)}</strong><div class="username">@${escapeHtml(currentProfile.username)}</div><div class="profile-stats"><span id="ownFollowers">Followers: …</span><span id="ownFollowing">Following: …</span></div></div>`;
  onSnapshot(collection(db,"profiles",currentUser.uid,"followers"),x=>{const e=$("ownFollowers");if(e)e.textContent=`Followers: ${x.size}`});
  onSnapshot(collection(db,"profiles",currentUser.uid,"following"),x=>{const e=$("ownFollowing");if(e)e.textContent=`Following: ${x.size}`});}
  styleIdentity(profileSummary,currentProfile?.liamAppearance||{});
@@ -626,6 +627,7 @@ saveProfileButton.addEventListener("click",async()=>{
 
 profileButton.addEventListener("click",()=>{if(currentUser&&currentProfile)openProfileModal();else authModal.classList.add("show")});
 closeProfileButton.addEventListener("click",()=>profileModal.classList.remove("show"));
+$("viewOwnPublicProfile").addEventListener("click",()=>{if(!currentUser)return;profileModal.classList.remove("show");openPublicProfile(currentUser.uid,currentProfile||{});});
 profileModal.addEventListener("click",e=>{if(e.target===profileModal&&currentProfile)profileModal.classList.remove("show")});
 signOutButton.addEventListener("click",async()=>{if(confirm("Sign out of this browser account?")){profileModal.classList.remove("show");await signOut(auth)}});
 deleteAccountButton.addEventListener("click",async()=>{
