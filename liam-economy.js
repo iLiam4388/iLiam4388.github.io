@@ -91,6 +91,9 @@ function customize(){
  const colors=element('label','iDot color '),select=element('select');for(const id of ['blue','purple','green','gold']){const option=element('option',id+(id==='blue'||has(id)?'':' (locked)'));option.value=id;option.disabled=id!=='blue'&&!has(id);select.append(option)}select.value=appearance.color;select.disabled=busy||!wallet;select.onchange=()=>equip({color:select.value});colors.append(select);controls.append(colors);
  for(const [id,label] of [['glasses','Sunglasses'],['hat','Beanie'],['follower','iDot assistant follows cursor'],['frame','Golden profile frame'],['gradient','Gradient display name'],['username','Blue username'],['tag','iDot Club tag'],['cursor','Neon cursor'],['texture','Starfield texture']])toggle(id,label);
  custom.append(controls,element('p','Eye tracking is included with every live iDot. The assistant uses exactly the same color and accessories as your iDot avatar.'));
+ const inv=element('div','','lc-achievements');inv.append(element('h4','Inventory & cosmetic shop'));
+ for(const [id,name,price,group] of catalog){if(group==='Downloads')continue;const label=has(id)?name+' · Owned':name+' · '+price+' LC';inv.append(button(label,()=>buy(id,price),has(id)||!wallet||busy||wallet.balance<price));}
+ custom.append(inv);
  const ach=element('div','','lc-achievements');ach.append(element('h4','Achievements'));
  for(const [id,label,amount] of [['firstPost','Publish your first post',25],['featured','Get a featured post',150]])ach.append(button(wallet?.claims?.includes(id)?label+' · Claimed':label+' · Claim '+amount+' LC',()=>claim(id,amount),!wallet||busy||wallet.claims.includes(id)));
  custom.append(ach);
@@ -112,5 +115,5 @@ onAuthStateChanged(auth,async current=>{
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
  },e=>{if(g===generation){error=e.message;render()}}));
 });
-if(custom&&new URLSearchParams(location.search).get('customize')==='1'){const timer=setInterval(()=>{if(user&&wallet){clearInterval(timer);document.getElementById('profileButton')?.click();custom.scrollIntoView({block:'nearest'})}},250);setTimeout(()=>clearInterval(timer),15000)}
+if(custom&&new URLSearchParams(location.search).get('customize')==='1'){const timer=setInterval(()=>{if(user&&document.getElementById('profileButton')&&!document.getElementById('profileButton').disabled&&wallet){clearInterval(timer);document.getElementById('profileButton')?.click();custom.scrollIntoView({block:'nearest'})}},250);setTimeout(()=>clearInterval(timer),15000)}
 render();
