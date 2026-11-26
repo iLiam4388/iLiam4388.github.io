@@ -123,7 +123,8 @@ service cloud.firestore {
           || (item == 'cursor' && price == 150)
           || (item == 'texture' && price == 150)
           || (item == 'tag' && price == 100)
-          || (item == 'wallpaper' && price == 75);
+          || (item == 'wallpaper' && price == 75)
+          || ({'cursorPink':100,'cursorMint':100,'cursorPurple':150,'cursorGold':200,'cursorPixel':200,'cursorStar':250,'cursorIce':300,'cursorFire':300,'cursorGalaxy':400,'cursorGlitch':450,'cursorRainbow':500,'cursorDot':600,'themeGalaxy':250,'themeSunset':180,'themeOcean':220,'themeCyber':260,'themeArcade':280,'themeAurora':300,'themeCloud':180,'themeCrystal':350,'themeMidnight':100,'themeRetro':300,'accBow':50,'accCap':75,'accSleep':100,'accHeart':120,'accHeadphones':150,'accTop':175,'accPirate':200,'accGamer':250,'accHalo':300,'accWings':350,'accCrown':500,'accPlanets':750,'profSilver':75,'profNeon':100,'profSunset':150,'profMetal':200,'profRainbow':350,'profSparkles':400,'profBanner':450,'profGalaxy':600,'buddyStar':300,'buddyCloud':250,'buddyRobot':450,'buddyPixel':350,'buddyPlanet':600,'packSticker':100,'packGalaxy':150,'packIcons':200}.get(item, -1) == price && price > 0);
     }
     function lcPost(uid, postId, featured) {
       return postId is string && postId.size() > 0 && postId.size() < 100
@@ -242,9 +243,12 @@ service cloud.firestore {
         );
       allow delete: if false;
     }
+    function lcSelected(uid, item, options) {
+      return item == '' || (item is string && item in options && lcOwn(uid, item));
+    }
     function lcAppearance(uid) {
       let c = request.resource.data.liamAppearance;
-      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag','favicon'])
+      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag','favicon','cursorStyle','themeStyle','buddyStyle','accessory','borderStyle','nameStyle','handleStyle','profileEffect','bannerStyle'])
         && c.keys().hasAll(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag'])
         && c.avatar is bool
         && (c.color == 'blue' || (c.color in ['purple','green','gold'] && lcOwn(uid,c.color)))
@@ -258,7 +262,16 @@ service cloud.firestore {
         && c.texture is bool && (!c.texture || lcOwn(uid,'texture'))
         && c.tag is bool && (!c.tag || lcOwn(uid,'tag'))
         && c.get('favicon', false) is bool
-        && (!c.get('favicon', false) || resource.data.get('idotFaviconGranted', false) == true);
+        && (!c.get('favicon', false) || resource.data.get('idotFaviconGranted', false) == true)
+        && lcSelected(uid, c.get('cursorStyle', ''), ['cursorPink','cursorMint','cursorPurple','cursorGold','cursorPixel','cursorStar','cursorIce','cursorFire','cursorGalaxy','cursorGlitch','cursorRainbow','cursorDot'])
+        && lcSelected(uid, c.get('themeStyle', ''), ['themeGalaxy','themeSunset','themeOcean','themeCyber','themeArcade','themeAurora','themeCloud','themeCrystal','themeMidnight','themeRetro'])
+        && lcSelected(uid, c.get('buddyStyle', ''), ['buddyStar','buddyCloud','buddyRobot','buddyPixel','buddyPlanet'])
+        && lcSelected(uid, c.get('accessory', ''), ['accBow','accCap','accSleep','accHeart','accHeadphones','accTop','accPirate','accGamer','accHalo','accWings','accCrown','accPlanets'])
+        && lcSelected(uid, c.get('borderStyle', ''), ['profSilver','profRainbow'])
+        && lcSelected(uid, c.get('nameStyle', ''), ['profNeon','profSunset'])
+        && lcSelected(uid, c.get('handleStyle', ''), ['profMetal','profGalaxy'])
+        && lcSelected(uid, c.get('profileEffect', ''), ['profSparkles'])
+        && lcSelected(uid, c.get('bannerStyle', ''), ['profBanner']);
     }
     match /profiles/{uid} {
       allow update: if isSelf(uid) && hasProfile()
