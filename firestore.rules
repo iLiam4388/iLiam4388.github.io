@@ -244,7 +244,7 @@ service cloud.firestore {
     }
     function lcAppearance(uid) {
       let c = request.resource.data.liamAppearance;
-      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag'])
+      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag','favicon'])
         && c.keys().hasAll(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag'])
         && c.avatar is bool
         && (c.color == 'blue' || (c.color in ['purple','green','gold'] && lcOwn(uid,c.color)))
@@ -256,7 +256,9 @@ service cloud.firestore {
         && c.username is bool && (!c.username || lcOwn(uid,'username'))
         && c.cursor is bool && (!c.cursor || lcOwn(uid,'cursor'))
         && c.texture is bool && (!c.texture || lcOwn(uid,'texture'))
-        && c.tag is bool && (!c.tag || lcOwn(uid,'tag'));
+        && c.tag is bool && (!c.tag || lcOwn(uid,'tag'))
+        && c.get('favicon', false) is bool
+        && (!c.get('favicon', false) || resource.data.get('idotFaviconGranted', false) == true);
     }
     match /profiles/{uid} {
       allow update: if isSelf(uid) && hasProfile()
