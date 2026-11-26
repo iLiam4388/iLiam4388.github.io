@@ -491,7 +491,7 @@ let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='',dailyTimer=0,messageCount=0;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
-const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css';document.head.append(style);
+const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=2';document.head.append(style);
 const buddy=document.createElement('div');buddy.className='lc-buddy';buddy.hidden=true;buddy.setAttribute('aria-hidden','true');document.body.append(buddy);
 let lastX=innerWidth/2,lastY=innerHeight/2,bx=lastX,by=lastY,frame=0;
 const motion=matchMedia('(prefers-reduced-motion: reduce)'),fine=matchMedia('(pointer:fine)');
