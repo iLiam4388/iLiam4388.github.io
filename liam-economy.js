@@ -593,7 +593,7 @@ function customize(){
   const live=element('div','','lc-dot-preview');live.innerHTML=dotSVG(appearance);
   const info=element('div','','lc-studio-info');info.append(element('span','LIVE PREVIEW','lc-eyebrow'),element('h4','Your iDot'),element('p','Move your cursor to see its eyes follow you. Your avatar and assistant share this appearance.'));
   const avatar=button(appearance.avatar?'iDot profile picture · On':'Use iDot as profile picture',()=>equip({avatar:!appearance.avatar}),busy||!wallet);
-  avatar.setAttribute('aria-pressed',String(appearance.avatar));info.append(avatar);hero.append(live,info);
+  avatar.setAttribute('aria-pressed',String(appearance.avatar));info.append(avatar);if(rareGranted)info.append(element('p','Exclusive unlocked: iLiam Icon Crown','lc-rare-label'));hero.append(live,info);
  }else{
   const live=element('div','','lc-identity-preview');const picture=element('img');picture.alt='Avatar preview';picture.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(dotSVG(appearance));picture.className=appearance.frame?'lc-frame':'';
   const name=element('strong','Display Name',appearance.gradient?'lc-preview-gradient':'');const handle=element('span','@username',appearance.username?'lc-blue-name':'');
@@ -612,6 +612,7 @@ function customize(){
   const disabled=busy||!wallet||(!owned&&wallet.balance<price);
   const b=button(owned?(active?'Equipped · Unequip':'Equip'):wallet&&wallet.balance<price?'Not enough LC':'Unlock',onAction,disabled||(id==='blue'&&active));b.setAttribute('aria-pressed',String(active));item.append(b);grid.append(item);
  }
+ if(isDot&&rareGranted)tile('favicon','iLiam Icon Crown',0,'A special iLiam favicon worn above your iDot. Awarded to selected accounts.',{favicon:true},true,appearance.favicon===true,()=>equip({favicon:!appearance.favicon}),true);
  if(isDot)tile('blue','Classic Blue',0,'The original iDot.',{color:'blue'},true,appearance.color==='blue',()=>equip({color:'blue'}));
  for(const [id,name,price,group,desc,config] of catalog){
   if(storeIds.has(id)||group!==(isDot?'iDot':'Profile'))continue;
@@ -619,7 +620,7 @@ function customize(){
   const active=color?appearance.color===id:appearance[id]===true;
   tile(id,name,price,desc,config,has(id),active,()=>has(id)?equip(color?{color:active?'blue':id}:{[id]:!active}):buy(id,price));
  }
- if(isDot&&rareGranted)tile('favicon','iLiam Icon Crown',0,'A special iLiam favicon worn above your iDot. Awarded to selected accounts.',{favicon:true},true,appearance.favicon===true,()=>equip({favicon:!appearance.favicon}),true);
+
  custom.append(element('h4',isDot?'iDot collection':'Profile cosmetics','lc-section-heading'),grid);
 
 }
