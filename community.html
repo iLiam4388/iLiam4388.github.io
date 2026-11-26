@@ -233,7 +233,7 @@ button:disabled{opacity:.55;cursor:wait;transform:none}
 
 <script type="module">
 import {installAdmin} from './community-admin.js?v=nav-badges-2';
-import {dotAvatar,styleIdentity,appearanceForProfile} from "./idot-render.js?v=2";
+import {dotAvatar,styleIdentity,appearanceForProfile} from "./idot-render.js?v=3";
 import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import{getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,deleteUser}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 import{getFirestore,doc,getDoc,addDoc,setDoc,deleteDoc,updateDoc,collection,query,where,orderBy,limit,onSnapshot,serverTimestamp,runTransaction,getDocs}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
@@ -382,7 +382,7 @@ async function openPublicProfile(uid,fallback={}){
   const followersSnap=await getDocs(collection(db,"profiles",uid,"followers"));
   const followingSnap=await getDocs(collection(db,"profiles",uid,"following"));
   publicProfileTitle.textContent=profile.nickname||"User Profile";
- publicProfileSummary.innerHTML=`${avatarMarkup(uid,profile)}<div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div>@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
+ publicProfileSummary.innerHTML=`${avatarMarkup(uid,profile)}<div><strong>${escapeHtml(profile.nickname||"Unknown user")}</strong><div class="username">@${escapeHtml(profile.username||"unknown")}</div><div class="profile-stats"><span>Followers: ${followersSnap.size}</span><span>Following: ${followingSnap.size}</span></div></div>`;
  styleIdentity(publicProfileSummary,profile.liamAppearance||{});
  const badge=document.createElement('span');badge.className='admin-badge';badge.dataset.communityBadge=uid;publicProfileSummary.append(badge);adminControl.badges();
  if(profile.bio){const bio=document.createElement('p');bio.textContent=profile.bio;publicProfileSummary.append(bio);}
@@ -1079,7 +1079,7 @@ async function renderSavedPosts(){
  }
 }
 </script>
-<script type="module" src="nav-badges.js?v=6"></script>
+<script type="module" src="nav-badges.js?v=7"></script>
 <script type="module" src="site-notifications.js?v=permission-fix-3"></script>
 <script type="module" src="community-calls.js?v=11"></script>
 <script type="module" src="community-group-calls.js?v=11"></script>
