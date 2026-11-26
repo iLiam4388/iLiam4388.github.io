@@ -131,22 +131,49 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/posts/$(postId)).data.uid == uid
         && (!featured || get(/databases/$(database)/documents/posts/$(postId)).data.featured == true);
     }
+    function lcAchievementAmount(action) {
+      return action == 'artist' ? 50 : action == 'messages50' ? 50 : action == 'messages100' ? 100 : 25;
+    }
+    function lcAchievement(uid, action, postId) {
+      return (action == 'firstPost' && lcPost(uid, postId, false))
+        || (action == 'artist' && lcPost(uid, postId, false)
+          && get(/databases/$(database)/documents/posts/$(postId)).data.text.matches('(?s).*⟦iLiam-media:v1:Image:[^⟧]+⟧.*'))
+        || (action in ['messages50','messages100'] && postId == ''
+          && exists(/databases/$(database)/documents/liamMessageStats/$(uid))
+          && get(/databases/$(database)/documents/liamMessageStats/$(uid)).data.count >= (action == 'messages50' ? 50 : 100));
+    }
+    function lcNewMessage(uid) {
+      let d = request.resource.data;
+      let m = /databases/$(database)/documents/chats/$(d.chatId)/messages/$(d.messageId);
+      return d.keys().hasOnly(['count','chatId','messageId'])
+        && d.count is int && d.chatId is string && d.messageId is string
+        && !exists(m) && existsAfter(m)
+        && getAfter(m).data.uid == uid && getAfter(m).data.createdAt == request.time;
+    }
+    match /liamMessageStats/{uid} {
+      allow read: if isSelf(uid);
+      allow create: if isSelf(uid) && hasProfile() && request.resource.data.count == 1 && lcNewMessage(uid);
+      allow update: if isSelf(uid) && hasProfile() && request.resource.data.count == resource.data.count + 1 && lcNewMessage(uid);
+      allow delete: if false;
+    }
     match /liamWallets/{uid} {
       allow read: if isSelf(uid);
       allow create: if isSelf(uid) && hasProfile()
-        && request.resource.data.keys().hasOnly(['balance','owned','claims','action','postId','lastDaily'])
+        && request.resource.data.keys().hasOnly(['balance','owned','claims','action','postId','lastDaily','lastPostReward'])
         && request.resource.data.get('lastDaily', null) == null
+        && request.resource.data.get('lastPostReward', null) == null
         && request.resource.data.balance == 100
         && request.resource.data.owned == []
         && request.resource.data.claims == []
         && request.resource.data.action == 'starter'
         && request.resource.data.postId == '';
       allow update: if isSelf(uid) && hasProfile()
-        && request.resource.data.keys().hasOnly(['balance','owned','claims','action','postId','lastDaily'])
+        && request.resource.data.keys().hasOnly(['balance','owned','claims','action','postId','lastDaily','lastPostReward'])
         && request.resource.data.balance is int && request.resource.data.balance >= 0
         && request.resource.data.owned is list && request.resource.data.claims is list
         && (
-          (request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
+          (request.resource.data.get('lastPostReward', null) == resource.data.get('lastPostReward', null)
+            && request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
             && request.resource.data.claims == resource.data.claims
             && !(request.resource.data.action in resource.data.owned)
             && request.resource.data.owned == resource.data.owned.concat([request.resource.data.action])
@@ -154,12 +181,13 @@ service cloud.firestore {
             && lcPrice(request.resource.data.action, resource.data.balance - request.resource.data.balance))
           || (request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
             && request.resource.data.owned == resource.data.owned
-            && request.resource.data.action in ['firstPost','featured']
+            && request.resource.data.action in ['firstPost','artist','messages50','messages100']
             && !(request.resource.data.action in resource.data.claims)
             && request.resource.data.claims == resource.data.claims.concat([request.resource.data.action])
-            && lcPost(uid, request.resource.data.postId, request.resource.data.action == 'featured')
-            && request.resource.data.balance == resource.data.balance + (request.resource.data.action == 'featured' ? 150 : 25))
-          || (request.resource.data.action == 'daily'
+            && lcAchievement(uid, request.resource.data.action, request.resource.data.postId)
+            && request.resource.data.balance == resource.data.balance + lcAchievementAmount(request.resource.data.action))
+          || (request.resource.data.get('lastPostReward', null) == resource.data.get('lastPostReward', null)
+            && request.resource.data.action == 'daily'
             && request.resource.data.postId == ''
             && request.resource.data.owned == resource.data.owned
             && request.resource.data.claims == resource.data.claims
@@ -168,6 +196,18 @@ service cloud.firestore {
             && (resource.data.get('lastDaily', null) == null
               || (resource.data.lastDaily is timestamp
                 && request.time >= resource.data.lastDaily + duration.value(24, 'h'))))
+          || (request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
+            && request.resource.data.owned == resource.data.owned
+            && request.resource.data.action in ['postReward','featuredReward']
+            && lcPost(uid, request.resource.data.postId, request.resource.data.action == 'featuredReward')
+            && !(request.resource.data.action + ':' + request.resource.data.postId in resource.data.claims)
+            && request.resource.data.claims == resource.data.claims.concat([request.resource.data.action + ':' + request.resource.data.postId])
+            && request.resource.data.balance == resource.data.balance + (request.resource.data.action == 'featuredReward' ? 150 : 5)
+            && (request.resource.data.action == 'featuredReward'
+              ? request.resource.data.get('lastPostReward', null) == resource.data.get('lastPostReward', null)
+              : (request.resource.data.lastPostReward == request.time
+                && (resource.data.get('lastPostReward', null) == null
+                  || request.time >= resource.data.lastPostReward + duration.value(1, 'h')))))
         );
       allow delete: if false;
     }
