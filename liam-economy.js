@@ -1,6 +1,6 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
+import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 import {defaultAppearance,dotSVG} from './idot-render.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
@@ -19,9 +19,9 @@ const catalog=[
  ['texture','Starfield Texture',150,'Extras','Decorate your iLiam background.',{}],
  ['wallpaper','iDot Wallpaper',75,'Downloads','Download an iDot PNG wallpaper.',{}]
 ];
-let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All';
+let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='',dailyTimer=0;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
-const balance=document.createElement('a');balance.className='lc-balance';balance.href='store.html';balance.hidden=true;document.body.append(balance);
+const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
 const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css';document.head.append(style);
 const buddy=document.createElement('div');buddy.className='lc-buddy';buddy.hidden=true;buddy.setAttribute('aria-hidden','true');document.body.append(buddy);
 let lastX=innerWidth/2,lastY=innerHeight/2,bx=lastX,by=lastY,frame=0;
@@ -42,10 +42,12 @@ addEventListener('pointermove',e=>{
  document.querySelectorAll('.lc-dot-preview').forEach(el=>{const r=el.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2;const n=Math.max(1,Math.hypot(dx,dy));eyes(el,dx/n*3,dy/n*3)});
  if(!buddy.hidden&&!frame)frame=requestAnimationFrame(tick);
 },{passive:true});
+const storeIds=new Set(['follower','cursor','texture','wallpaper']);
+function dailyReady(){return !!wallet&&(!wallet.lastDaily||Date.now()-wallet.lastDaily.toMillis()>=86400000);}
 function has(id){return wallet?.owned?.includes(id)===true;}
 function apply(){
  balance.hidden=!user||!wallet;balance.textContent=wallet?wallet.balance.toLocaleString()+' LC':'';
- balance.setAttribute('aria-label','Liam Coins balance and store');
+ balance.setAttribute('aria-label','Liam Coins balance and ways to earn');
  const b=document.getElementById('profileButton');if(b){let t=b.querySelector('.lc-profile-balance');if(!t){t=document.createElement('span');t.className='lc-profile-balance';b.append(t)}t.textContent=wallet?' · '+wallet.balance+' LC':''}
  buddy.hidden=!(user&&has('follower')&&appearance.follower&&fine.matches&&!motion.matches);
  if(!buddy.hidden){buddy.innerHTML=dotSVG(appearance);if(!frame)frame=requestAnimationFrame(tick)}
@@ -71,49 +73,69 @@ function thumbnail(id,c){if(!previews.has(id))previews.set(id,png(id,c));return 
 function status(root){if(error)root.append(element('p',error,'lc-error'))}
 function shop(){
  if(!store)return;store.replaceChildren();
- const intro=element('div','','lc-intro');intro.append(element('h2','Liam Store'),element('p','Earn Liam Coins and unlock cosmetics, companions and downloads.'));
+ const intro=element('div','','lc-intro');intro.append(element('h2','Liam Store'),element('p','Spend Liam Coins on assistants, cursors, textures and downloads. Customize your iDot and profile in Community.'));
  if(!user){const link=element('a','Sign in through Community');link.href='community.html';intro.append(link)}
  else if(wallet)intro.append(element('strong',wallet.balance+' Liam Coins (LC)'));
  else intro.append(element('p','Loading your wallet…'));
- store.append(intro);status(store);
- const filters=element('div','','lc-filters');for(const name of ['All','iDot','Profile','Extras','Downloads']){const b=button(name,()=>{category=name;shop()});b.setAttribute('aria-pressed',String(category===name));filters.append(b)}store.append(filters);
- const grid=element('div','','lc-grid');for(const [id,name,price,group,desc,c] of catalog){if(category!=='All'&&group!==category)continue;const card=element('article','','lc-card'),img=element('img');img.alt=name;img.width=280;img.height=180;thumbnail(id,c).then(src=>img.src=src).catch(()=>{});card.append(img,element('h3',name),element('p',desc),element('strong',price+' LC'));
- if(has(id)){if(id==='wallpaper')card.append(button('Download PNG',async()=>{const a=element('a');a.download='idot-wallpaper.png';a.href=await png(id,appearance,1920,1080);a.click()}));else {const a=element('a','Owned · Customize in profile');a.href='community.html?customize=1';card.append(a)}}else card.append(button(wallet&&wallet.balance<price?'Not enough LC':'Buy',()=>buy(id,price),!wallet||busy||wallet.balance<price));grid.append(card)}store.append(grid);
+ const earn=element('a','How to earn Liam Coins','lc-button');earn.href='community.html?earn=1';intro.append(earn);store.append(intro);status(store);
+ const filters=element('div','','lc-filters');for(const name of ['All','iDot','Extras','Downloads']){const b=button(name,()=>{category=name;shop()});b.setAttribute('aria-pressed',String(category===name));filters.append(b)}store.append(filters);
+ const grid=element('div','','lc-grid');for(const [id,name,price,group,desc,c] of catalog){if(!storeIds.has(id)||(category!=='All'&&group!==category))continue;const card=element('article','','lc-card'),img=element('img');img.alt=name;img.width=280;img.height=180;thumbnail(id,c).then(src=>img.src=src).catch(()=>{});card.append(img,element('h3',name),element('p',desc),element('strong',price+' LC'));
+ if(has(id)){if(id==='wallpaper')card.append(button('Download PNG',async()=>{const a=element('a');a.download='idot-wallpaper.png';a.href=await png(id,appearance,1920,1080);a.click()}));else {card.append(button(appearance[id]?'Equipped · Turn off':'Owned · Equip',()=>equip({[id]:!appearance[id]}),busy));if(id==='follower'){const a=element('a','Customize your iDot in Community');a.href='community.html?customize=1';card.append(a)}}}else card.append(button(wallet&&wallet.balance<price?'Not enough LC':'Buy',()=>buy(id,price),!wallet||busy||wallet.balance<price));grid.append(card)}store.append(grid);
 }
 function customize(){
  if(!custom)return;custom.replaceChildren();if(!user)return;
- custom.append(element('h3','Liam Coins & Profile Customization'),element('p',wallet?wallet.balance+' LC':'Loading wallet…'));status(custom);
- const link=element('a','Visit Liam Store','lc-button');link.href='store.html';custom.append(link);
- const preview=element('div','','lc-dot-preview');preview.innerHTML=dotSVG(appearance);custom.append(preview);
+ const bar=element('div','','lc-filters');
+ for(const [id,label] of [['','Close menu'],['idot','iDot'],['profile','Profile appearance'],['earn','Earn LC']]){
+  if(id===''&&!profileTab)continue;
+  const b=button(label,()=>{profileTab=profileTab===id?'':id;customize()});b.setAttribute('aria-pressed',String(profileTab===id));bar.append(b);
+ }
+ custom.append(element('h3','Liam Coins'+(wallet?' · '+wallet.balance+' LC':'')),bar);status(custom);
+ if(!profileTab){custom.append(element('p','Open a menu to customize your profile, customize iDot, or earn Liam Coins.'));return;}
+ if(profileTab==='earn'){
+  custom.append(element('h4','How to earn Liam Coins'),element('p','Your account receives 100 LC once when its wallet is created. Earn more by claiming daily rewards and completing achievements.'));
+  const daily=button(dailyReady()?'Claim daily reward · +10 LC':'Daily reward · '+(wallet?.lastDaily?'come back after 24 hours':'loading'),()=>claimDaily(),!dailyReady()||busy);custom.append(daily);
+  for(const [id,label,amount] of [['firstPost','Publish your first post',25],['featured','Get your first featured post',150]])custom.append(button(wallet?.claims?.includes(id)?label+' · Claimed':label+' · Claim '+amount+' LC',()=>claim(id,amount),!wallet||busy||wallet.claims.includes(id)));
+  return;
+ }
  const controls=element('div','','lc-controls');
- function toggle(id,label,free=false){const row=element('label','','lc-option'),input=element('input');input.type='checkbox';input.checked=appearance[id]===true;input.disabled=busy||!wallet||(!free&&!has(id));input.onchange=()=>equip({[id]:input.checked});row.append(input,document.createTextNode(label+(free||has(id)?'':' (locked)')));controls.append(row)}
- toggle('avatar','Use iDot as profile picture (free)',true);
- const colors=element('label','iDot color '),select=element('select');for(const id of ['blue','purple','green','gold']){const option=element('option',id+(id==='blue'||has(id)?'':' (locked)'));option.value=id;option.disabled=id!=='blue'&&!has(id);select.append(option)}select.value=appearance.color;select.disabled=busy||!wallet;select.onchange=()=>equip({color:select.value});colors.append(select);controls.append(colors);
- for(const [id,label] of [['glasses','Sunglasses'],['hat','Beanie'],['follower','iDot assistant follows cursor'],['frame','Golden profile frame'],['gradient','Gradient display name'],['username','Blue username'],['tag','iDot Club tag'],['cursor','Neon cursor'],['texture','Starfield texture']])toggle(id,label);
- custom.append(controls,element('p','Eye tracking is included with every live iDot. The assistant uses exactly the same color and accessories as your iDot avatar.'));
- const inv=element('div','','lc-achievements');inv.append(element('h4','Inventory & cosmetic shop'));
- for(const [id,name,price,group] of catalog){if(group==='Downloads')continue;const label=has(id)?name+' · Owned':name+' · '+price+' LC';inv.append(button(label,()=>buy(id,price),has(id)||!wallet||busy||wallet.balance<price));}
+ function toggle(id,label,free=false){
+  const row=element('label','','lc-option'),input=element('input');input.type='checkbox';input.checked=appearance[id]===true;input.disabled=busy||!wallet||(!free&&!has(id));input.onchange=()=>equip({[id]:input.checked});row.append(input,document.createTextNode(label+(free||has(id)?'':' (locked)')));controls.append(row);
+ }
+ if(profileTab==='idot'){
+  const preview=element('div','','lc-dot-preview');preview.innerHTML=dotSVG(appearance);custom.append(preview);
+  toggle('avatar','Use iDot as profile picture (free)',true);
+  const colors=element('label','iDot color '),select=element('select');for(const id of ['blue','purple','green','gold']){const option=element('option',id+(id==='blue'||has(id)?'':' (locked)'));option.value=id;option.disabled=id!=='blue'&&!has(id);select.append(option)}select.value=appearance.color;select.disabled=busy||!wallet;select.onchange=()=>equip({color:select.value});colors.append(select);controls.append(colors);
+  toggle('glasses','Sunglasses');toggle('hat','Beanie');
+  custom.append(element('p','Eye tracking is free. Your store-purchased assistant always matches this iDot.'));
+ }else{for(const [id,label] of [['frame','Golden profile frame'],['gradient','Gradient display name'],['username','Blue username'],['tag','iDot Club tag']])toggle(id,label);}
+ custom.append(controls);
+ const inv=element('div','','lc-achievements');inv.append(element('h4','Unlock customizations'));
+ for(const [id,name,price,group] of catalog){
+  if(storeIds.has(id)||group!==(profileTab==='idot'?'iDot':'Profile'))continue;
+  const label=has(id)?name+' · Owned':name+' · '+price+' LC';inv.append(button(label,()=>buy(id,price),has(id)||!wallet||busy||wallet.balance<price));
+ }
  custom.append(inv);
- const ach=element('div','','lc-achievements');ach.append(element('h4','Achievements'));
- for(const [id,label,amount] of [['firstPost','Publish your first post',25],['featured','Get a featured post',150]])ach.append(button(wallet?.claims?.includes(id)?label+' · Claimed':label+' · Claim '+amount+' LC',()=>claim(id,amount),!wallet||busy||wallet.claims.includes(id)));
- custom.append(ach);
 }
 function render(){apply();shop();customize();}
 async function operate(fn){if(busy||!user)return;const g=generation;busy=true;error='';render();try{await fn()}catch(e){if(g===generation)error=e.message||String(e)}finally{if(g===generation){busy=false;render()}}}
 async function buy(id,price){if(!confirm('Purchase '+catalog.find(x=>x[0]===id)[1]+' for '+price+' LC?'))return;return operate(async()=>{const ref=doc(db,'liamWallets',user.uid);await runTransaction(db,async tx=>{const s=await tx.get(ref),w=s.data();if(!w||w.owned.includes(id))throw Error('Already owned or unavailable.');if(w.balance<price)throw Error('Not enough Liam Coins.');tx.update(ref,{balance:w.balance-price,owned:[...w.owned,id],action:id,postId:''})})})}
 async function equip(changes){return operate(async()=>{await updateDoc(doc(db,'profiles',user.uid),{liamAppearance:{...appearance,...changes}})})}
+async function claimDaily(){return operate(async()=>{const ref=doc(db,'liamWallets',user.uid);await runTransaction(db,async tx=>{const w=(await tx.get(ref)).data();if(w.lastDaily&&Date.now()-w.lastDaily.toMillis()<86400000)throw Error('Daily reward already claimed. Try again after 24 hours.');tx.update(ref,{balance:w.balance+10,action:'daily',postId:'',lastDaily:serverTimestamp()})})})}
 async function claim(id,amount){return operate(async()=>{const uid=user.uid;const constraints=[where('uid','==',uid)];if(id==='featured')constraints.push(where('featured','==',true));const posts=await getDocs(query(collection(db,'posts'),...constraints,limit(1)));if(posts.empty)throw Error('You have not earned this achievement yet.');const ref=doc(db,'liamWallets',uid);await runTransaction(db,async tx=>{const w=(await tx.get(ref)).data();if(w.claims.includes(id))throw Error('Already claimed.');tx.update(ref,{balance:w.balance+amount,claims:[...w.claims,id],action:id,postId:posts.docs[0].id})})})}
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;wallet=null;appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);wallet=null;profileTab='';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
   if(g!==generation||!p.exists())return;
   appearance={...defaultAppearance,...p.data().liamAppearance};render();if(started)return;started=true;
   try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
-   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;render()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
+   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);if(wallet?.lastDaily&&!dailyReady())dailyTimer=setTimeout(render,Math.max(1000,86400000-(Date.now()-wallet.lastDaily.toMillis())+1000));render()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
  },e=>{if(g===generation){error=e.message;render()}}));
 });
-if(custom&&new URLSearchParams(location.search).get('customize')==='1'){const timer=setInterval(()=>{if(user&&document.getElementById('profileButton')&&!document.getElementById('profileButton').disabled&&wallet){clearInterval(timer);document.getElementById('profileButton')?.click();custom.scrollIntoView({block:'nearest'})}},250);setTimeout(()=>clearInterval(timer),15000)}
+const params=new URLSearchParams(location.search);
+if(custom&&(params.get('customize')==='1'||params.get('earn')==='1')){
+ const timer=setInterval(()=>{if(user&&document.getElementById('profileButton')&&!document.getElementById('profileButton').disabled){clearInterval(timer);profileTab=params.get('earn')==='1'?'earn':'idot';customize();document.getElementById('profileButton')?.click();custom.scrollIntoView({block:'nearest'})}},500);setTimeout(()=>clearInterval(timer),15000);
+}
 render();
