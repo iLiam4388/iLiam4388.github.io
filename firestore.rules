@@ -179,7 +179,8 @@ service cloud.firestore {
             && request.resource.data.owned == resource.data.owned.concat([request.resource.data.action])
             && request.resource.data.postId == ''
             && lcPrice(request.resource.data.action, resource.data.balance - request.resource.data.balance))
-          || (request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
+          || (request.resource.data.get('lastPostReward', null) == resource.data.get('lastPostReward', null)
+            && request.resource.data.get('lastDaily', null) == resource.data.get('lastDaily', null)
             && request.resource.data.owned == resource.data.owned
             && request.resource.data.action in ['firstPost','artist','messages50','messages100']
             && !(request.resource.data.action in resource.data.claims)
@@ -200,7 +201,7 @@ service cloud.firestore {
             && request.resource.data.owned == resource.data.owned
             && request.resource.data.action in ['postReward','featuredReward']
             && lcPost(uid, request.resource.data.postId, request.resource.data.action == 'featuredReward')
-            && !(request.resource.data.action + ':' + request.resource.data.postId in resource.data.claims)
+            && !((request.resource.data.action + ':' + request.resource.data.postId) in resource.data.claims)
             && request.resource.data.claims == resource.data.claims.concat([request.resource.data.action + ':' + request.resource.data.postId])
             && request.resource.data.balance == resource.data.balance + (request.resource.data.action == 'featuredReward' ? 150 : 5)
             && (request.resource.data.action == 'featuredReward'
