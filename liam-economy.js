@@ -19,7 +19,7 @@ const catalog=[
  ['texture','Starfield Texture',150,'Extras','Decorate your iLiam background.',{}],
  ['wallpaper','iDot Wallpaper',75,'Downloads','Download an iDot PNG wallpaper.',{}]
 ];
-let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='',dailyTimer=0;
+let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='',dailyTimer=0,messageCount=0;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
 const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css';document.head.append(style);
@@ -94,7 +94,16 @@ function customize(){
  if(profileTab==='earn'){
   custom.append(element('h4','How to earn Liam Coins'),element('p','Your account receives 100 LC once when its wallet is created. Earn more by claiming daily rewards and completing achievements.'));
   const daily=button(dailyReady()?'Claim daily reward · +10 LC':'Daily reward · '+(wallet?.lastDaily?'come back after 24 hours':'loading'),()=>claimDaily(),!dailyReady()||busy);custom.append(daily);
-  for(const [id,label,amount] of [['firstPost','Publish your first post',25],['featured','Get your first featured post',150]])custom.append(button(wallet?.claims?.includes(id)?label+' · Claimed':label+' · Claim '+amount+' LC',()=>claim(id,amount),!wallet||busy||wallet.claims.includes(id)));
+  const postReady=wallet&&(!wallet.lastPostReward||Date.now()-wallet.lastPostReward.toMillis()>=3600000);
+  custom.append(element('h4','Repeatable rewards'));
+  custom.append(button(postReady?'Publish a post · Claim +5 LC':'Post reward · available after one hour',()=>claim('postReward',5),!postReady||busy));
+  custom.append(button('Featured post · Claim +150 LC per post',()=>claim('featuredReward',150),!wallet||busy));
+  custom.append(element('p','Each post can be rewarded once. Regular post rewards are limited to one per hour to discourage spam.'));
+  custom.append(element('h4','Achievements'));
+  for(const [id,label,amount,target] of [['firstPost','First Post',25,0],['artist','Artist · Share a post with an image',50,0],['messages50','Chatter · Send 50 messages',50,50],['messages100','Conversation Pro · Send 100 messages',100,100]]){
+   const claimed=wallet?.claims?.includes(id);const progress=target?' · '+Math.min(messageCount,target)+'/'+target:'';
+   custom.append(button(claimed?label+' · Claimed':label+progress+' · Claim '+amount+' LC',()=>claim(id,amount),!wallet||busy||claimed||(target>0&&messageCount<target)));
+  }
   return;
  }
  const controls=element('div','','lc-controls');
@@ -121,16 +130,36 @@ async function operate(fn){if(busy||!user)return;const g=generation;busy=true;er
 async function buy(id,price){if(!confirm('Purchase '+catalog.find(x=>x[0]===id)[1]+' for '+price+' LC?'))return;return operate(async()=>{const ref=doc(db,'liamWallets',user.uid);await runTransaction(db,async tx=>{const s=await tx.get(ref),w=s.data();if(!w||w.owned.includes(id))throw Error('Already owned or unavailable.');if(w.balance<price)throw Error('Not enough Liam Coins.');tx.update(ref,{balance:w.balance-price,owned:[...w.owned,id],action:id,postId:''})})})}
 async function equip(changes){return operate(async()=>{await updateDoc(doc(db,'profiles',user.uid),{liamAppearance:{...appearance,...changes}})})}
 async function claimDaily(){return operate(async()=>{const ref=doc(db,'liamWallets',user.uid);await runTransaction(db,async tx=>{const w=(await tx.get(ref)).data();if(w.lastDaily&&Date.now()-w.lastDaily.toMillis()<86400000)throw Error('Daily reward already claimed. Try again after 24 hours.');tx.update(ref,{balance:w.balance+10,action:'daily',postId:'',lastDaily:serverTimestamp()})})})}
-async function claim(id,amount){return operate(async()=>{const uid=user.uid;const constraints=[where('uid','==',uid)];if(id==='featured')constraints.push(where('featured','==',true));const posts=await getDocs(query(collection(db,'posts'),...constraints,limit(1)));if(posts.empty)throw Error('You have not earned this achievement yet.');const ref=doc(db,'liamWallets',uid);await runTransaction(db,async tx=>{const w=(await tx.get(ref)).data();if(w.claims.includes(id))throw Error('Already claimed.');tx.update(ref,{balance:w.balance+amount,claims:[...w.claims,id],action:id,postId:posts.docs[0].id})})})}
+async function claim(id,amount){return operate(async()=>{
+ const uid=user.uid;let postId='';
+ const repeat=id==='postReward'||id==='featuredReward';
+ if(!['messages50','messages100'].includes(id)){
+  const posts=await getDocs(query(collection(db,'posts'),where('uid','==',uid),limit(250)));
+  const eligible=posts.docs.filter(p=>{
+   if(id==='featuredReward'&&p.data().featured!==true)return false;
+   if(id==='artist'&&!/⟦iLiam-media:v1:Image:[^⟧]+⟧/.test(p.data().text||''))return false;
+   return !repeat||!wallet.claims.includes(id+':'+p.id);
+  });
+  if(!eligible.length)throw Error('No eligible unclaimed post yet.');
+  postId=eligible[0].id;
+ }
+ const ref=doc(db,'liamWallets',uid),key=repeat?id+':'+postId:id;
+ await runTransaction(db,async tx=>{
+  const w=(await tx.get(ref)).data();if(w.claims.includes(key))throw Error('Already claimed.');
+  if(id==='postReward'&&w.lastPostReward&&Date.now()-w.lastPostReward.toMillis()<3600000)throw Error('Try again after one hour.');
+  tx.update(ref,{balance:w.balance+amount,claims:[...w.claims,key],action:id,postId,...(id==='postReward'?{lastPostReward:serverTimestamp()}:{})});
+ });
+})}
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);wallet=null;profileTab='';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);wallet=null;messageCount=0;profileTab='';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
+ if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize()}},()=>{}));
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
   if(g!==generation||!p.exists())return;
   appearance={...defaultAppearance,...p.data().liamAppearance};render();if(started)return;started=true;
   try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
-   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);if(wallet?.lastDaily&&!dailyReady())dailyTimer=setTimeout(render,Math.max(1000,86400000-(Date.now()-wallet.lastDaily.toMillis())+1000));render()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
+   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
  },e=>{if(g===generation){error=e.message;render()}}));
 });
