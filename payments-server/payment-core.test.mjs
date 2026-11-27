@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {PACKS,packFor,paidOrder,netCoins} from './payment-core.mjs';
+const session={livemode:false,mode:'payment',payment_status:'paid',currency:'usd',amount_total:99,payment_intent:'pi_test',metadata:{app:'iliam-sandbox-v1',uid:'tester',pack:'lc100'}};
+test('five fixed packages',()=>assert.equal(Object.keys(PACKS).length,5));
+test('prototype keys rejected',()=>assert.equal(packFor('constructor'),null));
+test('valid paid sandbox order',()=>assert.equal(paidOrder(session).coins,100));
+for(const [key,value] of Object.entries({livemode:true,payment_status:'unpaid',currency:'eur',amount_total:1,mode:'subscription',payment_intent:null}))test('reject '+key,()=>assert.equal(paidOrder({...session,[key]:value}),null));
+test('reject missing metadata',()=>assert.equal(paidOrder({...session,metadata:{}}),null));
+test('refund total',()=>assert.equal(netCoins(100,99,99),0));
+test('partial refund',()=>assert.equal(netCoins(100,100,25),75));
+test('no refund',()=>assert.equal(netCoins(600,499,0),600));
