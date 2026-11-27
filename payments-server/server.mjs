@@ -88,6 +88,11 @@ app.post('/checkout',tester,async(req,res)=>{
  success_url:RETURN+'?coins=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:RETURN+'?coins=cancel'
  },{idempotencyKey:'iliam-sandbox:'+req.uid+':'+id+':'+attempt});
  if(s.livemode!==false||!s.url)throw Error('Invalid sandbox session');res.json({url:s.url});
- }catch{console.error('Sandbox checkout creation failed');res.status(503).json({error:'Sandbox checkout unavailable'})}
+ }catch(e){
+  // Only log structured diagnostic fields, never keys, tokens, or request bodies.
+  const safe=v=>typeof v==='string'&&/^[a-zA-Z0-9_.\[\]\/-]{1,160}$/.test(v)?v:undefined;
+  console.error('Sandbox Stripe checkout failed:',JSON.stringify({type:safe(e?.type),code:safe(e?.code),param:safe(e?.param),statusCode:Number.isInteger(e?.statusCode)?e.statusCode:undefined,requestId:safe(e?.requestId)}));
+  res.status(503).json({error:'Sandbox checkout unavailable'});
+ }
 });
 app.listen(Number(process.env.PORT)||8080,'0.0.0.0',()=>console.log('iLiam sandbox checkout ready'));
