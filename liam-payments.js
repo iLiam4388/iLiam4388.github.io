@@ -15,6 +15,7 @@ let current=null,busy=false,balance=null,requestVersion=0,checkout=null,checkout
 const panel=document.getElementById('lc-embedded-panel'),mount=document.getElementById('lc-embedded-checkout'),heading=document.getElementById('lc-embedded-heading'),notice=document.getElementById('lc-embedded-notice'),close=document.getElementById('lc-embedded-close'),confirmation=document.getElementById('lc-payment-return');
 const ready=!!backend;
 const params=new URLSearchParams(location.search);
+const returnedFromCheckout=['success','cancel'].includes(params.get('coins'));
 const validSession=id=>typeof id==='string'&&id.startsWith(prefix)&&/^[A-Za-z0-9_]{1,220}$/.test(id);
 const pendingKey=uid=>'iliam-checkout-'+modeName+'-'+uid;
 const savePending=id=>{pending=id;try{if(current){if(id)sessionStorage.setItem(pendingKey(current.uid),id);else sessionStorage.removeItem(pendingKey(current.uid));}}catch{}};
@@ -46,6 +47,7 @@ async function api(path,body){
 function render(){
  wallet.textContent=modeName+' wallet: '+(balance===null?'—':balance.toLocaleString()+' '+coinsName);
  cards.replaceChildren();
+ if(returnedFromCheckout)return;
  for(const [id,coins,cents] of packs){
   const card=document.createElement('article');card.className='lc-pack-card';
   const img=document.createElement('div');img.className='lc-pack-icon';img.setAttribute('aria-hidden','true');img.textContent='LC';
@@ -68,11 +70,11 @@ close.addEventListener('click',()=>{
  refresh();
 });
 async function openCheckout(id,coins,cents){
- if(busy||!current||!ready||!backend||!checkoutConfigured||(live&&!liveAuthorized))return;
+ if(returnedFromCheckout||busy||!current||!ready||!backend||!checkoutConfigured||(live&&!liveAuthorized))return;
  // Open synchronously on the click so popup blockers can recognize user activation.
  const popup=window.open('about:blank','_blank','popup,width=560,height=780,resizable=yes,scrollbars=yes');
  if(!popup){setStatus('Your browser blocked the payment window. Allow popups for iLiam and try again. No checkout was created.');return;}
- const v=++checkoutVersion,uid=current.uid;checkout=popup;busy=true;render();panel.hidden=false;
+ const v=++checkoutVersion,uid=current.uid;polling=false;checkout=popup;busy=true;render();panel.hidden=false;
  try{
   popup.opener=null;
   popup.document.title='iLiam secure checkout';
@@ -116,7 +118,7 @@ async function confirmOrder(sessionId,uid,version){
    }catch(e){if(current?.uid===uid&&checkoutVersion===version)confirmation.textContent='Payment verification unavailable: '+(e.message||'Try again');}
    if(i<35)await new Promise(resolve=>setTimeout(resolve,5000));
   }
-  if(current?.uid===uid&&checkoutVersion===version){confirmation.textContent='Verification is still pending. Use Refresh wallet to check again.';busy=false;render();}
+  if(current?.uid===uid&&checkoutVersion===version){confirmation.textContent='Verification is still pending. Use Refresh wallet to check again, or close the checkout window before starting a new purchase.';render();}
  }finally{if(checkoutVersion===version)polling=false;}
 }
 async function refresh(){
@@ -142,4 +144,8 @@ onAuthStateChanged(auth,u=>{
 },()=>{liveAuthorized=false;balance=null;render();setStatus('Firebase sign-in could not be verified. Sign in again through Community.');});
 document.getElementById('lc-refresh-wallet').addEventListener('click',()=>{refresh();checkPending();});
 window.addEventListener('focus',()=>{if(current){refresh();checkPending();}});
+if(returnedFromCheckout){
+ const exit=document.createElement('button');exit.type='button';exit.className='lc-pack-buy';exit.textContent='Close payment window';exit.onclick=()=>{window.close();if(!window.closed)confirmation.textContent='You may close this tab and return to iLiam. Coins are only credited after verified payment.';};
+ root.querySelector('.lc-payment-actions').prepend(exit);
+}
 render();
