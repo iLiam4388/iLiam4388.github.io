@@ -2,15 +2,12 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
 import {paymentConfig} from './liam-payment-config.js?v=2';
-const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('liam-coin-packs'),shop=document.getElementById('liam-shop'),open=document.getElementById('get-liam-coins');
+const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('liam-coin-packs');
 const packs=[['lc100',100,99],['lc600',600,499],['lc1300',1300,999],['lc3000',3000,1999],['lc8500',8500,4999]];
 const backend=paymentConfig.sandbox===true&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
 let current=null,busy=false,balance=null,requestVersion=0;
 const status=document.getElementById('lc-payment-status'),wallet=document.getElementById('lc-sandbox-wallet'),cards=document.getElementById('lc-payment-packs');
 const setStatus=(message)=>{status.textContent=message};
-function show(){root.hidden=false;shop.hidden=true;open.setAttribute('aria-expanded','true');root.scrollIntoView({block:'start'});refresh();}
-function hide(){root.hidden=true;shop.hidden=false;open.setAttribute('aria-expanded','false');}
-document.addEventListener('iliam:coin-packs-opened',refresh);
 async function api(path,body){
  if(!backend||!current)throw Error('Sandbox backend is not configured or you are not signed in.');
  const token=await current.getIdToken(),res=await fetch(backend+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
@@ -38,5 +35,5 @@ async function refresh(){
 onAuthStateChanged(auth,u=>{current=u;balance=null;requestVersion++;render();if(!root.hidden)refresh();});
 document.getElementById('lc-refresh-wallet').addEventListener('click',refresh);
 const params=new URLSearchParams(location.search);
-if(params.has('coins')){show();if(params.get('coins')==='success'){document.getElementById('lc-payment-return').textContent='Returned from Checkout. Your test LC appear only after Stripe verifies payment. Refresh test wallet to check.';}else if(params.get('coins')==='cancel'){document.getElementById('lc-payment-return').textContent='Checkout canceled. No test LC awarded.';}}
+if(params.has('coins')){if(params.get('coins')==='success'){document.getElementById('lc-payment-return').textContent='Returned from Checkout. Your test LC appear only after Stripe verifies payment. Refresh test wallet to check.';}else if(params.get('coins')==='cancel'){document.getElementById('lc-payment-return').textContent='Checkout canceled. No test LC awarded.';}}
 render();
