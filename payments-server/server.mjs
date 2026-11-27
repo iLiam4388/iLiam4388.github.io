@@ -1,6 +1,7 @@
 import express from 'express';
 import Stripe from 'stripe';
-import {initializeApp,applicationDefault} from 'firebase-admin/app';
+import {initializeApp,cert} from 'firebase-admin/app';
+import {readFileSync} from 'node:fs';
 import {getAuth} from 'firebase-admin/auth';
 import {getFirestore,FieldValue} from 'firebase-admin/firestore';
 import {packFor,paidOrder,netCoins} from './payment-core.mjs';
@@ -8,7 +9,17 @@ const key=process.env.STRIPE_API_KEY, signing=process.env.STRIPE_WEBHOOK_SECRET;
 const testers=new Set((process.env.TESTER_UIDS||'').split(',').map(x=>x.trim()).filter(Boolean));
 if(!/^(sk|rk)_test_/.test(key||'')||!signing?.startsWith('whsec_')||!testers.size)throw Error('Sandbox test key, webhook secret and tester allowlist are required.');
 const stripe=new Stripe(key,{apiVersion:'2026-11-18.endive'});
-const firebase=initializeApp({credential:applicationDefault(),projectId:process.env.FIREBASE_PROJECT_ID||'iliam-4d0c9'});
+const projectId=process.env.FIREBASE_PROJECT_ID||'iliam-4d0c9';
+const credentialPath=process.env.GOOGLE_APPLICATION_CREDENTIALS||'/etc/secrets/firebase-service-account.json';
+let account;
+try{account=JSON.parse(readFileSync(credentialPath,'utf8'))}catch(e){
+ throw Error(e?.code==='ENOENT'?'Firebase secret file not found: check filename and GOOGLE_APPLICATION_CREDENTIALS':'Firebase secret file unreadable or invalid JSON');
+}
+if(account?.type!=='service_account'||!account.client_email||!account.private_key)throw Error('Firebase secret file is not a complete service account JSON');
+if(account.project_id!==projectId)throw Error('Firebase service account project does not match FIREBASE_PROJECT_ID');
+const credential=cert(account);
+const firebase=initializeApp({credential,projectId});
+console.log('Firebase service account JSON loaded and project matches');
 const db=getFirestore(firebase),auth=getAuth(firebase),app=express();
 const ORIGIN='https://iliam4388.github.io',RETURN=ORIGIN+'/liam-coins.html';
 const wallet=uid=>db.collection('liamSandboxWallets').doc(uid);
