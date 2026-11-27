@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
-import {paymentConfig} from './liam-payment-config.js?v=1';
+import {paymentConfig} from './liam-payment-config.js?v=2';
 const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('liam-coin-packs'),shop=document.getElementById('liam-shop'),open=document.getElementById('get-liam-coins');
 const packs=[['lc100',100,99],['lc600',600,499],['lc1300',1300,999],['lc3000',3000,1999],['lc8500',8500,4999]];
 const backend=paymentConfig.sandbox===true&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
@@ -10,9 +10,7 @@ const status=document.getElementById('lc-payment-status'),wallet=document.getEle
 const setStatus=(message)=>{status.textContent=message};
 function show(){root.hidden=false;shop.hidden=true;open.setAttribute('aria-expanded','true');root.scrollIntoView({block:'start'});refresh();}
 function hide(){root.hidden=true;shop.hidden=false;open.setAttribute('aria-expanded','false');}
-open.addEventListener('click',()=>root.hidden?show():hide());
-document.getElementById('lc-back-cosmetics').addEventListener('click',hide);
-document.addEventListener('iliam:coin-packs',show);
+document.addEventListener('iliam:coin-packs-opened',refresh);
 async function api(path,body){
  if(!backend||!current)throw Error('Sandbox backend is not configured or you are not signed in.');
  const token=await current.getIdToken(),res=await fetch(backend+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
