@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test payment-core.test.mjs"
+    "test": "node --test payment-core.test.mjs live-core.test.mjs",
+    "start:live": "node live-server.mjs"
   },
   "engines": {
     "node": ">=22"
