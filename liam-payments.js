@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
-import {paymentConfig as sandboxConfig,livePaymentConfig} from './liam-payment-config.js?v=5';
+import {paymentConfig as sandboxConfig,livePaymentConfig} from './liam-payment-config.js?v=6';
 const live=new URLSearchParams(location.search).get('mode')==='live';
 const paymentConfig=live?livePaymentConfig:sandboxConfig;
 const prefix=live?'cs_live_':'cs_test_';
