@@ -11,10 +11,13 @@ const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('
 const packs=[['lc100',100,99],['lc600',600,499],['lc1300',1300,999],['lc3000',3000,1999],['lc8500',8500,4999]];
 const checkoutConfigured=live?paymentConfig.enabled===true:paymentConfig.sandbox===true;
 const backend=(live||paymentConfig.sandbox===true)&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
-let current=null,busy=false,balance=null,requestVersion=0,checkout=null,checkoutVersion=0,stripe=null,liveAuthorized=false;
+let current=null,busy=false,balance=null,requestVersion=0,checkout=null,checkoutVersion=0,liveAuthorized=false,pending=null,polling=false;
 const panel=document.getElementById('lc-embedded-panel'),mount=document.getElementById('lc-embedded-checkout'),heading=document.getElementById('lc-embedded-heading'),notice=document.getElementById('lc-embedded-notice'),close=document.getElementById('lc-embedded-close'),confirmation=document.getElementById('lc-payment-return');
-const key=paymentConfig.publishableKey;
-const ready=typeof key==='string'&&(live?/^pk_live_[A-Za-z0-9]+$/:/^pk_test_[A-Za-z0-9]+$/).test(key);
+const ready=!!backend;
+const params=new URLSearchParams(location.search);
+const validSession=id=>typeof id==='string'&&id.startsWith(prefix)&&/^[A-Za-z0-9_]{1,220}$/.test(id);
+const pendingKey=uid=>'iliam-checkout-'+modeName+'-'+uid;
+const savePending=id=>{pending=id;try{if(current){if(id)sessionStorage.setItem(pendingKey(current.uid),id);else sessionStorage.removeItem(pendingKey(current.uid));}}catch{}};
 const status=document.getElementById('lc-payment-status'),wallet=document.getElementById('lc-sandbox-wallet'),cards=document.getElementById('lc-payment-packs');
 const setStatus=(message)=>{status.textContent=message};
 setStatus('Checking your iLiam sign-in…');
@@ -27,7 +30,7 @@ if(live){
 }
 
 async function api(path,body){
- if(live&&!checkoutConfigured&&path!=='/wallet')throw Error('Live checkout is disabled on the website.');
+ if(live&&!checkoutConfigured&&path==='/checkout')throw Error('Live checkout is disabled on the website.');
  if(!backend||!current)throw Error('Payment backend is not configured or you are not signed in.');
  const account=current,controller=new AbortController();
  let timer;
@@ -54,52 +57,89 @@ function render(){
  }
 }
 function closeCheckout(){
- checkoutVersion++;if(checkout){try{checkout.destroy()}catch{}checkout=null;}
+ checkoutVersion++;polling=false;
+ if(checkout){try{checkout.close()}catch{}checkout=null;}
  mount.replaceChildren();panel.hidden=true;busy=false;render();
 }
-close.addEventListener('click',()=>{closeCheckout();setStatus('Checkout closed. Any completed payment is still verified by Stripe.');refresh();});
+close.textContent='Close checkout window';
+close.addEventListener('click',()=>{
+ closeCheckout();
+ confirmation.textContent='Checkout window closed. Closing does not cancel an existing payment; verified purchases still credit your wallet.';
+ refresh();
+});
 async function openCheckout(id,coins,cents){
  if(busy||!current||!ready||!backend||!checkoutConfigured||(live&&!liveAuthorized))return;
- const v=++checkoutVersion,uid=current.uid;busy=true;render();panel.hidden=false;
- heading.textContent=coins.toLocaleString()+' LC · '+(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});
- confirmation.textContent='';notice.textContent='Loading secure '+(live?'live':'test')+' checkout…';panel.scrollIntoView({block:'start',behavior:'smooth'});
+ // Open synchronously on the click so popup blockers can recognize user activation.
+ const popup=window.open('about:blank','_blank','popup,width=560,height=780,resizable=yes,scrollbars=yes');
+ if(!popup){setStatus('Your browser blocked the payment window. Allow popups for iLiam and try again. No checkout was created.');return;}
+ const v=++checkoutVersion,uid=current.uid;checkout=popup;busy=true;render();panel.hidden=false;
  try{
-  if(typeof window.Stripe!=='function')throw Error('Stripe.js could not load. Refresh the page and try again.');
-  stripe ||= window.Stripe(key);
-  const result=await api('/checkout',{pack:id,attempt:crypto.randomUUID(),embedded:true});
-  if(v!==checkoutVersion||current?.uid!==uid)return;
-  if(typeof result.clientSecret!=='string'||!result.clientSecret.startsWith(prefix)||typeof result.sessionId!=='string'||!result.sessionId.startsWith(prefix))throw Error('Embedded checkout is not ready. Deploy the latest payment server and refresh.');
-  const options={fetchClientSecret:async()=>result.clientSecret,onComplete:()=>{if(v===checkoutVersion&&current?.uid===uid){closeCheckout();confirmOrder(result.sessionId,uid,checkoutVersion);}}};
-  const create=stripe.createEmbeddedCheckoutPage||stripe.initEmbeddedCheckout;
-  if(typeof create!=='function')throw Error('Embedded Stripe Checkout is unavailable in this browser.');
-  const instance=await create.call(stripe,options);
-  if(v!==checkoutVersion||current?.uid!==uid){instance.destroy();return;}
-  checkout=instance;checkout.mount('#lc-embedded-checkout');notice.textContent=live?'This is a real purchase. Only use your own authorized payment method.':'Use a Stripe test card only. No real money will be charged.';
+  popup.opener=null;
+  popup.document.title='iLiam secure checkout';
+  popup.document.body.textContent='Opening secure Stripe checkout…';
+ }catch{}
+ heading.textContent=coins.toLocaleString()+' LC · '+(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});
+ confirmation.textContent='';notice.textContent='Opening Stripe in a separate window…';panel.scrollIntoView({block:'start',behavior:'smooth'});
+ try{
+  const result=await api('/checkout',{pack:id,attempt:crypto.randomUUID(),embedded:false});
+  if(v!==checkoutVersion||current?.uid!==uid){try{popup.close()}catch{}return;}
+  const url=new URL(result.url);
+  if(url.protocol!=='https:'||url.hostname!=='checkout.stripe.com'||url.username||url.password||url.port||!validSession(result.sessionId))throw Error('Hosted Stripe checkout is not ready. Deploy the latest payment server and refresh.');
+  if(popup.closed)throw Error('The payment window was closed before checkout loaded.');
+  savePending(result.sessionId);
+  popup.location.replace(url.href);
+  notice.textContent=live?'Complete the real purchase in the separate Stripe window. This page will verify it automatically.':'Use a Stripe test card in the separate window. No real money will be charged.';
+  const resume=document.createElement('a');resume.className='lc-pack-buy';resume.href=url.href;resume.target='_blank';resume.rel='noopener noreferrer';resume.textContent='Reopen secure Stripe checkout';mount.replaceChildren(resume);
+  confirmOrder(result.sessionId,uid,v);
  }catch(e){if(v===checkoutVersion){closeCheckout();setStatus(e.message||'Unable to open checkout');}}
 }
 async function confirmOrder(sessionId,uid,version){
- confirmation.textContent='Checkout completed. Waiting for verified coins…';
- for(let i=0;i<10;i++){
-  if(current?.uid!==uid||checkoutVersion!==version)return;
-  try{
-   const result=await api('/checkout-status',{sessionId});
+ if(polling||!validSession(sessionId)||current?.uid!==uid)return;
+ polling=true;
+ confirmation.textContent='Checking Stripe for verified payment…';
+ try{
+  for(let i=0;i<36;i++){
    if(current?.uid!==uid||checkoutVersion!==version)return;
-   if(result.verified){confirmation.textContent='Stripe verified your '+(live?'':'test ')+'purchase. '+result.credited.toLocaleString()+' '+coinsName+' credited (after any refunds or disputes).';await refresh();return;}
-  }catch{}
-  if(i<9)await new Promise(resolve=>setTimeout(resolve,2000));
- }
- if(current?.uid===uid&&checkoutVersion===version){confirmation.textContent='Checkout completed. Verification may still be pending; use the wallet refresh button to check.';refresh();}
+   try{
+    const result=await api('/checkout-status',{sessionId});
+    if(current?.uid!==uid||checkoutVersion!==version)return;
+    if(result.verified){
+     savePending(null);
+     closeCheckout();
+     confirmation.textContent='Stripe verified your '+(live?'':'test ')+'purchase. '+result.credited.toLocaleString()+' '+coinsName+' credited (after any refunds or disputes).';
+     await refresh();return;
+    }
+    if(result.sessionStatus==='expired'){
+     savePending(null);closeCheckout();confirmation.textContent='Checkout expired. No verified coins were awarded.';await refresh();return;
+    }
+    confirmation.textContent=result.paid?'Payment received. Waiting for verified coin delivery…':'Waiting for checkout. Coins are credited only after Stripe verification.';
+   }catch(e){if(current?.uid===uid&&checkoutVersion===version)confirmation.textContent='Payment verification unavailable: '+(e.message||'Try again');}
+   if(i<35)await new Promise(resolve=>setTimeout(resolve,5000));
+  }
+  if(current?.uid===uid&&checkoutVersion===version){confirmation.textContent='Verification is still pending. Use Refresh wallet to check again.';busy=false;render();}
+ }finally{if(checkoutVersion===version)polling=false;}
 }
 async function refresh(){
  if(root.hidden)return;const v=++requestVersion;
  if(!backend){setStatus(modeName+' checkout is not enabled. No charges can be made.');return;}
  if(!current){setStatus('Sign in through Community to access checkout.');return;}
- if(!ready&&!live){setStatus('A matching Stripe publishable key is required for embedded checkout.');return;}
+ if(!ready){setStatus('Payment backend is not configured.');return;}
  setStatus(live?'Connecting to live wallet… The free Render service may need to wake up.':'Connecting to sandbox wallet…');
  try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');if(!Number.isSafeInteger(data.balance))throw Error('Wallet returned an invalid balance');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'Live pilot: real money purchases.':'Live wallet verified. Real purchases remain disabled.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus(e.message)}}
 }
-onAuthStateChanged(auth,u=>{if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';}current=u;balance=null;liveAuthorized=false;requestVersion++;render();if(!root.hidden)refresh();},()=>{liveAuthorized=false;balance=null;render();setStatus('Firebase sign-in could not be verified. Sign in again through Community.');});
-document.getElementById('lc-refresh-wallet').addEventListener('click',refresh);
-const params=new URLSearchParams(location.search);
-if(!live&&params.has('coins')){if(params.get('coins')==='success'){document.getElementById('lc-payment-return').textContent='Returned from Checkout. Your test LC appear only after Stripe verifies payment. Refresh test wallet to check.';}else if(params.get('coins')==='cancel'){document.getElementById('lc-payment-return').textContent='Checkout canceled. No test LC awarded.';}}
+function checkPending(){if(current&&pending&&!polling)confirmOrder(pending,current.uid,checkoutVersion);}
+onAuthStateChanged(auth,u=>{
+ if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';pending=null;}
+ current=u;balance=null;liveAuthorized=false;requestVersion++;render();
+ if(!root.hidden)refresh();
+ if(u){
+  let stored;try{stored=sessionStorage.getItem(pendingKey(u.uid))}catch{}
+  const returned=params.get('coins')==='success'?params.get('session_id'):null;
+  if(validSession(returned))savePending(returned);else if(validSession(stored))pending=stored;
+  if(params.get('coins')==='cancel')confirmation.textContent='Returned from Checkout without completing payment. You may close this window.';
+  checkPending();
+ }
+},()=>{liveAuthorized=false;balance=null;render();setStatus('Firebase sign-in could not be verified. Sign in again through Community.');});
+document.getElementById('lc-refresh-wallet').addEventListener('click',()=>{refresh();checkPending();});
+window.addEventListener('focus',()=>{if(current){refresh();checkPending();}});
 render();
