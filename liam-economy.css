@@ -90,3 +90,108 @@ body.lc-expanded-theme{--lc-panel:linear-gradient(145deg,var(--lc-theme-panel),v
 @media(prefers-reduced-motion:reduce){.lc-profRainbow img.avatar,.lc-profRainbow.lc-identity-preview img,.lc-profGalaxy .username,.lc-profGalaxy.lc-identity-preview>span,.lc-profSparkles::after{animation:none!important}}
 
 .lc-balance{top:auto;right:auto;max-width:calc(100vw - 28px);box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:9000}.lc-balance:before{flex-shrink:0}
+
+/* Distinct full-site skin design system. All selectors are opt-in through
+   the authenticated, owned/equipped texture state. Never style game iframes. */
+body.lc-texture {
+ --skin-fg:#f1f5ff;--skin-muted:#c9d7ed;--skin-radius:14px;--skin-button-radius:10px;
+ --skin-surface:var(--lc-panel);--skin-button:var(--lc-accent);--skin-edge:var(--lc-border);
+ --skin-shadow:0 5px 18px #0006;--skin-button-shadow:0 3px 8px #0006;
+ --skin-input:#101b2d;--skin-title-shadow:0 0 12px #8da9ff66;
+ --skin-font:Verdana,Arial,sans-serif;--skin-heading:var(--skin-font);
+ --skin-border-width:1px;--skin-border-style:solid;
+ --skin-danger:#761e35;--skin-danger-fg:#fff;
+}
+body.lc-expanded-theme {
+ --skin-edge:var(--lc-theme-light);--skin-input:var(--lc-theme-bg);
+ --skin-surface:linear-gradient(145deg,var(--lc-theme-panel),var(--lc-theme-bg));
+ --skin-button:linear-gradient(180deg,var(--lc-theme-accent),var(--lc-theme-panel));
+ --skin-title-shadow:0 0 12px var(--lc-theme-light);
+}
+/* Every texture has its own typography, silhouettes, material and accents. */
+body[data-lc-skin="themeRetro"] {
+ --skin-font:Tahoma,"Trebuchet MS",Arial,sans-serif;--skin-heading:"Trebuchet MS",Tahoma,Arial,sans-serif;
+ --skin-fg:#142c4f;--skin-muted:#36587c;--skin-edge:#527baa;--skin-radius:5px;--skin-button-radius:5px;
+ --skin-surface:linear-gradient(#d9edff 0 7%,#f8fcff 8%,#e4edf7 100%);
+ --skin-button:linear-gradient(#fff 0%,#eaf5ff 45%,#b2d2f3 49%,#d4e9ff 100%);
+ --skin-input:#fff;--skin-shadow:inset 0 1px #fff,2px 3px 0 #294d8255,0 5px 12px #18396b33;
+ --skin-button-shadow:inset 1px 1px #fff,inset -1px -1px #7396bf,1px 2px 2px #18396b40;
+ --skin-title-shadow:1px 1px #fff,2px 2px #91b6dc;
+ background:repeating-linear-gradient(0deg,#bad7f6 0 1px,transparent 1px 5px),linear-gradient(135deg,#eaf6ff,#8db7e4 65%,#c4e6ff)!important;
+ background-size:auto,cover!important;
+}
+body[data-lc-skin="themeCyber"] {
+ --skin-font:"Cascadia Mono","Lucida Console",Consolas,monospace;--skin-heading:var(--skin-font);
+ --skin-fg:#a8ffd1;--skin-muted:#77c99a;--skin-edge:#38b879;--skin-radius:0px;--skin-button-radius:0px;
+ --skin-surface:linear-gradient(145deg,#09261a,#020b07);
+ --skin-button:linear-gradient(#103a26,#06190f);--skin-input:#020d07;
+ --skin-shadow:inset 0 0 20px #2fff7c0a,0 0 10px #39ff8030;
+ --skin-button-shadow:inset 0 -2px #35ce77,0 0 8px #35ce7725;--skin-title-shadow:0 0 9px #49ff9b80;
+ background:repeating-linear-gradient(0deg,transparent 0 3px,#42ff8c0d 3px 4px),linear-gradient(90deg,#3fff8d16 1px,transparent 1px),linear-gradient(#3fff8d16 1px,transparent 1px),radial-gradient(ellipse at top,#123624,#020906 70%)!important;
+ background-size:auto,32px 32px,32px 32px,cover!important;
+}
+body[data-lc-skin="themeGalaxy"] {--skin-radius:24px;--skin-button-radius:999px;--skin-shadow:0 0 25px #a27bff38,inset 0 0 16px #ba8cff1c;--skin-surface:radial-gradient(ellipse at top right,#513075,#17122d 70%);--skin-button:linear-gradient(120deg,#623da0,#322052);--skin-heading:Georgia,serif}
+body[data-lc-skin="themeSunset"] {--skin-radius:24px 24px 8px 8px;--skin-button-radius:999px;--skin-surface:linear-gradient(160deg,#783b4a,#3b1d3c);--skin-button:linear-gradient(#ac5656,#74354d);--skin-shadow:0 6px 0 #2e132e66,0 8px 20px #f88a5533;--skin-heading:Georgia,serif}
+body[data-lc-skin="themeOcean"] {--skin-radius:9px 28px 9px 28px;--skin-button-radius:18px 5px;--skin-surface:linear-gradient(155deg,#154e66,#071d32);--skin-shadow:inset 0 1px #8eeeff55,0 8px 20px #00131c88;--skin-heading:"Trebuchet MS",sans-serif}
+body[data-lc-skin="themeArcade"] {--skin-font:"Courier New",monospace;--skin-heading:var(--skin-font);--skin-radius:0px;--skin-button-radius:0px;--skin-border-width:2px;--skin-shadow:4px 4px #ef7ed4,8px 8px #160d2c;--skin-button-shadow:3px 3px #e676cb;--skin-surface:repeating-linear-gradient(0deg,#23163e 0 5px,#281946 5px 6px);--skin-button:linear-gradient(#76418e,#44215b);--skin-title-shadow:3px 3px #8149af}
+body[data-lc-skin="themeAurora"] {--skin-radius:22px;--skin-button-radius:999px;--skin-surface:linear-gradient(135deg,#214a53,#102b45 60%,#1b3d35);--skin-shadow:0 0 26px #8bffcc33,inset 0 1px #a0fbc766;--skin-button:linear-gradient(115deg,#235d59,#285b82);--skin-heading:"Trebuchet MS",sans-serif}
+body[data-lc-skin="themeCloud"] {--skin-fg:#233a60;--skin-muted:#395778;--skin-radius:32px;--skin-button-radius:999px;--skin-edge:#789cc5;--skin-surface:linear-gradient(#f5fbff,#cbdff6);--skin-button:linear-gradient(#fff,#bcd6f4);--skin-input:#fff;--skin-shadow:0 7px 0 #9cb9db66,0 10px 25px #486a9a44;--skin-button-shadow:inset 0 2px #fff,0 3px 8px #42618a44;--skin-title-shadow:1px 1px #fff;--skin-heading:"Trebuchet MS",sans-serif}
+body[data-lc-skin="themeCrystal"] {--skin-radius:2px 18px;--skin-button-radius:2px 12px;--skin-border-width:2px;--skin-surface:linear-gradient(125deg,#53729d44 0 20%,#8bdfff22 20% 28%,transparent 28%),linear-gradient(145deg,#364d70,#17243b);--skin-button:linear-gradient(145deg,#526f9b,#293d62 49%,#6a9ab5 50%,#405a83);--skin-shadow:inset 1px 1px #d6f9ff88,inset -2px -2px #101b3a,0 0 20px #a3eeff33;--skin-heading:Georgia,serif}
+body[data-lc-skin="themeMidnight"] {--skin-radius:6px;--skin-button-radius:6px;--skin-edge:#58687d;--skin-surface:#161c26;--skin-button:#2a3443;--skin-shadow:0 5px 16px #0009;--skin-button-shadow:none;--skin-title-shadow:none;--skin-font:system-ui,sans-serif}
+body.lc-texture {font-family:var(--skin-font)!important;color:var(--skin-fg)!important}
+body.lc-texture :is(header,.hero,.banner,.nav,.footer,footer,.terminal,.status,.post,.post-box,.content-card,.card,.review-section,.modal-card,.lc-card,.lc-intro,#liam-customize,.lc-cosmetic,.lc-achievement-row,.comment,.profile-summary,.public-profile-summary,.empty-card,.empty,.player-shell,.player-bar,.admin-panel,.account-panel,.login-card,.lc-payment-section,.lc-pack-card,.lc-embedded-panel) {
+ background:var(--skin-surface)!important;color:var(--skin-fg)!important;
+ border-color:var(--skin-edge)!important;border-style:var(--skin-border-style)!important;
+ border-radius:var(--skin-radius)!important;box-shadow:var(--skin-shadow)!important;
+}
+body.lc-texture :is(header,footer,.footer,.player-bar,.banner,.nav,.terminal,.status){border-radius:0!important}
+body.lc-texture :is(.nav a,.back-btn,.home-btn,.rider-btn,.saved-posts-btn,.profile-btn,.admin-panel-btn,.download-btn,.post-btn,.tool-btn,.small-btn:not(.danger),.review-btn,.review-primary,.review-reply-form button,.account-button,.account-panel button,.login-tab,.login-submit,.lc-button,.lc-pack-buy,.lc-get-coins,.player-btn,.admin-btn,.admin-action,.follow-btn,.auth-tab,.upvote-btn,.save-btn,.comments-btn,.toggle-comments-btn,.toggle-replies-btn,.like-comment-btn,.reply-btn,.view-profile-post,.view-saved) {
+ font-family:var(--skin-font)!important;background:var(--skin-button)!important;color:var(--skin-fg)!important;
+ border:var(--skin-border-width) solid var(--skin-edge)!important;border-radius:var(--skin-button-radius)!important;
+ box-shadow:var(--skin-button-shadow)!important;text-shadow:none!important;
+}
+body.lc-texture :is(.danger,.admin-action.danger,.delete-btn,.delete-comment,.remove-saved) {background:var(--skin-danger)!important;color:var(--skin-danger-fg)!important;border-color:#e38292!important}
+body.lc-texture :is(.lc-button[aria-pressed="true"],.auth-tab.active,.login-tab.active,.review-action.active,.upvote-btn.active,.save-btn.active) {outline:2px solid var(--skin-edge)!important;outline-offset:2px}
+body.lc-texture :is(.page-title,.hero h1,.brand,.content-card h1,.review-section h1,.player-title,.admin-panel h2,.login-card h2,.file-name,.lc-card h3) {font-family:var(--skin-heading)!important;color:var(--skin-fg)!important;text-shadow:var(--skin-title-shadow)!important}
+body.lc-texture :is(.hero p,.admin-field label,.admin-message,.admin-login-note,.login-card label,.login-hint,.lc-card p,.reviews-subtitle,.hint,.time,.media-caption,.post-text,.file-name,.empty) {color:var(--skin-fg)!important}
+body.lc-texture :is(input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=color]),textarea,select) {font-family:var(--skin-font)!important;color:var(--skin-fg)!important;background:var(--skin-input)!important;border:var(--skin-border-width) solid var(--skin-edge)!important;border-radius:var(--skin-button-radius)!important;box-shadow:none!important}
+body.lc-texture :is(input,textarea)::placeholder {color:var(--skin-muted)!important;opacity:1}
+body.lc-texture :is(a,button,input,textarea,select):focus-visible {outline:3px solid var(--skin-edge)!important;outline-offset:3px}
+body.lc-texture #iliam-reviews :is(.review-item,.review-reply){background:var(--skin-surface)!important;color:var(--skin-fg)!important;border-color:var(--skin-edge)!important;border-radius:var(--skin-radius)!important;box-shadow:var(--skin-shadow)!important}
+body.lc-texture #iliam-reviews :is(.review-name,.review-meta,.review-text,.review-state,.review-identity,.review-rating-label){color:var(--skin-fg)!important}
+body.lc-texture #iliam-reviews .review-action:not(.danger):not(.active){background:var(--skin-button)!important;color:var(--skin-fg)!important;border-color:var(--skin-edge)!important;border-radius:var(--skin-button-radius)!important}
+body.lc-texture :is(.post.featured,#iliam-reviews .review-item.featured,.game-card.featured){border:3px solid #efbd4c!important}
+/* Games: the thumbnail artwork stays intact; the surrounding tile, controls,
+   footer and player window match the equipped site skin. */
+body.lc-texture .game-card {
+ border:var(--skin-border-width) solid var(--skin-edge)!important;border-radius:var(--skin-radius)!important;
+ background:var(--skin-surface)!important;box-shadow:var(--skin-shadow)!important;
+}
+body.lc-texture .game-card::after {height:55%;background:linear-gradient(transparent,#000b 42%,#000e)!important}
+body.lc-texture .game-info {font-family:var(--skin-font);color:#fff}
+body.lc-texture .game-name {font-family:var(--skin-heading);color:#fff!important}
+body.lc-texture .game-desc {color:#e4edf8!important}
+body.lc-texture .game-card:hover {box-shadow:0 0 0 2px var(--skin-edge),var(--skin-shadow)!important}
+body.lc-texture .featured-badge {border-radius:var(--skin-button-radius)!important;background:#ffdd76!important;color:#302000!important;box-shadow:none!important}
+body.lc-texture :is(.player-overlay,.admin-overlay) {background:#000c!important}
+body.lc-texture .player-shell:fullscreen {border-radius:0!important}
+body[data-lc-skin="themeRetro"] :is(.hero,.content-card,.review-section,.post-box,.post,.card,.lc-card,.lc-intro,.admin-panel,.modal-card,.login-card) {border-width:2px!important;border-top:8px solid #387ac9!important}
+body[data-lc-skin="themeRetro"] :is(header,.nav,.player-bar,.terminal) {background:linear-gradient(#eaf7ff,#a9d1fa 46%,#5d9ce2 49%,#c2e0ff)!important}
+body[data-lc-skin="themeRetro"] :is(.hero h1,.page-title,.brand) {font-style:italic;letter-spacing:-.035em!important}
+body[data-lc-skin="themeRetro"] .game-card::after {height:52%;background:linear-gradient(transparent 0%,#112d52cc 45%,#0e2a50 100%)!important}
+body[data-lc-skin="themeRetro"] .game-info {left:8px;right:8px;bottom:6px;padding:5px 7px;background:linear-gradient(#e9f6ff,#b3d2f0);border:1px solid #5684b6;border-radius:3px}
+body[data-lc-skin="themeRetro"] :is(.game-name,.game-desc) {color:#163151!important;text-shadow:none!important}
+body[data-lc-skin="themeRetro"] :is(.lc-card strong,.lc-intro strong,.lc-pack-card strong) {color:#744600!important}
+body[data-lc-skin="themeCloud"] :is(.lc-card strong,.lc-intro strong,.lc-pack-card strong) {color:#744600!important}
+body[data-lc-skin="themeCyber"] :is(.hero h1,.page-title,.brand) {letter-spacing:.08em!important;text-transform:uppercase}
+body[data-lc-skin="themeCyber"] :is(.hero h1,.page-title)::before {content:">_ ";color:#52ff9b}
+body[data-lc-skin="themeCyber"] :is(.hero,.content-card,.review-section,.post-box,.post,.card,.lc-card,.admin-panel,.player-shell,.modal-card) {border-left:3px solid #49ff9b!important}
+body[data-lc-skin="themeCyber"] :is(.hero,.terminal,.player-bar,.admin-panel) {background:repeating-linear-gradient(0deg,transparent 0 3px,#68ff9c0c 3px 4px),var(--skin-surface)!important}
+body[data-lc-skin="themeCyber"] .game-info {left:7px;right:7px;bottom:7px;padding:6px 8px;background:#03150fee;border-left:3px solid #55ffa0}
+body[data-lc-skin="themeCyber"] .game-name::before {content:"> ";color:#55ffa0}
+body[data-lc-skin="themeCyber"] :is(.game-name,.game-desc) {color:#b5ffcd!important;text-shadow:none!important}
+body[data-lc-skin="themeArcade"] :is(.hero h1,.page-title,.brand){text-transform:uppercase;letter-spacing:.055em}
+body[data-lc-skin="themeArcade"] .game-info {background:#291743e8;padding:5px;border:1px solid #ff88d7;left:7px;right:7px;bottom:7px}
+body[data-lc-skin="themeMidnight"] .game-card:hover {transform:translateY(-2px)}
+@media(prefers-reduced-motion:reduce){body.lc-texture .game-card,body.lc-texture .game-card:hover{transition:none!important;transform:none!important}}
+@media(max-width:430px){body[data-lc-skin="themeRetro"] .game-info,body[data-lc-skin="themeCyber"] .game-info,body[data-lc-skin="themeArcade"] .game-info{padding:4px;left:4px;right:4px;bottom:4px}}
