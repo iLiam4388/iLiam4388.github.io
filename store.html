@@ -8,13 +8,16 @@
 <link rel="stylesheet" href="gallery.css">
 
 <link rel="stylesheet" href="nav-badges.css?v=1">
+<link rel="stylesheet" href="liam-payments.css?v=1">
 </head>
 <body data-gallery="store">
 <h1 data-nav-badge-page="store" class="page-title">STORE</h1>
-<a class="back-btn" href="index.html">← BACK HOME</a>
+<div class="lc-coin-nav"><a class="back-btn" href="index.html">← BACK HOME</a><button class="lc-get-coins" id="get-liam-coins" type="button" aria-controls="liam-coin-packs" aria-expanded="false">Get iLiam Coins</button></div>
 <div class="divider"></div>
 <main>
 <section id="liam-shop" aria-label="Liam Coin Store" style="width:min(1100px,94%);margin:25px auto"><p>Loading Liam Store…</p></section>
+<section class="lc-payment-section" id="liam-coin-packs" aria-label="Get iLiam Coins" hidden>
+<span class="lc-payment-badge">STRIPE SANDBOX · NO REAL MONEY</span><h2>Get iLiam Coins</h2><p class="lc-payment-note">Test one-time purchases with Stripe. Only approved testers can check out. Test coins are separate from your regular balance.</p><p id="lc-sandbox-wallet" aria-live="polite">Sandbox wallet: —</p><p id="lc-payment-return" aria-live="polite"></p><p id="lc-payment-status" aria-live="polite"></p><div class="lc-payment-packs" id="lc-payment-packs"></div><div class="lc-payment-actions"><button class="lc-button" id="lc-back-cosmetics" type="button">Back to cosmetics</button><button class="lc-button" id="lc-refresh-wallet" type="button">Refresh test wallet</button></div></section>
 </main>
 <div class="divider"></div>
 <div class="footer">© <span data-copyright-year>2026</span> iLiam</div>
@@ -23,5 +26,6 @@
 <script type="module" src="iliam-sitewide-calls.js?v=1"></script>
 <script defer src="ui-svg-icons.js?v=2"></script>
 <script defer src="copyright-year.js?v=1"></script>
+<script type="module" src="liam-payments.js?v=1"></script>
 </body>
 </html>
