@@ -89,7 +89,7 @@ app.post('/checkout',tester,async(req,res)=>{
  ...(embedded?{ui_mode:'embedded_page',redirect_on_completion:'never'}:{success_url:RETURN+'?coins=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:RETURN+'?coins=cancel'})
  },{idempotencyKey:'iliam-sandbox:'+req.uid+':'+id+':'+(embedded?'embedded':'hosted')+':'+attempt});
  if(s.livemode!==false||(embedded?!s.client_secret:!s.url))throw Error('Invalid sandbox session');
- res.json(embedded?{clientSecret:s.client_secret,sessionId:s.id}:{url:s.url});
+ res.json(embedded?{clientSecret:s.client_secret,sessionId:s.id}:{url:s.url,sessionId:s.id});
  }catch(e){
   // Only log structured diagnostic fields, never keys, tokens, or request bodies.
   const safe=v=>typeof v==='string'&&/^[a-zA-Z0-9_.\[\]\/-]{1,160}$/.test(v)?v:undefined;
@@ -105,7 +105,7 @@ app.post('/checkout-status',tester,async(req,res)=>{
   if(session.livemode!==false||session.metadata?.app!=='iliam-sandbox-v1'||session.metadata?.uid!==req.uid)return res.status(404).json({error:'Test session not found'});
   const order=paidOrder(session);
   const record=order?(await ledger(order.pi).get()).data():null;
-  res.json({paid:!!order,verified:!!record&&record.uid===req.uid&&record.pack===order.id,credited:record?.uid===req.uid?record.credited||0:0});
+  res.json({sessionStatus:session.status,paid:!!order,verified:!!record&&record.uid===req.uid&&record.pack===order.id,credited:record?.uid===req.uid?record.credited||0:0});
  }catch{return res.status(503).json({error:'Test session status unavailable'})}
 });
 app.listen(Number(process.env.PORT)||8080,'0.0.0.0',()=>console.log('iLiam sandbox checkout ready'));
