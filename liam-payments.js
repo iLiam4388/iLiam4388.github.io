@@ -17,6 +17,7 @@ const key=paymentConfig.publishableKey;
 const ready=typeof key==='string'&&(live?/^pk_live_[A-Za-z0-9]+$/:/^pk_test_[A-Za-z0-9]+$/).test(key);
 const status=document.getElementById('lc-payment-status'),wallet=document.getElementById('lc-sandbox-wallet'),cards=document.getElementById('lc-payment-packs');
 const setStatus=(message)=>{status.textContent=message};
+setStatus('Checking your iLiam sign-in…');
 if(live){
  root.querySelector('.lc-payment-badge').textContent=checkoutConfigured?'LIVE PAYMENT PILOT · REAL MONEY':'LIVE WALLET VERIFICATION · CHECKOUT DISABLED';
  root.querySelector('.lc-payment-note').textContent='Real one-time purchases for approved adult pilot users only. iLiam Coins are spendable on iLiam cosmetics, not redeemable for cash or transferable. Live checkout is disabled until approved.';
@@ -28,8 +29,16 @@ if(live){
 async function api(path,body){
  if(live&&!checkoutConfigured&&path!=='/wallet')throw Error('Live checkout is disabled on the website.');
  if(!backend||!current)throw Error('Payment backend is not configured or you are not signed in.');
- const token=await current.getIdToken(),res=await fetch(backend+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
- const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed');return data;
+ const account=current,controller=new AbortController();
+ let timer;
+ const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('The payment server or sign-in took too long. Refresh your wallet to retry.'));},90000)});
+ try{return await Promise.race([timeout,(async()=>{
+  const token=await account.getIdToken();if(controller.signal.aborted||current?.uid!==account.uid)throw Error('Sign-in changed. Try again.');
+  const res=await fetch(backend+path,{signal:controller.signal,method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  const data=await res.json().catch(()=>null);if(!res.ok)throw Error(data?.error||'Payment server returned HTTP '+res.status);
+  if(!data)throw Error('Payment server returned an unexpected response');return data;
+ })()]);}catch(e){if(e?.name==='AbortError')throw Error('Payment server request timed out. Refresh your wallet to retry.');if(e instanceof TypeError)throw Error('Cannot reach the payment server. Check your connection, then refresh your wallet.');throw e;}finally{clearTimeout(timer);}
+
 }
 function render(){
  wallet.textContent=modeName+' wallet: '+(balance===null?'—':balance.toLocaleString()+' '+coinsName);
@@ -86,9 +95,10 @@ async function refresh(){
  if(!backend){setStatus(modeName+' checkout is not enabled. No charges can be made.');return;}
  if(!current){setStatus('Sign in through Community to access checkout.');return;}
  if(!ready&&!live){setStatus('A matching Stripe publishable key is required for embedded checkout.');return;}
- try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'Live pilot: real money purchases.':'Live wallet verified. Real purchases remain disabled.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus(e.message)}}
+ setStatus(live?'Connecting to live wallet… The free Render service may need to wake up.':'Connecting to sandbox wallet…');
+ try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');if(!Number.isSafeInteger(data.balance))throw Error('Wallet returned an invalid balance');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'Live pilot: real money purchases.':'Live wallet verified. Real purchases remain disabled.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus(e.message)}}
 }
-onAuthStateChanged(auth,u=>{if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';}current=u;balance=null;liveAuthorized=false;requestVersion++;render();if(!root.hidden)refresh();});
+onAuthStateChanged(auth,u=>{if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';}current=u;balance=null;liveAuthorized=false;requestVersion++;render();if(!root.hidden)refresh();},()=>{liveAuthorized=false;balance=null;render();setStatus('Firebase sign-in could not be verified. Sign in again through Community.');});
 document.getElementById('lc-refresh-wallet').addEventListener('click',refresh);
 const params=new URLSearchParams(location.search);
 if(!live&&params.has('coins')){if(params.get('coins')==='success'){document.getElementById('lc-payment-return').textContent='Returned from Checkout. Your test LC appear only after Stripe verifies payment. Refresh test wallet to check.';}else if(params.get('coins')==='cancel'){document.getElementById('lc-payment-return').textContent='Checkout canceled. No test LC awarded.';}}
