@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {APP,liveOrder,liveSession,reconcile} from './live-core.mjs';
+const metadata={app:APP,uid:'pilot',pack:'lc100'};
+const charge={livemode:true,payment_intent:'pi_live1',currency:'usd',amount:99,paid:true,captured:true,amount_captured:99,amount_refunded:0,disputed:false};
+const pi={id:'pi_live1',livemode:true,status:'succeeded',currency:'usd',amount:99,amount_received:99,metadata,latest_charge:charge};
+const session={livemode:true,mode:'payment',payment_status:'paid',currency:'usd',amount_total:99,client_reference_id:'pilot',payment_intent:'pi_live1',metadata};
+const order=liveOrder(pi);
+test('valid live paid session and intent match',()=>{assert.equal(order.coins,100);assert.equal(liveSession(session).pi,order.pi)});
+for(const [key,value] of Object.entries({livemode:false,status:'processing',currency:'eur',amount:1,amount_received:1,metadata:{},latest_charge:'ch_1'}))test('reject intent '+key,()=>assert.equal(liveOrder({...pi,[key]:value}),null));
+for(const [key,value] of Object.entries({livemode:false,payment_status:'unpaid',amount_total:1,client_reference_id:'other'}))test('reject session '+key,()=>assert.equal(liveSession({...session,[key]:value}),null));
+test('reject test charge or uncaptured charge',()=>{assert.equal(liveOrder({...pi,latest_charge:{...charge,livemode:false}}),null);assert.equal(liveOrder({...pi,latest_charge:{...charge,captured:false}}),null)});
+const old={uid:order.uid,pack:order.id,cents:order.cents,coins:order.coins,credited:100,refunded:0};
+test('initial credit and duplicate',()=>{assert.equal(reconcile(order,{},100).balance,200);assert.equal(reconcile(order,old,200).balance,200)});
+test('refund after spending creates nonspendable debt',()=>{const r=reconcile({...order,refund:99},old,15);assert.equal(r.balance,-85);assert.equal(r.credited,0)});
+test('refund before completion and stale delivery',()=>{const r=reconcile({...order,refund:99},{},100);assert.equal(r.balance,100);assert.equal(reconcile(order,{...old,...r},100).balance,100)});
+test('dispute revokes and is sticky until manual reconciliation',()=>{const r=reconcile(order,old,200,true);assert.equal(r.balance,100);assert.equal(reconcile(order,{...old,...r},100).balance,100)});
+test('ledger identity mismatch rejected',()=>assert.throws(()=>reconcile(order,{...old,uid:'other'},200)));
