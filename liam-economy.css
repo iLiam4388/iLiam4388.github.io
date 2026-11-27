@@ -139,7 +139,7 @@ body[data-lc-skin="themeCloud"] {--skin-fg:#233a60;--skin-muted:#395778;--skin-r
 body[data-lc-skin="themeCrystal"] {--skin-radius:2px 18px;--skin-button-radius:2px 12px;--skin-border-width:2px;--skin-surface:linear-gradient(125deg,#53729d44 0 20%,#8bdfff22 20% 28%,transparent 28%),linear-gradient(145deg,#364d70,#17243b);--skin-button:linear-gradient(145deg,#526f9b,#293d62 49%,#6a9ab5 50%,#405a83);--skin-shadow:inset 1px 1px #d6f9ff88,inset -2px -2px #101b3a,0 0 20px #a3eeff33;--skin-heading:Georgia,serif}
 body[data-lc-skin="themeMidnight"] {--skin-radius:6px;--skin-button-radius:6px;--skin-edge:#58687d;--skin-surface:#161c26;--skin-button:#2a3443;--skin-shadow:0 5px 16px #0009;--skin-button-shadow:none;--skin-title-shadow:none;--skin-font:system-ui,sans-serif}
 body.lc-texture {font-family:var(--skin-font)!important;color:var(--skin-fg)!important}
-body.lc-texture :is(header,.hero,.banner,.nav,.footer,footer,.terminal,.status,.post,.post-box,.content-card,.card,.review-section,.modal-card,.lc-card,.lc-intro,#liam-customize,.lc-cosmetic,.lc-achievement-row,.comment,.profile-summary,.public-profile-summary,.empty-card,.empty,.player-shell,.player-bar,.admin-panel,.account-panel,.login-card,.lc-payment-section,.lc-pack-card,.lc-embedded-panel) {
+body.lc-texture :is(header,.hero,.banner,.nav,.footer,footer,.terminal,.status,.post,.post-box,.content-card,.card,.review-section,.modal-card,.lc-card,.lc-intro,:where(#liam-customize),.lc-cosmetic,.lc-achievement-row,.comment,.profile-summary,.public-profile-summary,.empty-card,.empty,.player-shell,.player-bar,.admin-panel,.account-panel,.login-card,.lc-payment-section,.lc-pack-card,.lc-embedded-panel) {
  background:var(--skin-surface)!important;color:var(--skin-fg)!important;
  border-color:var(--skin-edge)!important;border-style:var(--skin-border-style)!important;
  border-radius:var(--skin-radius)!important;box-shadow:var(--skin-shadow)!important;
@@ -160,7 +160,7 @@ body.lc-texture :is(a,button,input,textarea,select):focus-visible {outline:3px s
 body.lc-texture #iliam-reviews :is(.review-item,.review-reply){background:var(--skin-surface)!important;color:var(--skin-fg)!important;border-color:var(--skin-edge)!important;border-radius:var(--skin-radius)!important;box-shadow:var(--skin-shadow)!important}
 body.lc-texture #iliam-reviews :is(.review-name,.review-meta,.review-text,.review-state,.review-identity,.review-rating-label){color:var(--skin-fg)!important}
 body.lc-texture #iliam-reviews .review-action:not(.danger):not(.active){background:var(--skin-button)!important;color:var(--skin-fg)!important;border-color:var(--skin-edge)!important;border-radius:var(--skin-button-radius)!important}
-body.lc-texture :is(.post.featured,#iliam-reviews .review-item.featured,.game-card.featured){border:3px solid #efbd4c!important}
+body.lc-texture :is(.post.featured,:where(#iliam-reviews) .review-item.featured,.game-card.featured){border:3px solid #efbd4c!important}
 /* Games: the thumbnail artwork stays intact; the surrounding tile, controls,
    footer and player window match the equipped site skin. */
 body.lc-texture .game-card {
@@ -195,3 +195,12 @@ body[data-lc-skin="themeArcade"] .game-info {background:#291743e8;padding:5px;bo
 body[data-lc-skin="themeMidnight"] .game-card:hover {transform:translateY(-2px)}
 @media(prefers-reduced-motion:reduce){body.lc-texture .game-card,body.lc-texture .game-card:hover{transition:none!important;transform:none!important}}
 @media(max-width:430px){body[data-lc-skin="themeRetro"] .game-info,body[data-lc-skin="themeCyber"] .game-info,body[data-lc-skin="themeArcade"] .game-info{padding:4px;left:4px;right:4px;bottom:4px}}
+
+/* Preserve readability of light skins and keep special theme chrome specific. */
+body[data-lc-skin="themeRetro"] :is(.hero,.post,.post-box,.content-card,.review-section,.lc-card,.admin-panel,.modal-card,.login-card){border-top:8px solid #387ac9!important}
+body[data-lc-skin="themeRetro"] :is(.game-card,.player-shell){border-style:solid!important}
+body[data-lc-skin="themeRetro"] :is(.account-panel a,.lc-intro a,.lc-card a,.profile-link,.comment-profile-link),
+body[data-lc-skin="themeCloud"] :is(.account-panel a,.lc-intro a,.lc-card a,.profile-link,.comment-profile-link){color:#174b89!important}
+body[data-lc-skin="themeRetro"] :is(.username,.user,.review-name,.profile-stats,.login-card h2,.player-title),
+body[data-lc-skin="themeCloud"] :is(.username,.user,.review-name,.profile-stats,.login-card h2,.player-title){color:var(--skin-fg)!important;text-shadow:none!important}
+body[data-lc-skin="themeCyber"] :is(.game-card,.player-shell,.admin-panel){border-radius:0!important}
