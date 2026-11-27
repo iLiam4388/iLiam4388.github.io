@@ -82,7 +82,7 @@ app.post('/checkout',tester,async(req,res)=>{
  const attempt=req.body?.attempt;if(typeof attempt!=='string'||!/^[a-zA-Z0-9-]{16,64}$/.test(attempt))return res.status(400).json({error:'Invalid attempt'});
  const metadata={app:'iliam-sandbox-v1',uid:req.uid,pack:id};
  try{const s=await stripe.checkout.sessions.create({
- mode:'payment',adaptive_pricing:{enabled:false},allowed_payment_method_types:['card'],
+ mode:'payment',managed_payments:{enabled:false},adaptive_pricing:{enabled:false},allowed_payment_method_types:['card'],
  line_items:[{price_data:{currency:'usd',unit_amount:p.cents,product_data:{name:p.coins+' Liam Coins (SANDBOX TEST)'}},quantity:1}],
  metadata,payment_intent_data:{metadata},client_reference_id:req.uid,
  success_url:RETURN+'?coins=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:RETURN+'?coins=cancel'
