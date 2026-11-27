@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
-import {paymentConfig as sandboxConfig,livePaymentConfig} from './liam-payment-config.js?v=4';
+import {paymentConfig as sandboxConfig,livePaymentConfig} from './liam-payment-config.js?v=5';
 const live=new URLSearchParams(location.search).get('mode')==='live';
 const paymentConfig=live?livePaymentConfig:sandboxConfig;
 const prefix=live?'cs_live_':'cs_test_';
@@ -9,7 +9,8 @@ const modeName=live?'Live':'Sandbox';
 const coinsName=live?'LC':'test LC';
 const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('liam-coin-packs');
 const packs=[['lc100',100,99],['lc600',600,499],['lc1300',1300,999],['lc3000',3000,1999],['lc8500',8500,4999]];
-const backend=(live?paymentConfig.enabled===true:paymentConfig.sandbox===true)&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
+const checkoutConfigured=live?paymentConfig.enabled===true:paymentConfig.sandbox===true;
+const backend=(live||paymentConfig.sandbox===true)&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
 let current=null,busy=false,balance=null,requestVersion=0,checkout=null,checkoutVersion=0,stripe=null,liveAuthorized=false;
 const panel=document.getElementById('lc-embedded-panel'),mount=document.getElementById('lc-embedded-checkout'),heading=document.getElementById('lc-embedded-heading'),notice=document.getElementById('lc-embedded-notice'),close=document.getElementById('lc-embedded-close'),confirmation=document.getElementById('lc-payment-return');
 const key=paymentConfig.publishableKey;
@@ -17,7 +18,7 @@ const ready=typeof key==='string'&&(live?/^pk_live_[A-Za-z0-9]+$/:/^pk_test_[A-Z
 const status=document.getElementById('lc-payment-status'),wallet=document.getElementById('lc-sandbox-wallet'),cards=document.getElementById('lc-payment-packs');
 const setStatus=(message)=>{status.textContent=message};
 if(live){
- root.querySelector('.lc-payment-badge').textContent='LIVE PAYMENT PILOT · REAL MONEY';
+ root.querySelector('.lc-payment-badge').textContent=checkoutConfigured?'LIVE PAYMENT PILOT · REAL MONEY':'LIVE WALLET VERIFICATION · CHECKOUT DISABLED';
  root.querySelector('.lc-payment-note').textContent='Real one-time purchases for approved adult pilot users only. iLiam Coins are spendable on iLiam cosmetics, not redeemable for cash or transferable. Live checkout is disabled until approved.';
  document.getElementById('lc-refresh-wallet').textContent='Refresh wallet';
  heading.textContent='Live checkout';
@@ -25,6 +26,7 @@ if(live){
 }
 
 async function api(path,body){
+ if(live&&!checkoutConfigured&&path!=='/wallet')throw Error('Live checkout is disabled on the website.');
  if(!backend||!current)throw Error('Payment backend is not configured or you are not signed in.');
  const token=await current.getIdToken(),res=await fetch(backend+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
  const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed');return data;
@@ -37,7 +39,7 @@ function render(){
   const img=document.createElement('div');img.className='lc-pack-icon';img.setAttribute('aria-hidden','true');img.textContent='LC';
   const name=document.createElement('h3');name.textContent=coins.toLocaleString()+' LC';
   const price=document.createElement('strong');price.textContent=(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});
-  const btn=document.createElement('button');btn.type='button';btn.className='lc-pack-buy';btn.disabled=busy||!backend||!current||!ready||(live&&!liveAuthorized);btn.textContent=busy?'Checkout open':live?'Buy coins':'Test checkout';
+  const btn=document.createElement('button');btn.type='button';btn.className='lc-pack-buy';btn.disabled=busy||!backend||!current||!ready||!checkoutConfigured||(live&&!liveAuthorized);btn.textContent=busy?'Checkout open':live?'Buy coins':'Test checkout';
   btn.onclick=()=>openCheckout(id,coins,cents);
   card.append(img,name,price,btn);cards.append(card);
  }
@@ -48,7 +50,7 @@ function closeCheckout(){
 }
 close.addEventListener('click',()=>{closeCheckout();setStatus('Checkout closed. Any completed payment is still verified by Stripe.');refresh();});
 async function openCheckout(id,coins,cents){
- if(busy||!current||!ready||!backend||(live&&!liveAuthorized))return;
+ if(busy||!current||!ready||!backend||!checkoutConfigured||(live&&!liveAuthorized))return;
  const v=++checkoutVersion,uid=current.uid;busy=true;render();panel.hidden=false;
  heading.textContent=coins.toLocaleString()+' LC · '+(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});
  confirmation.textContent='';notice.textContent='Loading secure '+(live?'live':'test')+' checkout…';panel.scrollIntoView({block:'start',behavior:'smooth'});
@@ -83,8 +85,8 @@ async function refresh(){
  if(root.hidden)return;const v=++requestVersion;
  if(!backend){setStatus(modeName+' checkout is not enabled. No charges can be made.');return;}
  if(!current){setStatus('Sign in through Community to access checkout.');return;}
- if(!ready){setStatus('A matching Stripe publishable key is required for embedded checkout.');return;}
- try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');balance=data.balance;liveAuthorized=live&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'Live pilot: real money purchases.':'Live purchases are disabled on the server.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus(e.message)}}
+ if(!ready&&!live){setStatus('A matching Stripe publishable key is required for embedded checkout.');return;}
+ try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'Live pilot: real money purchases.':'Live wallet verified. Real purchases remain disabled.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus(e.message)}}
 }
 onAuthStateChanged(auth,u=>{if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';}current=u;balance=null;liveAuthorized=false;requestVersion++;render();if(!root.hidden)refresh();});
 document.getElementById('lc-refresh-wallet').addEventListener('click',refresh);
