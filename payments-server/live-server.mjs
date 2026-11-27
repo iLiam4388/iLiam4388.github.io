@@ -85,19 +85,21 @@ app.get('/wallet',authorize,async(req,res)=>{
 app.post('/checkout',authorize,async(req,res)=>{
  if(!enabled)return res.status(503).json({error:'Live purchases are disabled'});
  const id=req.body?.pack,p=packFor(id),attempt=req.body?.attempt;
- if(!p||typeof attempt!=='string'||!/^[a-zA-Z0-9-]{16,64}$/.test(attempt)||req.body?.embedded!==true)return res.status(400).json({error:'Invalid checkout request'});
+ if(!p||typeof attempt!=='string'||!/^[a-zA-Z0-9-]{16,64}$/.test(attempt)||(req.body?.embedded!==true&&req.body?.embedded!==false))return res.status(400).json({error:'Invalid checkout request'});
  try{
   const [w,profile]=await Promise.all([wallet(req.uid).get(),db.collection('profiles').doc(req.uid).get()]);
   if(!w.exists||!profile.exists||!Number.isSafeInteger(w.data().balance))return res.status(409).json({error:'Initialize your regular wallet and profile first'});
   const metadata={app:APP,uid:req.uid,pack:id};
+  const embedded=req.body.embedded===true;
+  const returnUrl=ORIGIN+'/liam-coins.html?mode=live';
   const s=await stripe.checkout.sessions.create({
    mode:'payment',managed_payments:{enabled:false},adaptive_pricing:{enabled:false},allowed_payment_method_types:['card'],
    line_items:[{price_data:{currency:'usd',unit_amount:p.cents,product_data:{name:p.coins+' iLiam Coins'}},quantity:1}],
    metadata,payment_intent_data:{metadata},client_reference_id:req.uid,
-   ui_mode:'embedded_page',redirect_on_completion:'never'
-  },{idempotencyKey:'iliam-live:'+req.uid+':'+id+':'+attempt});
-  if(s.livemode!==true||!s.client_secret||!s.id.startsWith('cs_live_'))throw Error('Live session mismatch');
-  res.json({clientSecret:s.client_secret,sessionId:s.id});
+   ...(embedded?{ui_mode:'embedded_page',redirect_on_completion:'never'}:{success_url:returnUrl+'&coins=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:returnUrl+'&coins=cancel'})
+  },{idempotencyKey:'iliam-live:'+req.uid+':'+id+':'+(embedded?'embedded':'hosted')+':'+attempt});
+  if(s.livemode!==true||(embedded?!s.client_secret:!s.url)||!s.id.startsWith('cs_live_'))throw Error('Live session mismatch');
+  res.json(embedded?{clientSecret:s.client_secret,sessionId:s.id}:{url:s.url,sessionId:s.id});
  }catch(e){
   console.error('Live checkout failed',typeof e?.code==='string'?e.code:'unknown');
   res.status(503).json({error:'Live checkout unavailable'});
@@ -110,7 +112,7 @@ app.post('/checkout-status',authorize,async(req,res)=>{
   const s=await stripe.checkout.sessions.retrieve(id);
   if(s.livemode!==true||s.metadata?.app!==APP||s.metadata?.uid!==req.uid||s.client_reference_id!==req.uid)return res.status(404).json({error:'Session not found'});
   const order=liveSession(s),record=order?(await ledger(order.pi).get()).data():null;
-  res.json({paid:!!order,verified:!!record&&record.uid===req.uid&&record.pack===order.id,credited:record?.uid===req.uid?record.credited:0});
+  res.json({sessionStatus:s.status,paid:!!order,verified:!!record&&record.uid===req.uid&&record.pack===order.id,credited:record?.uid===req.uid?record.credited:0});
  }catch{return res.status(503).json({error:'Session status unavailable'})}
 });
 app.listen(Number(process.env.PORT)||8080,'0.0.0.0',()=>console.log('iLiam live backend ready; new checkout '+(enabled?'pilot enabled':'disabled')));
