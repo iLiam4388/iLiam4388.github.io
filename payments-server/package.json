@@ -1,0 +1,17 @@
+{
+  "name": "iliam-sandbox-payments",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test payment-core.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "firebase-admin": "^13.5.0",
+    "stripe": "23.2.0"
+  }
+}
