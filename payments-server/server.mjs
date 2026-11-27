@@ -56,7 +56,13 @@ app.use(express.json({limit:'8kb'}));
 async function tester(req,res,next){
  try{const token=(req.headers.authorization||'').match(/^Bearer (.+)$/)?.[1];if(!token)return res.status(401).json({error:'Sign in first'});
  const decoded=await auth.verifyIdToken(token,true);if(!testers.has(decoded.uid))return res.status(403).json({error:'Sandbox is restricted to approved testers'});req.uid=decoded.uid;next();
- }catch{return res.status(401).json({error:'Invalid sign-in'})}
+ }catch(e){
+  // Log only the SDK error code, never tokens, user details or credentials.
+  const code=typeof e?.code==='string'&&/^[a-zA-Z0-9_\/-]{1,100}$/.test(e.code)?e.code:'unknown';
+  console.warn('Sandbox Firebase auth verification failed:',code);
+  if(['auth/insufficient-permission','auth/invalid-credential','auth/project-not-found','app/invalid-credential','app/no-app','auth/internal-error'].includes(code))return res.status(503).json({error:'Sandbox Firebase authentication configuration error'});
+  return res.status(401).json({error:'Invalid sign-in'});
+ }
 }
 app.get('/wallet',tester,async(req,res)=>{try{const s=await wallet(req.uid).get();res.json({balance:s.data()?.balance||0,sandbox:true})}catch{return res.status(503).json({error:'Wallet unavailable'})}});
 app.post('/checkout',tester,async(req,res)=>{
