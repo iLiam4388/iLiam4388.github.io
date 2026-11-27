@@ -493,7 +493,7 @@ let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='idot',dailyTimer=0,messageCount=0,rareGranted=false;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
-const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=5';document.head.append(style);
+const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=6';document.head.append(style);
 const buddy=document.createElement('div');buddy.className='lc-buddy';buddy.hidden=true;buddy.setAttribute('aria-hidden','true');document.body.append(buddy);
 let lastX=innerWidth/2,lastY=innerHeight/2,bx=lastX,by=lastY,frame=0;
 const motion=matchMedia('(prefers-reduced-motion: reduce)'),fine=matchMedia('(pointer:fine)');
@@ -532,6 +532,7 @@ function apply(){
  const theme=has(appearance.themeStyle)?themeVars(appearance.themeStyle):null;
  document.body.classList.toggle('lc-texture',!!theme||has('texture')&&appearance.texture);
  document.body.classList.toggle('lc-expanded-theme',!!theme);
+ if(theme)document.body.dataset.lcSkin=appearance.themeStyle;else if(has('texture')&&appearance.texture)document.body.dataset.lcSkin='texture';else delete document.body.dataset.lcSkin;
  for(const key of ['bg','panel','accent','light','pattern','size']){if(theme)document.body.style.setProperty('--lc-theme-'+key,theme[key]);else document.body.style.removeProperty('--lc-theme-'+key);}
 
 }
@@ -548,7 +549,31 @@ async function png(id,config,w=280,h=180){
   const svg=extra[3]==='Cursors'?cursorSvg(id):extra[3]==='Buddies'?buddySVG(id):dotSVG({accessory:id});const image=await svgImage(svg);const size=Math.min(w,h)*.78;ctx.drawImage(image,(w-size)/2,(h-size)/2,size,size);return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Textures'||id==='packGalaxy'){
-  const v=themeVars(extra?.[3]==='Textures'?id:'themeGalaxy');ctx.fillStyle=v.bg;ctx.fillRect(0,0,w,h);const grad=ctx.createLinearGradient(0,0,w,h);grad.addColorStop(0,v.bg);grad.addColorStop(1,v.panel);ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);ctx.fillStyle=v.light;for(let i=0;i<45;i++){ctx.globalAlpha=.4;ctx.fillRect((i*73+13)%w,(i*41+19)%h,2+i%2,2+i%2)}ctx.globalAlpha=1;ctx.fillStyle=v.panel;ctx.fillRect(w*.07,h*.40,w*.86,h*.50);ctx.strokeStyle=v.light;ctx.strokeRect(w*.07,h*.40,w*.86,h*.50);ctx.fillStyle=v.light;ctx.font='bold '+Math.round(h*.11)+'px Verdana';ctx.textAlign='center';ctx.fillText('iLiam',w*.5,h*.20);for(let i=0;i<3;i++){ctx.fillStyle=v.accent;ctx.fillRect(w*(.07+i*.29),h*.25,w*.27,h*.11)}ctx.textAlign='left';ctx.fillStyle=v.light;ctx.font='bold '+Math.round(h*.07)+'px Verdana';ctx.fillText('REVIEWS',w*.11,h*.53);for(let i=0;i<3;i++){ctx.globalAlpha=.55;ctx.fillRect(w*.12,h*(.63+i*.075),w*(.65-i*.09),h*.025)}ctx.globalAlpha=1;return canvas.toDataURL('image/png');
+  const skin=extra?.[3]==='Textures'?id:'themeGalaxy',v=themeVars(skin);
+  const retro=skin==='themeRetro',cyber=skin==='themeCyber',arcade=skin==='themeArcade',cloud=skin==='themeCloud',crystal=skin==='themeCrystal',midnight=skin==='themeMidnight';
+  const fg=retro?'#17385d':cloud?'#233a60':cyber?'#a8ffd1':'#f4f6ff';
+  const bg=retro?'#b6d5f5':cloud?'#d3e8fa':v.bg, surface=retro?'#edf6ff':cloud?'#f4faff':v.panel,edge=retro?'#507eae':cloud?'#789cc5':v.light;
+  const gradient=ctx.createLinearGradient(0,0,w,h);gradient.addColorStop(0,bg);gradient.addColorStop(1,retro?'#82afe0':cloud?'#a3c4e9':v.accent);ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
+  ctx.save();ctx.globalAlpha=.18;ctx.strokeStyle=edge;ctx.fillStyle=edge;ctx.lineWidth=1;
+  if(cyber){for(let x=0;x<w;x+=18){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=18){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}for(let y=0;y<h;y+=4)ctx.fillRect(0,y,w,1)}
+  else if(retro){for(let y=0;y<h;y+=4)ctx.fillRect(0,y,w,1)}
+  else if(arcade){for(let y=0;y<h;y+=12)for(let x=0;x<w;x+=12)if((x/12+y/12)%2===0)ctx.fillRect(x,y,12,12)}
+  else if(skin==='themeOcean'){for(let y=0;y<h;y+=18){ctx.beginPath();for(let x=0;x<=w;x+=3){const yy=y+6*Math.sin(x/18);x?ctx.lineTo(x,yy):ctx.moveTo(x,yy)}ctx.stroke()}}
+  else if(crystal){for(let x=-h;x<w;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+h,h);ctx.stroke()}}
+  else if(skin==='themeSunset'||skin==='themeAurora'||cloud){for(let i=0;i<4;i++){ctx.beginPath();ctx.ellipse(w*(.2+i*.26),h*(.15+i%2*.23),w*.3,h*.18,-.3,0,Math.PI*2);ctx.fill()}}
+  else if(!midnight){for(let i=0;i<45;i++)ctx.fillRect((i*73+13)%w,(i*41+19)%h,2+i%2,2+i%2)}
+  ctx.restore();
+  const radius=cyber||arcade?0:retro||midnight?3:crystal?6:cloud?20:skin==='themeOcean'?9:14;
+  function panel(x,y,pw,ph,fill,rad=radius){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,pw,ph,rad);else ctx.rect(x,y,pw,ph);ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=edge;ctx.lineWidth=arcade||retro?2:1;ctx.stroke()}
+  panel(w*.06,h*.08,w*.88,h*.84,surface);
+  if(retro){const chrome=ctx.createLinearGradient(0,h*.08,0,h*.24);chrome.addColorStop(0,'#e6f5ff');chrome.addColorStop(.48,'#8cbef4');chrome.addColorStop(.5,'#478bd7');chrome.addColorStop(1,'#acd4f9');panel(w*.06,h*.08,w*.88,h*.16,chrome,3);for(let i=0;i<3;i++){ctx.fillStyle=i===2?'#d35b4b':'#eaf5ff';ctx.fillRect(w*(.75+i*.055),h*.115,w*.04,h*.075)}}
+  if(cyber){ctx.fillStyle='#42ff95';ctx.fillRect(w*.06,h*.08,3,h*.84)}
+  ctx.fillStyle=fg;ctx.font='bold '+Math.round(h*.115)+'px '+(cyber||arcade?'monospace':retro?'Tahoma, sans-serif':crystal||skin==='themeGalaxy'?'Georgia, serif':'Verdana, sans-serif');ctx.textAlign=retro||cyber?'left':'center';ctx.fillText(cyber?'>_ iLIAM':retro?'iLiam.exe':arcade?'iLIAM ARCADE':'iLiam',retro||cyber?w*.105:w*.5,h*.205);
+  for(let i=0;i<3;i++){let fill=v.accent;if(retro){fill=ctx.createLinearGradient(0,h*.29,0,h*.42);fill.addColorStop(0,'#fff');fill.addColorStop(.48,'#e4f3ff');fill.addColorStop(.5,'#a9c9e9');fill.addColorStop(1,'#d9edff')}else if(cyber)fill='#092a19';else if(cloud)fill='#d5e8ff';panel(w*(.10+i*.27),h*.29,w*.25,h*.12,fill,cyber||arcade?0:retro?3:10);ctx.fillStyle=fg;ctx.textAlign='center';ctx.font='bold '+Math.round(h*.055)+'px '+(cyber||arcade?'monospace':'Arial');ctx.fillText(['HOME','GAMES','STORE'][i],w*(.225+i*.27),h*.37)}
+  panel(w*.10,h*.49,w*.80,h*.35,retro?'#fff':cyber?'#04150c':cloud?'#e5f1ff':v.bg);
+  ctx.fillStyle=fg;ctx.textAlign='left';ctx.font='bold '+Math.round(h*.075)+'px '+(cyber||arcade?'monospace':'Verdana');ctx.fillText(cyber?'$ SYSTEM ONLINE':retro?'Welcome to iLiam!':'COMMUNITY',w*.14,h*.60);
+  ctx.fillStyle=fg;ctx.globalAlpha=.55;for(let i=0;i<3;i++)ctx.fillRect(w*.14,h*(.66+i*.055),w*(.64-i*.09),Math.max(1,h*.015));ctx.globalAlpha=1;
+  return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Profile'){
   const image=await svgImage(dotSVG({})),cx=w*.25,cy=h*.49,size=h*.56;ctx.drawImage(image,cx-size/2,cy-size/2,size,size);const color={profSilver:'#cddbe8',profNeon:'#72ffba',profSunset:'#ffac91',profMetal:'#c3d6e5',profRainbow:'#d8a1ff',profSparkles:'#ffe7a2',profBanner:'#ae93ff',profGalaxy:'#baa0ff'}[id];
