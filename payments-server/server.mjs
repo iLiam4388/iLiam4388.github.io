@@ -10,7 +10,7 @@ if(!/^(sk|rk)_test_/.test(key||'')||!signing?.startsWith('whsec_')||!testers.siz
 const stripe=new Stripe(key,{apiVersion:'2026-11-18.endive'});
 const firebase=initializeApp({credential:applicationDefault(),projectId:process.env.FIREBASE_PROJECT_ID||'iliam-4d0c9'});
 const db=getFirestore(firebase),auth=getAuth(firebase),app=express();
-const ORIGIN='https://iliam4388.github.io',RETURN=ORIGIN+'/store.html';
+const ORIGIN='https://iliam4388.github.io',RETURN=ORIGIN+'/liam-coins.html';
 const wallet=uid=>db.collection('liamSandboxWallets').doc(uid);
 const ledger=pi=>db.collection('liamSandboxPayments').doc(pi);
 async function applyOrder(order,refund=0){
