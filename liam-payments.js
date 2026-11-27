@@ -1,7 +1,7 @@
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
-import {paymentConfig} from './liam-payment-config.js?v=2';
+import {paymentConfig} from './liam-payment-config.js?v=3';
 const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('liam-coin-packs');
 const packs=[['lc100',100,99],['lc600',600,499],['lc1300',1300,999],['lc3000',3000,1999],['lc8500',8500,4999]];
 const backend=paymentConfig.sandbox===true&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
