@@ -12,8 +12,9 @@ const stripe=new Stripe(key,{apiVersion:'2026-11-18.endive'});
 const projectId=process.env.FIREBASE_PROJECT_ID||'iliam-4d0c9';
 const credentialPath=process.env.GOOGLE_APPLICATION_CREDENTIALS||'/etc/secrets/firebase-service-account.json';
 let account;
-try{account=JSON.parse(readFileSync(credentialPath,'utf8'))}catch(e){
- throw Error(e?.code==='ENOENT'?'Firebase secret file not found: check filename and GOOGLE_APPLICATION_CREDENTIALS':'Firebase secret file unreadable or invalid JSON');
+const credentialJson=process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+try{account=JSON.parse(credentialJson?.trim()?credentialJson:readFileSync(credentialPath,'utf8'))}catch(e){
+ throw Error(credentialJson?.trim()?'FIREBASE_SERVICE_ACCOUNT_JSON is invalid JSON':e?.code==='ENOENT'?'Firebase secret file not found: configure FIREBASE_SERVICE_ACCOUNT_JSON or check filename and GOOGLE_APPLICATION_CREDENTIALS':'Firebase secret file unreadable or invalid JSON');
 }
 if(account?.type!=='service_account'||!account.client_email||!account.private_key)throw Error('Firebase secret file is not a complete service account JSON');
 if(account.project_id!==projectId)throw Error('Firebase service account project does not match FIREBASE_PROJECT_ID');
