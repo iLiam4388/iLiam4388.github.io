@@ -686,12 +686,12 @@ function customize(){
   const b=button(owned?(active?'Equipped · Unequip':'Equip'):wallet&&wallet.balance<price?'Not enough LC':'Unlock',onAction,disabled||(id==='blue'&&active));b.setAttribute('aria-pressed',String(active));item.append(b);grid.append(item);
  }
  if(isDot&&rareGranted)tile('favicon','iLiam Icon Crown',0,'A special iLiam favicon worn above your iDot. Awarded to selected accounts.',{favicon:true},true,appearance.favicon===true,()=>equip({favicon:!appearance.favicon,...(!appearance.favicon?{accessory:'',hat:false}:{})}),true);
- if(isDot)tile('blue','Classic Blue',0,'The original iDot.',{color:'blue'},true,appearance.color==='blue',()=>equip({color:'blue'}));
  const sectionFor=id=>{const slot=slotFor(id);if(isDot){if(['purple','green','gold'].includes(id)||slot==='color')return 'iDot Colors';if(id==='glasses'||id==='accHeart'||slot==='eyewearStyle')return 'Eyewear';if(id==='hat'||['accCap','accSleep','accTop','accPirate','accCrown'].includes(id)||slot==='hatStyle')return 'Hats';return 'Other Accessories';}if(slot==='avatarColor')return 'Profile Picture Colors';if(slot==='bannerStyle')return 'Profile Banners';if(id==='tag'||slot==='tagStyle')return 'Profile Tags';if(id==='frame'||slot==='borderStyle')return 'Profile Rings';return 'Name and Effects';};
  const sections=isDot?['iDot Colors','Eyewear','Hats','Other Accessories']:['Profile Picture Colors','Profile Banners','Profile Tags','Profile Rings','Name and Effects'];
  const initial=grid;grid=element('div','','lc-cosmetic-grid');
- if(isDot&&initial.children.length)custom.append(element('h4','Classic and exclusive','lc-section-heading'),initial);
+ if(isDot&&rareGranted&&initial.children.length)custom.append(element('h4','Exclusive items','lc-section-heading'),initial);
  for(const section of sections){grid=element('div','','lc-cosmetic-grid');
+ if(isDot&&section==='iDot Colors')tile('blue','Classic Blue',0,'The original iDot.',{color:'blue'},true,appearance.color==='blue',()=>equip({color:'blue'}));
  for(const [id,name,price,group,desc,config] of catalog){
   if(storeIds.has(id)||group!==(isDot?'iDot':'Profile')||sectionFor(id)!==section)continue;
   const color=['purple','green','gold'].includes(id)||slotFor(id)==='color';
