@@ -32,16 +32,48 @@ if(live){
 }
 
 function rewardAmount(result){return result?.verified===true&&Number.isSafeInteger(result.credited)&&result.credited>0?result.credited:0;}
-function showReward(result,sessionId,uid){
- const amount=rewardAmount(result);if(!amount)return;
- if(document.visibilityState==='hidden'){const visible=()=>{if(document.visibilityState==='visible'){document.removeEventListener('visibilitychange',visible);if(current?.uid===uid)showReward(result,sessionId,uid);}};document.addEventListener('visibilitychange',visible);return;}
- const key='iliam-reward-shown-'+uid+'-'+sessionId;
- try{if(localStorage.getItem(key))return;localStorage.setItem(key,'1')}catch{}
- const el=document.createElement('div');el.className='lc-reward-overlay';el.setAttribute('role','status');
- const coin=document.createElement('div');coin.className='lc-reward-coin';coin.textContent='LC';
- const title=document.createElement('strong');title.textContent='+'+amount.toLocaleString()+' new iLiam Coins!';
- el.append(coin,title);document.body.append(el);setTimeout(()=>el.remove(),4200);
+const rewardQueue=new Map(),rewardShown=new Set();
+let activeReward=null;
+function rewardSeen(key){try{return rewardShown.has(key)||localStorage.getItem(key)==='1'}catch{return rewardShown.has(key)}}
+function finishReward(mark=true){
+ if(!activeReward)return;
+ const {key,el,timer}=activeReward;clearTimeout(timer);el.remove();activeReward=null;
+ if(mark){rewardShown.add(key);try{localStorage.setItem(key,'1')}catch{}}
+ playNextReward();
 }
+function playNextReward(){
+ if(activeReward||document.visibilityState==='hidden'||!document.hasFocus())return;
+ for(const [key,entry] of rewardQueue){
+  rewardQueue.delete(key);
+  if(current?.uid!==entry.uid||rewardSeen(key))continue;
+  const el=document.createElement('div');el.className='lc-reward-overlay';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+  const panel=document.createElement('div');panel.className='lc-reward-card';
+  const burst=document.createElement('div');burst.className='lc-reward-burst';burst.setAttribute('aria-hidden','true');
+  for(let i=0;i<12;i++){const spark=document.createElement('span');spark.className='lc-reward-spark';spark.style.setProperty('--angle',i*30+'deg');spark.style.setProperty('--distance',(70+(i%3)*15)+'px');burst.append(spark);}
+  const coin=document.createElement('div');coin.className='lc-reward-coin';coin.setAttribute('aria-hidden','true');coin.textContent='LC';burst.append(coin);
+  const title=document.createElement('strong');title.className='lc-reward-amount';title.textContent='+'+entry.amount.toLocaleString();
+  const subtitle=document.createElement('span');subtitle.className='lc-reward-label';subtitle.textContent=live?'New iLiam Coins!':'New test coins!';
+  const message=document.createElement('span');message.className='lc-reward-success';message.textContent='Purchase successful';
+  const done=document.createElement('button');done.type='button';done.className='lc-reward-done';done.textContent='Continue';done.onclick=()=>finishReward();
+  panel.append(burst,title,subtitle,message,done);el.append(panel);document.body.append(el);
+  activeReward={key,entry,el,timer:setTimeout(()=>finishReward(),5500)};return;
+ }
+}
+function suspendReward(){
+ if(!activeReward)return;
+ const {key,entry,el,timer}=activeReward;clearTimeout(timer);el.remove();activeReward=null;
+ if(!rewardSeen(key))rewardQueue.set(key,entry);
+}
+function showReward(result,sessionId,uid){
+ const amount=rewardAmount(result);if(!amount||current?.uid!==uid)return;
+ const key='iliam-reward-shown-'+uid+'-'+sessionId;
+ if(rewardSeen(key)||activeReward?.key===key)return;
+ rewardQueue.set(key,{amount,uid});playNextReward();
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')suspendReward();else playNextReward()});
+window.addEventListener('blur',suspendReward);
+window.addEventListener('focus',playNextReward);
+window.addEventListener('storage',e=>{if(e.newValue==='1'){rewardQueue.delete(e.key);if(activeReward?.key===e.key)finishReward(false);}});
 
 async function api(path,body){
  if(live&&!checkoutConfigured&&path==='/checkout')throw Error('Live checkout is disabled on the website.');
@@ -119,7 +151,7 @@ async function confirmOrder(sessionId,uid,version){
     if(result.verified){
      savePending(null);
      closeCheckout(true);
-     confirmation.textContent='Purchase verified.';showReward(result,sessionId,uid);
+     confirmation.textContent=rewardAmount(result)?'Purchase successful · +'+rewardAmount(result).toLocaleString()+' '+coinsName:'Purchase verified.';showReward(result,sessionId,uid);
      await refresh();return;
     }
     if(result.sessionStatus==='expired'){
@@ -143,7 +175,7 @@ async function refresh(){
 }
 function checkPending(){if(current&&pending){if(polling)wakePaymentPoll?.();else confirmOrder(pending,current.uid,checkoutVersion);}}
 onAuthStateChanged(auth,u=>{
- if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';pending=null;}
+ if(current?.uid!==u?.uid){suspendReward();rewardQueue.clear();closeCheckout();confirmation.textContent='';pending=null;}
  current=u;balance=null;liveAuthorized=false;requestVersion++;render();
  if(!root.hidden)refresh();
  if(u){
