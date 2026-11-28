@@ -3,7 +3,7 @@ import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 import {defaultAppearance,dotSVG,appearanceForProfile} from './idot-render.js?v=4';
-import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG} from './liam-expansion.js?v=3';
+import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG} from './liam-expansion.js?v=4';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const catalog=[
  ['follower','iDot Assistant',250,'iDot','Your own customized iDot follows your cursor. Eye tracking is included.',{}],
@@ -546,7 +546,7 @@ async function png(id,config,w=280,h=180){
  ctx.fillStyle='#b9d7ff';for(let i=0;i<22;i++){ctx.globalAlpha=.35;ctx.fillRect((i*83+17)%w,(i*41+11)%h,2,2)}ctx.globalAlpha=1;
  const extra=expansionById.get(id);
  if(id==='cursor'||extra?.[3]==='Cursors'||extra?.[3]==='Buddies'||extra?.[3]==='iDot'){
-  const svg=id==='cursor'||extra?.[3]==='Cursors'?cursorSvg(id):extra?.[3]==='Buddies'?buddySVG(id):dotSVG({accessory:id});const image=await svgImage(svg);const size=Math.min(w,h)*.78;ctx.drawImage(image,(w-size)/2,(h-size)/2,size,size);return canvas.toDataURL('image/png');
+  const svg=id==='cursor'||extra?.[3]==='Cursors'?cursorSvg(id):extra?.[3]==='Buddies'?buddySVG(id):dotSVG({accessory:id});const image=await svgImage(svg);const size=id==='cursorPixel'?Math.floor(Math.min(w,h)*.78/32)*32:Math.min(w,h)*.78;if(id==='cursorPixel')ctx.imageSmoothingEnabled=false;ctx.drawImage(image,Math.floor((w-size)/2),Math.floor((h-size)/2),size,size);return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Textures'||id==='packGalaxy'){
   const skin=extra?.[3]==='Textures'?id:'themeGalaxy',v=themeVars(skin);
