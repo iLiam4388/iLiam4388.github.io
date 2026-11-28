@@ -64,4 +64,4 @@ if(pageId&&badges.has(pageId)){
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderBadges();});
 window.addEventListener('pageshow',renderBadges);
 
-import "./liam-economy.js?v=18";
+import "./liam-economy.js?v=19";

@@ -5,8 +5,8 @@ import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 import {watchFeatured,isFeaturedAdmin,toggleFeatured} from './liam-featured.js?v=1';
-import {defaultAppearance,dotSVG,dotAvatar,styleCosmeticProfile,appearanceForProfile} from './idot-render.js?v=5';
-import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG,cosmeticArt,cosmeticLabel} from './liam-expansion.js?v=5';
+import {defaultAppearance,dotSVG,dotAvatar,styleCosmeticProfile,appearanceForProfile} from './idot-render.js?v=6';
+import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG,cosmeticArt,cosmeticLabel} from './liam-expansion.js?v=6';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const catalog=[
  ['follower','iDot Assistant',250,'iDot','Your own customized iDot follows your cursor. Eye tracking is included.',{}],

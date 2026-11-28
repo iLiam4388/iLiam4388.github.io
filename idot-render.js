@@ -1,4 +1,4 @@
-import {accessorySVG,profileClasses,cosmeticArt,cosmeticLabel} from './liam-expansion.js?v=5';
+import {accessorySVG,profileClasses,cosmeticArt,cosmeticLabel} from './liam-expansion.js?v=6';
 const palette={blue:'#47c9ff',purple:'#b16dff',green:'#52e6a1',gold:'#ffcf59'};
 // Downsample the real site favicon once so SVG avatar data URLs remain small.
 let faviconImage='';
