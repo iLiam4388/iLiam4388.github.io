@@ -538,6 +538,7 @@ function apply(){
 
 }
 motion.addEventListener?.('change',apply);fine.addEventListener?.('change',apply);
+window.addEventListener('pageshow',apply);document.addEventListener('visibilitychange',()=>{if(!document.hidden)apply()});
 function element(tag,txt,cls){const e=document.createElement(tag);if(txt)e.textContent=txt;if(cls)e.className=cls;return e;}
 function button(txt,fn,disabled=false){const b=element('button',txt,'lc-button');b.type='button';b.disabled=disabled;b.onclick=fn;return b;}
 function svgImage(s){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s)})}
@@ -873,14 +874,56 @@ onAuthStateChanged(auth,async current=>{
  stops.push(onSnapshot(doc(db,'liamRewardChests',current.uid),ss=>{if(g===generation){chestState=ss.data()||{};chestLoaded=true;updateChests()}},()=>{if(g===generation){chestLoaded=false;updateChests()}}));
  if(custom)stops.push(onSnapshot(query(collection(db,'posts'),where('uid','==',current.uid),limit(250)),ps=>{if(g===generation){autoPosts=ps.docs;scheduleAchievements()}},e=>console.warn('Post reward listener unavailable',e)));
  if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize();scheduleAchievements()}},()=>{}));
- let started=false;
- stops.push(onSnapshot(profileRef,async p=>{
-  if(g!==generation||!p.exists())return;
-  profileDisplay={name:p.data().displayName||p.data().username||'',handle:p.data().username?'@'+String(p.data().username).replace(/^@/,''):''};profileCreatedAt=p.data().createdAt?.toMillis?.()||null;rareGranted=p.data().idotFaviconGranted===true;appearance=appearanceForProfile(p.data());render();if(started)return;started=true;
-  try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
-   stops.push(onSnapshot(ref,{includeMetadataChanges:true},s=>{if(g!==generation)return;wallet=s.data()||null;if(!s.metadata.hasPendingWrites&&!s.metadata.fromCache)observeRewardClaims(wallet);clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render();scheduleAchievements()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
-  }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
- },e=>{if(g===generation){error=e.message;render()}}));
+ let profileReady=false,walletKnownMissing=false,creatingWallet=false,initializedWallet=false;
+ // Subscribe independently: a slow or failed starter transaction must never
+ // block existing users' owned cosmetics and saved appearance from loading.
+ function renderLoadedState(){
+  if(g!==generation)return;
+  render();scheduleAchievements();
+ }
+ async function ensureStarterWallet(){
+  if(g!==generation||!profileReady||!walletKnownMissing||creatingWallet||initializedWallet)return;
+  creatingWallet=true;
+  try{
+   await runTransaction(db,async tx=>{
+    if(g!==generation)throw Error('Account changed');
+    const w=await tx.get(ref);
+    if(g!==generation)throw Error('Account changed');
+    if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''});
+   });
+   initializedWallet=true;
+  }catch(e){if(g===generation){error='Wallet initialization unavailable: '+e.message;renderLoadedState();}}
+  finally{creatingWallet=false;}
+ }
+ const retryWallet=()=>ensureStarterWallet();
+ window.addEventListener('online',retryWallet);stops.push(()=>window.removeEventListener('online',retryWallet));
+ stops.push(onSnapshot(ref,{includeMetadataChanges:true},snap=>{
+  if(g!==generation)return;
+  if(snap.exists()){
+   wallet=snap.data();walletKnownMissing=false;initializedWallet=true;
+   if(error.startsWith('Wallet '))error='';
+   if(!snap.metadata.hasPendingWrites&&!snap.metadata.fromCache)observeRewardClaims(wallet);
+  }else if(!snap.metadata.fromCache&&!snap.metadata.hasPendingWrites){
+   wallet=null;walletKnownMissing=true;
+  }
+  clearTimeout(dailyTimer);
+  const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());
+  if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);
+  renderLoadedState();ensureStarterWallet();
+ },e=>{if(g===generation){error='Wallet unavailable: '+e.message;renderLoadedState();}}));
+ stops.push(onSnapshot(profileRef,{includeMetadataChanges:true},p=>{
+  if(g!==generation)return;
+  if(!p.exists()){
+   if(!p.metadata.fromCache){profileReady=false;appearance={...defaultAppearance};rareGranted=false;renderLoadedState();}
+   return;
+  }
+  profileReady=true;
+  const data=p.data();
+  profileDisplay={name:data.displayName||data.username||'',handle:data.username?'@'+String(data.username).replace(/^@/,''):''};
+  profileCreatedAt=data.createdAt?.toMillis?.()||null;rareGranted=data.idotFaviconGranted===true;
+  appearance=appearanceForProfile(data);
+  renderLoadedState();ensureStarterWallet();
+ },e=>{if(g===generation){error='Profile unavailable: '+e.message;renderLoadedState();}}));
 });
 const params=new URLSearchParams(location.search);
 if(custom&&(params.get('customize')==='1'||params.get('earn')==='1')){
