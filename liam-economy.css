@@ -204,3 +204,6 @@ body[data-lc-skin="themeCloud"] :is(.account-panel a,.lc-intro a,.lc-card a,.pro
 body[data-lc-skin="themeRetro"] :is(.username,.user,.review-name,.profile-stats,.login-card h2,.player-title),
 body[data-lc-skin="themeCloud"] :is(.username,.user,.review-name,.profile-stats,.login-card h2,.player-title){color:var(--skin-fg)!important;text-shadow:none!important}
 body[data-lc-skin="themeCyber"] :is(.game-card,.player-shell,.admin-panel){border-radius:0!important}
+
+/* Profile customization expansion: banners are scoped to profile headers. */
+.lc-custom-banner:is(.profile-summary,.public-profile-summary,.lc-identity-preview){background:var(--lc-custom-banner)!important;border-color:#a3b0d5!important;color:#fff!important;padding:12px;border-radius:12px}.lc-custom-banner:is(.profile-summary,.public-profile-summary,.lc-identity-preview) :is(strong,.username,.lc-public-tag){text-shadow:0 1px 3px #0008}.lc-custom-banner.lc-identity-preview{min-width:140px}.lc-custom-banner .lc-public-tag{background:#121a2bcc}.lc-cosmetic-grid img{image-rendering:auto}

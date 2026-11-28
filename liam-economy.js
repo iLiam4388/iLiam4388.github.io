@@ -2,8 +2,8 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
-import {defaultAppearance,dotSVG,appearanceForProfile} from './idot-render.js?v=4';
-import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG} from './liam-expansion.js?v=4';
+import {defaultAppearance,dotSVG,dotAvatar,styleCosmeticProfile,appearanceForProfile} from './idot-render.js?v=5';
+import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG,cosmeticArt,cosmeticLabel} from './liam-expansion.js?v=5';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const catalog=[
  ['follower','iDot Assistant',250,'iDot','Your own customized iDot follows your cursor. Eye tracking is included.',{}],
@@ -487,7 +487,7 @@ const achievements=[
   ]
  }
 ];
-catalog.push(...expansion.map(r=>[r[0],r[1],r[2],r[3],describe(r),r[3]==='iDot'?{accessory:r[0]}:{}]));
+catalog.push(...expansion.map(r=>[r[0],r[1],r[2],r[3],describe(r),r[3]==='iDot'?{[slotFor(r[0])]:r[0]}:{}]));
 const achievementById=new Map(achievements.map(a=>[a.id,a]));
 let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='idot',dailyTimer=0,messageCount=0,rareGranted=false;
@@ -515,7 +515,7 @@ addEventListener('pointermove',e=>{
 },{passive:true});
 const storeIds=new Set(['follower','cursor','texture','wallpaper',...expansion.filter(r=>!['iDot','Profile'].includes(r[3])).map(r=>r[0])]);
 const equipped=id=>slotFor(id)?appearance[slotFor(id)]===id:appearance[id]===true;
-function switchItem(id){const slot=slotFor(id);if(!slot)return equip({[id]:!appearance[id],...(id==='cursor'?{cursorStyle:''}:id==='texture'?{themeStyle:''}:id==='follower'?{buddyStyle:''}:id==='hat'?{accessory:'',favicon:false}:id==='frame'?{borderStyle:''}:id==='gradient'?{nameStyle:''}:id==='username'?{handleStyle:''}:{})});const changes={[slot]:equipped(id)?'':id};if(slot==='cursorStyle')changes.cursor=false;if(slot==='themeStyle')changes.texture=false;if(slot==='buddyStyle')changes.follower=false;if(slot==='accessory'&&!equipped(id)){changes.hat=false;changes.favicon=false;}if(slot==='borderStyle')changes.frame=false;if(slot==='nameStyle')changes.gradient=false;if(slot==='handleStyle')changes.username=false;return equip(changes);}
+function switchItem(id){const slot=slotFor(id);if(!slot)return equip({[id]:!appearance[id],...(id==='cursor'?{cursorStyle:''}:id==='texture'?{themeStyle:''}:id==='follower'?{buddyStyle:''}:id==='hat'?{accessory:'',favicon:false}:id==='frame'?{borderStyle:''}:id==='gradient'?{nameStyle:''}:id==='username'?{handleStyle:''}:{})});const changes={[slot]:equipped(id)?'':id};if(slot==='cursorStyle')changes.cursor=false;if(slot==='themeStyle')changes.texture=false;if(slot==='buddyStyle')changes.follower=false;if(slot==='accessory'&&!equipped(id)){changes.hat=false;changes.favicon=false;changes.hatStyle='';changes.eyewearStyle='';}if(slot==='hatStyle'&&!equipped(id)){changes.hat=false;changes.favicon=false;changes.accessory='';}if(slot==='eyewearStyle'&&!equipped(id)){changes.glasses=false;if(appearance.accessory==='accHeart')changes.accessory='';}if(slot==='tagStyle'&&!equipped(id))changes.tag=false;if(slot==='borderStyle')changes.frame=false;if(slot==='nameStyle')changes.gradient=false;if(slot==='handleStyle')changes.username=false;return equip(changes);}
 function dailyReady(){return !!wallet&&(!wallet.lastDaily||Date.now()-wallet.lastDaily.toMillis()>=86400000);}
 function has(id){return wallet?.owned?.includes(id)===true;}
 function apply(){
@@ -546,7 +546,7 @@ async function png(id,config,w=280,h=180){
  ctx.fillStyle='#b9d7ff';for(let i=0;i<22;i++){ctx.globalAlpha=.35;ctx.fillRect((i*83+17)%w,(i*41+11)%h,2,2)}ctx.globalAlpha=1;
  const extra=expansionById.get(id);
  if(id==='cursor'||extra?.[3]==='Cursors'||extra?.[3]==='Buddies'||extra?.[3]==='iDot'){
-  const svg=id==='cursor'||extra?.[3]==='Cursors'?cursorSvg(id):extra?.[3]==='Buddies'?buddySVG(id):dotSVG({accessory:id});const image=await svgImage(svg);const size=id==='cursorPixel'?Math.floor(Math.min(w,h)*.78/32)*32:Math.min(w,h)*.78;if(id==='cursorPixel')ctx.imageSmoothingEnabled=false;ctx.drawImage(image,Math.floor((w-size)/2),Math.floor((h-size)/2),size,size);return canvas.toDataURL('image/png');
+  const svg=id==='cursor'||extra?.[3]==='Cursors'?cursorSvg(id):extra?.[3]==='Buddies'?buddySVG(id):dotSVG({[slotFor(id)]:id});const image=await svgImage(svg);const size=id==='cursorPixel'?Math.floor(Math.min(w,h)*.78/32)*32:Math.min(w,h)*.78;if(id==='cursorPixel')ctx.imageSmoothingEnabled=false;ctx.drawImage(image,Math.floor((w-size)/2),Math.floor((h-size)/2),size,size);return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Textures'||id==='packGalaxy'){
   const skin=extra?.[3]==='Textures'?id:'themeGalaxy',v=themeVars(skin);
@@ -576,10 +576,10 @@ async function png(id,config,w=280,h=180){
   return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Profile'){
-  const image=await svgImage(dotSVG({})),cx=w*.25,cy=h*.49,size=h*.56;ctx.drawImage(image,cx-size/2,cy-size/2,size,size);const color={profSilver:'#cddbe8',profNeon:'#72ffba',profSunset:'#ffac91',profMetal:'#c3d6e5',profRainbow:'#d8a1ff',profSparkles:'#ffe7a2',profBanner:'#ae93ff',profGalaxy:'#baa0ff'}[id];
+  const slot=slotFor(id),art=cosmeticArt(id);if(slot==='bannerStyle'&&Array.isArray(art)){const g=ctx.createLinearGradient(0,0,w,h);art.forEach((c,i)=>g.addColorStop(i/(art.length-1),c));ctx.fillStyle=g;ctx.fillRect(0,0,w,h);}const image=await svgImage(dotSVG({})),cx=w*.25,cy=h*.49,size=h*.56;if(slot==='avatarColor'&&typeof art==='string'){ctx.fillStyle=art;ctx.beginPath();ctx.arc(cx,cy,size*.49,0,Math.PI*2);ctx.fill();}ctx.drawImage(image,cx-size/2,cy-size/2,size,size);const color={profSilver:'#cddbe8',profNeon:'#72ffba',profSunset:'#ffac91',profMetal:'#c3d6e5',profRainbow:'#d8a1ff',profSparkles:'#ffe7a2',profBanner:'#ae93ff',profGalaxy:'#baa0ff'}[id]||(typeof art==='string'?art:'#e9efff');
   if(id==='profSilver'||id==='profRainbow'){ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.arc(cx,cy,size*.44,0,Math.PI*2);ctx.stroke()}
   if(id==='profSparkles'||id==='profBanner'){ctx.fillStyle=color;for(let i=0;i<24;i++){ctx.fillRect((i*71+13)%w,(i*37+5)%h,3,3)}}
-  ctx.fillStyle=color;ctx.font='bold '+Math.round(w*.065)+'px Verdana';ctx.fillText(id==='profMetal'||id==='profGalaxy'?'@username':'Display Name',w*.46,h*.45);ctx.font=Math.round(w*.046)+'px Verdana';ctx.fillText(id==='profMetal'||id==='profGalaxy'?'Display Name':'@username',w*.46,h*.59);return canvas.toDataURL('image/png');
+  ctx.fillStyle=color;ctx.font='bold '+Math.round(w*.065)+'px Verdana';ctx.fillText(slot==='tagStyle'?cosmeticLabel(id):id==='profMetal'||id==='profGalaxy'?'@username':'Display Name',w*.46,h*.45);ctx.font=Math.round(w*.046)+'px Verdana';ctx.fillText(id==='profMetal'||id==='profGalaxy'?'Display Name':'@username',w*.46,h*.59);return canvas.toDataURL('image/png');
  }
  if(id==='packSticker'||id==='packIcons'){const image=await svgImage(dotSVG({accessory:id==='packSticker'?'accHalo':'accCrown'}));const size=h*.57;ctx.drawImage(image,w*.13,h*.18,size,size);ctx.drawImage(await svgImage(dotSVG({color:'purple',accessory:'accHeart'})),w*.48,h*.27,size,size);return canvas.toDataURL('image/png');}
  if(id==='texture'){for(let i=0;i<60;i++){ctx.fillStyle=i%2?'#a9d9ff':'#dcafff';ctx.fillRect((i*73)%w,(i*37)%h,i%3+1,i%3+1)}}
@@ -668,13 +668,13 @@ function customize(){
   const avatar=button(appearance.avatar?'iDot profile picture · On':'Use iDot as profile picture',()=>equip({avatar:!appearance.avatar}),busy||!wallet);
   avatar.setAttribute('aria-pressed',String(appearance.avatar));info.append(avatar);if(rareGranted)info.append(element('p','Exclusive unlocked: iLiam Icon Crown','lc-rare-label'));hero.append(live,info);
  }else{
-  const live=element('div','','lc-identity-preview');const picture=element('img');picture.alt='Avatar preview';picture.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(dotSVG(appearance));picture.className=appearance.frame?'lc-frame':'';
+  const live=element('div','','lc-identity-preview');const picture=element('img');picture.alt='Avatar preview';picture.src=dotAvatar(appearance);picture.className=appearance.frame?'lc-frame':'';
   const name=element('strong','Display Name',appearance.gradient?'lc-preview-gradient':'');const handle=element('span','@username',appearance.username?'lc-blue-name':'');
-  live.append(picture,name,handle);profileClasses(live,appearance);if(appearance.tag)live.append(element('span','iDot Club','lc-public-tag'));
+  live.append(picture,name,handle);profileClasses(live,appearance);styleCosmeticProfile(live,appearance);
   const info=element('div','','lc-studio-info');info.append(element('span','PROFILE PREVIEW','lc-eyebrow'),element('h4','Your public style'),element('p','Choose how your name and avatar look to the community.'));hero.append(live,info);
  }
  custom.append(hero);
- const grid=element('div','','lc-cosmetic-grid');
+ let grid=element('div','','lc-cosmetic-grid');
  function tile(id,name,price,desc,config,owned,active,onAction,rare=false){
   const item=element('article','','lc-cosmetic'+(active?' lc-cosmetic-selected':'')+(rare?' lc-cosmetic-rare':''));
   const img=element('img');img.alt=name+' preview';img.width=280;img.height=180;
@@ -687,14 +687,19 @@ function customize(){
  }
  if(isDot&&rareGranted)tile('favicon','iLiam Icon Crown',0,'A special iLiam favicon worn above your iDot. Awarded to selected accounts.',{favicon:true},true,appearance.favicon===true,()=>equip({favicon:!appearance.favicon,...(!appearance.favicon?{accessory:'',hat:false}:{})}),true);
  if(isDot)tile('blue','Classic Blue',0,'The original iDot.',{color:'blue'},true,appearance.color==='blue',()=>equip({color:'blue'}));
+ const sectionFor=id=>{const slot=slotFor(id);if(isDot){if(['purple','green','gold'].includes(id)||slot==='color')return 'iDot Colors';if(id==='glasses'||id==='accHeart'||slot==='eyewearStyle')return 'Eyewear';if(id==='hat'||['accCap','accSleep','accTop','accPirate','accCrown'].includes(id)||slot==='hatStyle')return 'Hats';return 'Other Accessories';}if(slot==='avatarColor')return 'Profile Picture Colors';if(slot==='bannerStyle')return 'Profile Banners';if(id==='tag'||slot==='tagStyle')return 'Profile Tags';if(id==='frame'||slot==='borderStyle')return 'Profile Rings';return 'Name and Effects';};
+ const sections=isDot?['iDot Colors','Eyewear','Hats','Other Accessories']:['Profile Picture Colors','Profile Banners','Profile Tags','Profile Rings','Name and Effects'];
+ const initial=grid;grid=element('div','','lc-cosmetic-grid');
+ if(isDot&&initial.children.length)custom.append(element('h4','Classic and exclusive','lc-section-heading'),initial);
+ for(const section of sections){grid=element('div','','lc-cosmetic-grid');
  for(const [id,name,price,group,desc,config] of catalog){
-  if(storeIds.has(id)||group!==(isDot?'iDot':'Profile'))continue;
-  const color=['purple','green','gold'].includes(id);
+  if(storeIds.has(id)||group!==(isDot?'iDot':'Profile')||sectionFor(id)!==section)continue;
+  const color=['purple','green','gold'].includes(id)||slotFor(id)==='color';
   const active=color?appearance.color===id:equipped(id);
   tile(id,name,price,desc,config,has(id),active,()=>has(id)?(color?equip({color:active?'blue':id}):switchItem(id)):buy(id,price));
  }
-
- custom.append(element('h4',isDot?'iDot collection':'Profile cosmetics','lc-section-heading'),grid);
+ if(grid.children.length)custom.append(element('h4',section,'lc-section-heading'),grid);
+ }
 
 }
 function render(){apply();shop();customize();}

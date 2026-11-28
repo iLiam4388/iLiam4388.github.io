@@ -124,7 +124,7 @@ service cloud.firestore {
           || (item == 'texture' && price == 150)
           || (item == 'tag' && price == 100)
           || (item == 'wallpaper' && price == 75)
-          || ({'cursorPink':100,'cursorMint':100,'cursorPurple':150,'cursorGold':200,'cursorPixel':200,'cursorStar':250,'cursorIce':300,'cursorFire':300,'cursorGalaxy':400,'cursorGlitch':450,'cursorRainbow':500,'cursorDot':600,'themeGalaxy':250,'themeSunset':180,'themeOcean':220,'themeCyber':260,'themeArcade':280,'themeAurora':300,'themeCloud':180,'themeCrystal':350,'themeMidnight':100,'themeRetro':300,'accBow':50,'accCap':75,'accSleep':100,'accHeart':120,'accHeadphones':150,'accTop':175,'accPirate':200,'accGamer':250,'accHalo':300,'accWings':350,'accCrown':500,'accPlanets':750,'profSilver':75,'profNeon':100,'profSunset':150,'profMetal':200,'profRainbow':350,'profSparkles':400,'profBanner':450,'profGalaxy':600,'buddyStar':300,'buddyCloud':250,'buddyRobot':450,'buddyPixel':350,'buddyPlanet':600,'packSticker':100,'packGalaxy':150,'packIcons':200}.get(item, -1) == price && price > 0);
+          || ({'cursorPink':100,'cursorMint':100,'cursorPurple':150,'cursorGold':200,'cursorPixel':200,'cursorStar':250,'cursorIce':300,'cursorFire':300,'cursorGalaxy':400,'cursorGlitch':450,'cursorRainbow':500,'cursorDot':600,'themeGalaxy':250,'themeSunset':180,'themeOcean':220,'themeCyber':260,'themeArcade':280,'themeAurora':300,'themeCloud':180,'themeCrystal':350,'themeMidnight':100,'themeRetro':300,'accBow':50,'accCap':75,'accSleep':100,'accHeart':120,'accHeadphones':150,'accTop':175,'accPirate':200,'accGamer':250,'accHalo':300,'accWings':350,'accCrown':500,'accPlanets':750,'profSilver':75,'profNeon':100,'profSunset':150,'profMetal':200,'profRainbow':350,'profSparkles':400,'profBanner':450,'profGalaxy':600,'buddyStar':300,'buddyCloud':250,'buddyRobot':450,'buddyPixel':350,'buddyPlanet':600,'packSticker':100,'packGalaxy':150,'packIcons':200,'dotRed':75,'dotOrange':75,'dotPink':75,'dotTeal':100,'dotNavy':100,'dotLavender':100,'dotWhite':125,'dotBlack':150,'eyeRound':90,'eyeAviator':140,'eyePixel':150,'eyeStar':200,'hatBucket':100,'hatWizard':200,'hatBeret':110,'hatSpace':250,'avatarRose':80,'avatarOcean':80,'avatarMint':80,'avatarGold':120,'avatarNight':100,'bannerAurora':200,'bannerSunset':180,'bannerOcean':180,'bannerPixel':220,'bannerMidnight':150,'tagExplorer':75,'tagCreator':100,'tagGamer':100,'tagCollector':125,'tagStar':150,'tagCosmic':180}.get(item, -1) == price && price > 0);
     }
     function lcPost(uid, postId, featured) {
       return postId is string && postId.size() > 0 && postId.size() < 100
@@ -248,10 +248,10 @@ service cloud.firestore {
     }
     function lcAppearance(uid) {
       let c = request.resource.data.liamAppearance;
-      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag','favicon','cursorStyle','themeStyle','buddyStyle','accessory','borderStyle','nameStyle','handleStyle','profileEffect','bannerStyle'])
+      return c is map && c.keys().hasOnly(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag','favicon','cursorStyle','themeStyle','buddyStyle','accessory','borderStyle','nameStyle','handleStyle','profileEffect','bannerStyle','eyewearStyle','hatStyle','avatarColor','tagStyle'])
         && c.keys().hasAll(['avatar','color','glasses','hat','follower','frame','gradient','username','cursor','texture','tag'])
         && c.avatar is bool
-        && (c.color == 'blue' || (c.color in ['purple','green','gold'] && lcOwn(uid,c.color)))
+        && (c.color == 'blue' || (c.color in ['purple','green','gold','dotRed','dotOrange','dotPink','dotTeal','dotNavy','dotLavender','dotWhite','dotBlack'] && lcOwn(uid,c.color)))
         && c.glasses is bool && (!c.glasses || lcOwn(uid,'glasses'))
         && c.hat is bool && (!c.hat || lcOwn(uid,'hat'))
         && c.follower is bool && (!c.follower || lcOwn(uid,'follower'))
@@ -271,7 +271,11 @@ service cloud.firestore {
         && lcSelected(uid, c.get('nameStyle', ''), ['profNeon','profSunset'])
         && lcSelected(uid, c.get('handleStyle', ''), ['profMetal','profGalaxy'])
         && lcSelected(uid, c.get('profileEffect', ''), ['profSparkles'])
-        && lcSelected(uid, c.get('bannerStyle', ''), ['profBanner']);
+        && lcSelected(uid, c.get('bannerStyle', ''), ['profBanner','bannerAurora','bannerSunset','bannerOcean','bannerPixel','bannerMidnight'])
+        && lcSelected(uid, c.get('eyewearStyle', ''), ['eyeRound','eyeAviator','eyePixel','eyeStar'])
+        && lcSelected(uid, c.get('hatStyle', ''), ['hatBucket','hatWizard','hatBeret','hatSpace'])
+        && lcSelected(uid, c.get('avatarColor', ''), ['avatarRose','avatarOcean','avatarMint','avatarGold','avatarNight'])
+        && lcSelected(uid, c.get('tagStyle', ''), ['tagExplorer','tagCreator','tagGamer','tagCollector','tagStar','tagCosmic']);
     }
     match /profiles/{uid} {
       allow update: if isSelf(uid) && hasProfile()
