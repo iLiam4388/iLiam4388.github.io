@@ -191,6 +191,15 @@ service cloud.firestore {
       allow read: if isSelf(uid);
       allow write: if false;
     }
+    match /liamStoreConfig/{configId} {
+      allow read: if true;
+      allow create, update: if configId == 'featured' && isAdmin()
+        && request.resource.data.keys().hasOnly(['products','packs'])
+        && request.resource.data.keys().hasAll(['products','packs'])
+        && request.resource.data.products is list && request.resource.data.products.size() <= 100
+        && request.resource.data.packs is list && request.resource.data.packs.size() <= 5;
+      allow delete: if false;
+    }
     match /liamWallets/{uid} {
       allow read: if isSelf(uid);
       allow create: if isSelf(uid) && hasProfile()

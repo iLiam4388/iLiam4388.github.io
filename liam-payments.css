@@ -3,3 +3,5 @@
 .lc-coin-nav a,.lc-payment-actions a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;position:relative;pointer-events:auto}.lc-coin-nav{position:relative;z-index:5}
 
 .lc-embedded-panel{scroll-margin-top:24px;text-align:left;margin:20px auto;padding:clamp(12px,3vw,24px);background:#17233d;border:1px solid #a98545;border-radius:18px;max-width:940px}.lc-embedded-panel[hidden]{display:none!important}.lc-embedded-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.lc-embedded-header h3{margin:0;color:#ffe49b}.lc-embedded-header button{margin:0}.lc-embedded-checkout{min-width:0;width:100%;border-radius:12px;overflow:hidden}.lc-embedded-panel p{font-size:13px;color:#d9e4f7}.lc-embedded-checkout:empty{min-height:48px}
+
+.lc-featured-mark{display:inline-flex;gap:4px;color:#ffe39a;font-weight:800;font-size:12px}.lc-feature-toggle{cursor:pointer;background:#24395a;color:#eaf6ff;border:1px solid #668dbd;border-radius:8px;padding:6px 10px}

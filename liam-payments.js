@@ -2,6 +2,7 @@ import {createRewardCelebration} from './liam-reward-celebration.js?v=1';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
+import {watchFeatured,isFeaturedAdmin,toggleFeatured} from './liam-featured.js?v=1';
 import {paymentConfig as sandboxConfig,livePaymentConfig} from './liam-payment-config.js?v=6';
 // Production is the default; sandbox remains an explicit test route.
 const live=new URLSearchParams(location.search).get('mode')!=='sandbox';
@@ -13,6 +14,7 @@ const auth=getAuth(initializeApp(firebaseConfig)),root=document.getElementById('
 const packs=[['lc100',100,99],['lc600',600,499],['lc1300',1300,999],['lc3000',3000,1999],['lc8500',8500,4999]];
 const checkoutConfigured=live?paymentConfig.enabled===true:paymentConfig.sandbox===true;
 const backend=(live||paymentConfig.sandbox===true)&&/^https:\/\/[^\s]+$/i.test(paymentConfig.backendUrl)?paymentConfig.backendUrl.replace(/\/$/,''):'';
+let featured={products:[],packs:[]},featuredAdmin=false;
 let current=null,busy=false,balance=null,requestVersion=0,checkout=null,checkoutVersion=0,liveAuthorized=false,pending=null,polling=false;
 const confirmation=document.getElementById('lc-payment-return');
 const ready=!!backend;
@@ -85,14 +87,14 @@ function render(){
  wallet.textContent='Balance: '+(balance===null?'—':balance.toLocaleString()+' '+coinsName);
  cards.replaceChildren();
  if(returnedFromCheckout)return;
- for(const [id,coins,cents] of packs){
+ for(const [id,coins,cents] of [...packs].sort((a,b)=>Number(featured.packs.includes(b[0]))-Number(featured.packs.includes(a[0])))){
   const card=document.createElement('article');card.className='lc-pack-card';
   const img=document.createElement('div');img.className='lc-pack-icon';img.setAttribute('aria-hidden','true');img.textContent='LC';
   const name=document.createElement('h3');name.textContent=coins.toLocaleString()+' LC';
   const price=document.createElement('strong');price.textContent=(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});
   const btn=document.createElement('button');btn.type='button';btn.className='lc-pack-buy';btn.disabled=busy||!!pending||!backend||!current||!ready||!checkoutConfigured||(live&&!liveAuthorized);btn.textContent=(busy||pending)?'Checkout pending':live?'Buy coins':'Test checkout';
   btn.onclick=()=>openCheckout(id,coins,cents);
-  card.append(img,name,price,btn);cards.append(card);
+  card.append(img,name,price,btn);if(featured.packs.includes(id)){const badge=document.createElement('span');badge.className='lc-featured-mark';badge.textContent='★ Featured';card.append(badge)}if(featuredAdmin){const featureBtn=document.createElement('button');featureBtn.type='button';featureBtn.className='lc-feature-toggle';featureBtn.textContent=featured.packs.includes(id)?'Unfeature':'Feature';featureBtn.onclick=()=>toggleFeatured('packs',id).catch(e=>setStatus(e.message));card.append(featureBtn)}cards.append(card);
  }
 }
 function closeCheckout(keepReturnWindow=false){
@@ -166,9 +168,10 @@ async function refresh(){
  try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');if(!Number.isSafeInteger(data.balance))throw Error('Wallet returned an invalid balance');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'':'Purchases are currently unavailable for this account.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus('Unable to load your balance. Please try again.')}}
 }
 function checkPending(){if(current&&pending){if(polling)wakePaymentPoll?.();else confirmOrder(pending,current.uid,checkoutVersion);}}
+watchFeatured(next=>{featured=next;render()});
 onAuthStateChanged(auth,u=>{
  if(current?.uid!==u?.uid){suspendReward();rewardQueue.clear();closeCheckout();confirmation.textContent='';pending=null;}
- current=u;balance=null;liveAuthorized=false;requestVersion++;render();
+ current=u;featuredAdmin=false;balance=null;liveAuthorized=false;requestVersion++;render();if(u)isFeaturedAdmin(u.uid).then(ok=>{if(current?.uid===u.uid){featuredAdmin=ok;render()}}).catch(()=>{});
  if(!root.hidden)refresh();
  if(u){
   let stored;try{stored=sessionStorage.getItem(pendingKey(u.uid))}catch{}

@@ -4,6 +4,7 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
+import {watchFeatured,isFeaturedAdmin,toggleFeatured} from './liam-featured.js?v=1';
 import {defaultAppearance,dotSVG,dotAvatar,styleCosmeticProfile,appearanceForProfile} from './idot-render.js?v=5';
 import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG,cosmeticArt,cosmeticLabel} from './liam-expansion.js?v=5';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
@@ -492,6 +493,7 @@ const achievements=[
 catalog.push(...expansion.map(r=>[r[0],r[1],r[2],r[3],describe(r),r[3]==='iDot'?{[slotFor(r[0])]:r[0]}:{}]));
 const achievementById=new Map(achievements.map(a=>[a.id,a]));
 let profileCreatedAt=null,achievementFilter='All';
+let featured={products:[],packs:[]},canFeature=false;
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='idot',dailyTimer=0,messageCount=0,rareGranted=false;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
@@ -616,6 +618,8 @@ async function downloadPack(id){
 const previews=new Map();
 function thumbnail(id,c){if(!previews.has(id))previews.set(id,png(id,c));return previews.get(id)}
 function status(root){if(error)root.append(element('p',error,'lc-error'))}
+function featureMark(){const mark=element('span','','lc-featured-mark');mark.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3.1 6.3 7 1-5.1 4.9 1.2 7L12 18l-6.2 3.2 1.2-7L2 9.3l7-1Z"/></svg> Featured';return mark;}
+watchFeatured(next=>{featured=next;shop()});
 function shop(){
  if(!store)return;store.replaceChildren();
  const intro=element('div','','lc-intro');intro.append(element('h2','Liam Store'),element('p','Spend Liam Coins on assistants, cursors, textures and downloads. Customize your iDot and profile in Community.'));
@@ -624,8 +628,8 @@ function shop(){
  else intro.append(element('p','Loading your wallet…'));
  const earn=element('a','How to earn Liam Coins','lc-button');earn.href='community.html?earn=1';intro.append(earn);store.append(intro);status(store);
  const filters=element('div','','lc-filters');for(const name of ['All','Cursors','Textures','Buddies','Downloads','Owned']){const b=button(name,()=>{category=name;shop()});b.setAttribute('aria-pressed',String(category===name));filters.append(b)}store.append(filters);
- const grid=element('div','','lc-grid');for(const [id,name,price,group,desc,c] of catalog){const displayGroup=id==='cursor'?'Cursors':id==='texture'?'Textures':id==='follower'?'Buddies':group;if(!storeIds.has(id)||(category==='Owned'?!has(id):category!=='All'&&displayGroup!==category))continue;const card=element('article','','lc-card'),img=element('img');img.alt=name;img.width=280;img.height=180;thumbnail(id,c).then(src=>img.src=src).catch(()=>{});card.append(img,element('span',rarityFor(id),'lc-item-rarity'),element('h3',name),element('p',desc),element('strong',price+' LC'));
- if(has(id)){if(id==='wallpaper')card.append(button('Download PNG',async()=>{const a=element('a');a.download='idot-wallpaper.png';a.href=await png(id,appearance,1920,1080);a.click()}));else if(group==='Downloads'){card.append(button('Download PNG pack',()=>downloadPack(id),busy));}else {card.append(button(equipped(id)?'Equipped · Turn off':'Owned · Equip',()=>switchItem(id),busy));if(id==='follower'){const a=element('a','Customize your iDot in Community');a.href='community.html?customize=1';card.append(a)}}}else card.append(button(wallet&&wallet.balance<price?'Not enough LC':'Buy',()=>buy(id,price),!wallet||busy||wallet.balance<price));grid.append(card)}store.append(grid);
+ const grid=element('div','','lc-grid');for(const [id,name,price,group,desc,c] of [...catalog].sort((a,b)=>Number(featured.products.includes(b[0]))-Number(featured.products.includes(a[0])))){const displayGroup=id==='cursor'?'Cursors':id==='texture'?'Textures':id==='follower'?'Buddies':group;if(!storeIds.has(id)||(category==='Owned'?!has(id):category!=='All'&&displayGroup!==category))continue;const card=element('article','','lc-card'),img=element('img');img.alt=name;img.width=280;img.height=180;thumbnail(id,c).then(src=>img.src=src).catch(()=>{});card.append(img,element('span',rarityFor(id),'lc-item-rarity'),element('h3',name),element('p',desc),element('strong',price+' LC'));if(featured.products.includes(id))card.append(featureMark());
+ if(has(id)){if(id==='wallpaper')card.append(button('Download PNG',async()=>{const a=element('a');a.download='idot-wallpaper.png';a.href=await png(id,appearance,1920,1080);a.click()}));else if(group==='Downloads'){card.append(button('Download PNG pack',()=>downloadPack(id),busy));}else {card.append(button(equipped(id)?'Equipped · Turn off':'Owned · Equip',()=>switchItem(id),busy));if(id==='follower'){const a=element('a','Customize your iDot in Community');a.href='community.html?customize=1';card.append(a)}}}else card.append(button(wallet&&wallet.balance<price?'Not enough LC':'Buy',()=>buy(id,price),!wallet||busy||wallet.balance<price));if(canFeature)card.append(button(featured.products.includes(id)?'Unfeature':'Feature',()=>toggleFeatured('products',id).catch(e=>{error=e.message;render()}),busy));grid.append(card)}store.append(grid);
 }
 // Compact avatar editor: catalog, ownership and transaction logic remain shared.
 let dotCategory='colors',dotSelection='',dotScroll=0;
@@ -890,7 +894,8 @@ async function autoAchievements(){
 }
 
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;autoPosts=null;chestState={};chestLoaded=false;chestBusy=false;rewardBaseline=null;toastRoot.replaceChildren();dismissChestCelebration();hideChests();clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;canFeature=false;autoPosts=null;chestState={};chestLoaded=false;chestBusy=false;rewardBaseline=null;toastRoot.replaceChildren();dismissChestCelebration();hideChests();clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ isFeaturedAdmin(current.uid).then(ok=>{if(g===generation){canFeature=ok;shop()}}).catch(()=>{});
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
  stops.push(onSnapshot(doc(db,'liamRewardChests',current.uid),ss=>{if(g===generation){chestState=ss.data()||{};chestLoaded=true;updateChests()}},()=>{if(g===generation){chestLoaded=false;updateChests()}}));
  stops.push(onSnapshot(query(collection(db,'posts'),where('uid','==',current.uid),limit(250)),ps=>{if(g===generation){autoPosts=ps.docs;scheduleAchievements()}},e=>console.warn('Post reward listener unavailable',e)));

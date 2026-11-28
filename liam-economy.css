@@ -255,3 +255,5 @@ body.lc-texture :is(#iliam-notify-panel input[type=checkbox],#iliam-permission-b
 .lc-owner-tag{display:inline-flex;align-items:center;gap:4px;color:#ffde79;border:1px solid #ffcf69;background:#302916;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;letter-spacing:.03em;white-space:nowrap}
 .lc-owner-tag svg{width:13px;height:13px}
 @media(max-width:420px){#liam-customize .lc-avatar-arrow{flex-basis:25px;min-width:25px}.lc-avatar-scroll-wrap{gap:2px;padding:0 2px}}
+
+.lc-featured-mark{display:inline-flex;gap:4px;align-items:center;color:#ffe39a;font-size:12px;font-weight:800}.lc-featured-mark svg{width:15px;height:15px}
