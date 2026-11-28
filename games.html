@@ -67,10 +67,10 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
 .player-frame{width:100%;height:100%;border:0;background:#000;flex:1}
 @media(max-width:600px){.player-overlay{padding:0}.player-shell{height:100vh;border-radius:0;border-left:0;border-right:0}.player-bar{flex-wrap:wrap}.player-title{width:100%;flex-basis:100%}}
 #adminLoginView{display:none!important}
-</style>
+#pcOnlyNotice{width:min(620px,calc(100% - 32px));margin:40px auto;padding:32px;text-align:center;border:2px solid cyan;border-radius:22px;background:#03111e;box-shadow:0 0 24px #00ffff55}#pcOnlyNotice h2{color:#9ffcff}#pcOnlyNotice p{line-height:1.6}html.pc-only .games-grid,html.pc-only .status,html.pc-only .search,html.pc-only .bottom-admin-wrap{display:none!important}html.pc-only #pcOnlyNotice{display:block!important}</style>
 <link rel="stylesheet" href="account-widget.css">
 <link rel="stylesheet" href="nav-badges.css?v=1">
-</head>
+<script>const mobileGamesDevice=(/Android|iPhone|iPad|iPod|Mobile|Tablet|Silk/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||navigator.userAgentData?.mobile===true);if(mobileGamesDevice)document.documentElement.classList.add('pc-only');</script></head>
 <body>
 <header>
   <div class="topbar">
@@ -86,7 +86,7 @@ footer{padding:24px;text-align:center;color:cyan;border-top:2px solid #00ffff55;
   <p>Pick a game and play! AND NO ADS!</p>
 </section>
 <div class="status" id="status">Connecting to Firebase…</div>
-<main class="games-grid" id="gamesGrid"></main>
+<section id="pcOnlyNotice" hidden><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="cyan" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4M7 21h10"/></svg><h2>PC devices only</h2><p>The iLiam Games section is only available on desktop and laptop computers. Phones and tablets are not supported.</p><a class="home-btn" href="index.html">Back to iLiam</a></section><main class="games-grid" id="gamesGrid"></main>
 <div class="bottom-admin-wrap"><button class="admin-btn" id="adminButton" type="button" hidden>⚙ ADMIN</button></div>
 <footer>© <span data-copyright-year>2026</span> iLiam</footer>
 
