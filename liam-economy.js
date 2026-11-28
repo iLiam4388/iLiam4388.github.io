@@ -633,7 +633,7 @@ function customize(){
  const heading=element('div','','lc-studio-heading');heading.append(element('h3','Customize your profile'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));custom.append(heading,bar);status(custom);
  if(!profileTab){custom.append(element('p','Open a menu to customize your profile, customize iDot, or earn Liam Coins.'));return;}
  if(profileTab==='earn'){
-  custom.append(element('h4','How to earn Liam Coins'),element('p','Your account receives 100 LC once when its wallet is created. Earn more by claiming daily rewards and completing achievements.'));
+  custom.append(element('h4','How to earn Liam Coins'),element('p','Your account receives 100 LC once when its wallet is created. Earn more through daily rewards and automatically unlocked achievements.'));
   const daily=button(dailyReady()?'Claim daily reward · +10 LC':'Daily reward · '+(wallet?.lastDaily?'come back after 24 hours':'loading'),()=>claimDaily(),!dailyReady()||busy);custom.append(daily);
   const postReady=wallet&&(!wallet.lastPostReward||Date.now()-wallet.lastPostReward.toMillis()>=3600000);
   custom.append(element('h4','Repeatable rewards'));
@@ -654,7 +654,7 @@ function customize(){
    const target=Array.isArray(a.target)?a.target.length:a.target;
    const row=element('div','','lc-achievement-row');const info=element('div');
    info.append(element('strong',a.name),element('p',a.description+(progress===null?'':' · '+Math.min(progress,target)+'/'+target)));
-   row.append(info,button(claimed?'Claimed':'+'+a.reward+' LC · Claim',()=>claim(a.id,a.reward),!wallet||busy||claimed||(progress!==null&&progress<target)));
+   row.append(info,element('strong',claimed?'Unlocked ✓':'+'+a.reward+' LC · Automatic'));
    list.append(row);
   }
   custom.append(list);
@@ -729,16 +729,44 @@ async function claim(id,amount){return operate(async()=>{
   tx.update(ref,{balance:w.balance+amount,claims:[...w.claims,key],action:id,postId,...(id==='postReward'?{lastPostReward:serverTimestamp()}:{})});
  });
 })}
+let autoRunning=false,autoTimer=0;
+function scheduleAchievements(delay=1200){if(!custom||!user||!wallet)return;clearTimeout(autoTimer);autoTimer=setTimeout(autoAchievements,delay);}
+async function autoAchievements(){
+ if(autoRunning||busy||!user||!wallet)return;
+ const g=generation,uid=user.uid;autoRunning=true;
+ try{
+  const remaining=achievements.filter(a=>!wallet.claims.includes(a.id));
+  if(!remaining.length)return;
+  const postKinds=['post','image','video','mixed','votes'];
+  let posts=[];
+  if(remaining.some(a=>postKinds.includes(a.kind)))posts=(await getDocs(query(collection(db,'posts'),where('uid','==',uid),limit(250)))).docs;
+  for(const a of remaining){
+   if(g!==generation||user?.uid!==uid)return;
+   let eligible=false;
+   if(a.kind==='messages')eligible=messageCount>=a.target;
+   if(a.kind==='owned')eligible=wallet.owned.length>=a.target;
+   if(a.kind==='items')eligible=a.target.every(has);
+   if(a.kind==='age')eligible=!!profileCreatedAt&&Date.now()-profileCreatedAt>=a.target*86400000;
+   if(postKinds.includes(a.kind))eligible=posts.some(p=>{
+    const d=p.data(),raw=d.text||'',images=(raw.match(/⟦iLiam-media:v1:Image:[^⟧]+⟧/g)||[]).length,videos=(raw.match(/⟦iLiam-media:v1:Video:[^⟧]+⟧/g)||[]).length;
+    return a.kind==='post'||(a.kind==='image'&&images>=a.target)||(a.kind==='video'&&videos>=a.target)||(a.kind==='mixed'&&images>0&&videos>0)||(a.kind==='votes'&&Number(d.upvotes||0)>=a.target);
+   });
+   if(!eligible||busy)continue;
+   await claim(a.id,a.reward);
+  }
+ }catch(e){console.warn('Achievement check unavailable',e)}finally{autoRunning=false;if(g===generation)scheduleAchievements(60000);}
+}
+
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
- if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize()}},()=>{}));
+ if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize();scheduleAchievements()}},()=>{}));
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
   if(g!==generation||!p.exists())return;
   profileCreatedAt=p.data().createdAt?.toMillis?.()||null;rareGranted=p.data().idotFaviconGranted===true;appearance=appearanceForProfile(p.data());render();if(started)return;started=true;
   try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
-   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
+   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render();scheduleAchievements()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
  },e=>{if(g===generation){error=e.message;render()}}));
 });
