@@ -459,25 +459,27 @@ export const newAppearance={cursorStyle:'',themeStyle:'',buddyStyle:'',accessory
 export const rarityFor=id=>expansionById.get(id)?.[4]||'Common';
 export const describe=r=>({Cursors:'Change your cursor across iLiam.',Textures:'A full-site skin for buttons, reviews, posts and panels.',Buddies:'A small companion that follows your pointer.',iDot:'An accessory for your iDot avatar and assistant.',Profile:'Customize your public profile appearance.',Downloads:'A downloadable ZIP of PNG artwork.'})[r[3]];
 export const cursorSvg=id=>{
- const r=expansionById.get(id);if(!r||r[3]!=='Cursors')return '';
- const color=r[5],shape=r[6], arrow='M3 3V26L10 19L15 30L20 27L15 17H27Z';
+ const r=id==='cursor'?['cursor','Neon Cursor',150,'Cursors','Common','#31cfff','arrow']:expansionById.get(id);if(!r||r[3]!=='Cursors')return '';
+ const color=r[5],shape=r[6],arrow='M3 3L3 25L9.8 19L15 29L19.4 26.7L14.2 16.9L23.5 16.9Z';
+ const defs='<defs><linearGradient id="body" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="'+color+'"/><stop offset="1" stop-color="'+color+'"/></linearGradient><linearGradient id="rain" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#ff7689"/><stop offset=".28" stop-color="#ffdf78"/><stop offset=".52" stop-color="#67e9a8"/><stop offset=".76" stop-color="#61baff"/><stop offset="1" stop-color="#c389ff"/></linearGradient><linearGradient id="space" x1="0%" y1="0%" x2="100%" y2="100%"><stop stop-color="#bda4ff"/><stop offset=".42" stop-color="#5143ad"/><stop offset="1" stop-color="#191b58"/></linearGradient><linearGradient id="flame" x1="0%" y1="100%" x2="0%" y2="0%"><stop stop-color="#ff4c49"/><stop offset=".6" stop-color="#ff9c43"/><stop offset="1" stop-color="#ffed9b"/></linearGradient><radialGradient id="face" cx="30%" cy="25%" r="80%"><stop stop-color="#b9f4ff"/><stop offset=".45" stop-color="'+color+'"/><stop offset="1" stop-color="#189bd6"/></radialGradient></defs>';
+ const outlined=(d,fill,extra='')=>'<path d="'+d+'" fill="none" stroke="#101a2d" stroke-width="3.2" stroke-linejoin="round"/><path d="'+d+'" fill="'+fill+'" stroke="#f7fbff" stroke-width="1.1" stroke-linejoin="round" '+extra+'/>';
  const paths={
- arrow:'<path d="'+arrow+'" fill="'+color+'" stroke="#fff" stroke-width="1.5"/>',
- pixel:'<path d="M2 2H7V7H12V12H17V17H25V22H15V27H20V31H12V25H7V30H2Z" fill="'+color+'" stroke="#172439" stroke-width="1.5"/>',
- star:'<path d="M15 2L19 11L30 12L22 20L24 30L15 25L6 30L8 20L1 12L11 11Z" fill="'+color+'" stroke="#fff" stroke-width="1.5"/>',
- ice:'<path d="M16 1L28 11L23 25L16 31L5 25L2 11Z" fill="'+color+'" stroke="#fff" stroke-width="1.5"/><path d="M16 1V31M2 11L23 25M28 11L5 25" stroke="#3689bb" fill="none"/>',
- fire:'<path d="M17 1Q25 9 20 14Q30 10 30 22Q30 31 16 31Q1 31 2 21Q3 12 11 9Q9 18 15 16Q20 9 17 1Z" fill="'+color+'" stroke="#fff" stroke-width="1.5"/><path d="M16 17Q23 26 16 29Q9 27 16 17" fill="#ffe794"/>',
- galaxy:'<path d="'+arrow+'" fill="#402778" stroke="#d9bdff" stroke-width="1.5"/><circle cx="8" cy="10" r="1" fill="#fff"/><circle cx="11" cy="16" r="1.2" fill="#fff"/><circle cx="18" cy="14" r="1" fill="#fff"/>',
- glitch:'<path d="'+arrow+'" fill="#ec65aa" transform="translate(2 0)"/><path d="'+arrow+'" fill="'+color+'" stroke="#fff" stroke-width="1"/>',
- rainbow:'<defs><linearGradient id="c" x2="1" y2="1"><stop stop-color="#ff7676"/><stop offset=".3" stop-color="#ffdf68"/><stop offset=".55" stop-color="#57e6a1"/><stop offset=".8" stop-color="#6b9dff"/><stop offset="1" stop-color="#da8bff"/></linearGradient></defs><path d="'+arrow+'" fill="url(#c)" stroke="#fff" stroke-width="1.5"/>',
- dot:'<circle cx="16" cy="16" r="14" fill="'+color+'" stroke="#fff" stroke-width="2"/><ellipse cx="11" cy="13" rx="4" ry="5" fill="white"/><ellipse cx="21" cy="13" rx="4" ry="5" fill="white"/><circle cx="11" cy="14" r="2" fill="#122039"/><circle cx="21" cy="14" r="2" fill="#122039"/><path d="M12 22Q16 26 20 22" stroke="#122039" stroke-width="2" fill="none"/>'
+ arrow:outlined(arrow,'url(#body)')+'<path d="M5.4 7.5V19.4L9.5 15.8" fill="none" stroke="#fff" stroke-opacity=".65" stroke-width="1" stroke-linecap="round"/>',
+ pixel:'<path d="M3 3H7V7H11V11H15V15H23V19H15V23H19V29H13V25H9V21H7V25H3Z" fill="#142039" stroke="#142039" stroke-width="2"/><path d="M3 3H7V7H11V11H15V15H23V19H15V23H19V29H13V25H9V21H7V25H3Z" fill="'+color+'" stroke="#fff" stroke-width="1" shape-rendering="crispEdges"/>',
+ star:outlined('M16 2.5L20 11.1L29.4 12.3L22.5 18.9L24.1 28.4L16 23.8L7.9 28.4L9.5 18.9L2.6 12.3L12 11.1Z','url(#body)')+'<path d="M16 6L13 13L6.5 14" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/><circle cx="16" cy="16" r="1.3" fill="#fff"/>',
+ ice:outlined('M16 2L27 10.5L24.5 23L16 30L7.5 23L5 10.5Z','url(#body)')+'<path d="M16 2L12 12L5 10.5L7.5 23L16 19L16 30L24.5 23L20 12L27 10.5Z" fill="#2879ba" opacity=".28"/><path d="M16 3L12 12L16 19L20 12L16 3M5 10.5L12 12M20 12L27 10.5M7.5 23L16 19L24.5 23" fill="none" stroke="#e5faff" stroke-width=".85"/><circle cx="16" cy="16" r="1" fill="#fff"/>',
+ fire:outlined('M17 2.5C22 8 23 11 21 15C25 13 28 17 28 22C28 27 23 30 16 30C9 30 4 27 4 21C4 15 9 11 12 9C10 15 13 17 16 14C19 10 18 6 17 2.5Z','url(#flame)')+'<path d="M16 17C20 21 22 25 18 28C13 30 9 25 13 22Z" fill="#fff4af"/><circle cx="16" cy="16" r="1" fill="#fff"/>',
+ galaxy:outlined(arrow,'url(#space)')+'<path d="M5 15Q10 9 17 14" fill="none" stroke="#e0b9ff" stroke-width="1.8" opacity=".65"/><g fill="#fff"><circle cx="7" cy="8" r=".9"/><circle cx="7" cy="17" r=".8"/><circle cx="13" cy="13" r=".65"/><circle cx="15" cy="23" r=".9"/></g>',
+ glitch:'<path d="'+arrow+'" transform="translate(1.5 0)" fill="#f76cb8" stroke="#101a2d" stroke-width="2" stroke-linejoin="round"/>'+outlined(arrow,'#49e7ee')+'<path d="M4 10H9M4 15H12M5 19H8" stroke="#174f74" stroke-width="1.4"/><path d="M6 8H9M9 14H15" stroke="#fff" stroke-width="1"/>',
+ rainbow:outlined(arrow,'url(#rain)')+'<path d="M5.5 8V18.5" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>',
+ dot:'<circle cx="16" cy="16" r="13.5" fill="url(#face)" stroke="#142039" stroke-width="2.5"/><circle cx="16" cy="16" r="12.7" fill="none" stroke="#effcff" stroke-width=".8"/><ellipse cx="11.5" cy="13.5" rx="3.4" ry="4.3" fill="#fff"/><ellipse cx="20.5" cy="13.5" rx="3.4" ry="4.3" fill="#fff"/><circle cx="12" cy="14" r="1.9" fill="#152b43"/><circle cx="20" cy="14" r="1.9" fill="#152b43"/><path d="M12 22Q16 25 20 22" stroke="#152b43" stroke-width="1.5" stroke-linecap="round" fill="none"/>'
  };
- return '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">'+paths[shape]+'</svg>';
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">'+defs+paths[shape]+'</svg>';
 };
 export function buddySVG(id){
  const forms={
- buddyStar:'<path d="M50 6L63 32L92 37L72 59L77 89L50 75L23 89L28 59L8 37L37 32Z" fill="#ffd360" stroke="#fff1ac" stroke-width="4"/>',
- buddyCloud:'<path d="M25 75C1 75 2 42 24 42C20 11 70 7 76 37C102 34 106 75 78 75Z" fill="#d8edff" stroke="#8bbad8" stroke-width="3"/>',
+ buddyStar:'<path d="M46 11Q50 4 54 11L64 33L88 36Q96 37 90 43L72 60L76 83Q78 92 70 87L50 76L30 87Q22 92 24 83L28 60L10 43Q4 37 12 36L36 33Z" fill="#ffd360" stroke="#fff1ac" stroke-width="3" stroke-linejoin="round"/>',
+ buddyCloud:'<path d="M25 76C8 76 3 65 7 53Q11 41 25 40C25 24 38 16 51 18Q70 18 76 38C91 36 99 46 97 60Q95 76 78 76Z" fill="#d8edff" stroke="#8bbad8" stroke-width="3"/>',
  buddyRobot:'<path d="M50 24V12" stroke="#92a8c4" stroke-width="6"/><circle cx="50" cy="9" r="5" fill="#ff7491"/><rect x="15" y="25" width="70" height="60" rx="13" fill="#94a9c4" stroke="#e2f1ff" stroke-width="3"/><rect x="24" y="37" width="52" height="34" rx="7" fill="#233650"/>',
  buddyPixel:'<path d="M16 20H32V32H68V20H84V76H72V88H28V76H16Z" fill="#b29aff" stroke="#503f8a" stroke-width="3"/>',
  buddyPlanet:'<circle cx="50" cy="50" r="34" fill="#a698ef" stroke="#5c478f" stroke-width="3"/><ellipse cx="50" cy="55" rx="46" ry="12" transform="rotate(-24 50 55)" stroke="#f5c8ff" stroke-width="6" fill="none"/>'
@@ -498,7 +500,7 @@ export function accessorySVG(id){
  accGamer:'<path d="M16 54V38A34 34 0 0 1 84 38V54" fill="none" stroke="#20354b" stroke-width="8"/><rect x="10" y="42" width="15" height="29" rx="4" fill="#28d7c0" stroke="#17273b" stroke-width="3"/><rect x="75" y="42" width="15" height="29" rx="4" fill="#28d7c0" stroke="#17273b" stroke-width="3"/><path d="M81 65Q75 77 61 77" stroke="#15273a" stroke-width="4" fill="none"/><circle cx="61" cy="77" r="4" fill="#28d7c0"/>',
  accHalo:'<ellipse cx="50" cy="12" rx="25" ry="7" fill="none" stroke="#ffe37a" stroke-width="5"/><ellipse cx="50" cy="12" rx="25" ry="7" fill="none" stroke="#fff7cb" stroke-width="1"/>',
  accWings:'<path d="M14 56Q0 30 4 19Q27 20 35 49L25 73Q8 88 6 71Z M86 56Q100 30 96 19Q73 20 65 49L75 73Q92 88 94 71Z" fill="#dc9df4" fill-opacity=".82" stroke="#fff1ff" stroke-width="2"/>',
- accCrown:'<path d="M23 29L18 9L37 21L50 4L63 21L82 9L77 29Z" fill="#ffd563" stroke="#996321" stroke-width="2"/><circle cx="50" cy="20" r="4" fill="#b879f5"/>',
+ accCrown:'<path d="M23 29L18 10Q18 8 21 10L37 20L48 5Q50 2 52 5L63 20L79 10Q82 8 82 10L77 29Z" fill="#ffd563" stroke="#996321" stroke-width="2" stroke-linejoin="round"/><path d="M25 26H75" stroke="#fff1a1" stroke-width="2" stroke-linecap="round"/><path d="M50 14L55 20L50 25L45 20Z" fill="#b879f5" stroke="#fff0ff" stroke-width="1"/>',
  accPlanets:'<ellipse cx="50" cy="51" rx="48" ry="18" transform="rotate(-24 50 51)" fill="none" stroke="#c8b1ff" stroke-width="2" stroke-dasharray="4 4"/><g><circle cx="10" cy="31" r="7" fill="#f5ac83"/><circle cx="90" cy="70" r="8" fill="#a58cff"/><animateTransform attributeName="transform" type="rotate" from="0 50 51" to="360 50 51" dur="12s" repeatCount="indefinite"/></g>'
  };return shapes[id]||'';
 }
