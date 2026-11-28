@@ -1,3 +1,4 @@
+import {livePaymentConfig} from './liam-payment-config.js?v=6';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
@@ -493,7 +494,7 @@ let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='idot',dailyTimer=0,messageCount=0,rareGranted=false;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
-const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=8';document.head.append(style);
+const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=9';document.head.append(style);
 const buddy=document.createElement('div');buddy.className='lc-buddy';buddy.hidden=true;buddy.setAttribute('aria-hidden','true');document.body.append(buddy);
 let lastX=innerWidth/2,lastY=innerHeight/2,bx=lastX,by=lastY,frame=0;
 const motion=matchMedia('(prefers-reduced-motion: reduce)'),fine=matchMedia('(pointer:fine)');
@@ -516,10 +517,9 @@ addEventListener('pointermove',e=>{
 const storeIds=new Set(['follower','cursor','texture','wallpaper',...expansion.filter(r=>!['iDot','Profile'].includes(r[3])).map(r=>r[0])]);
 const equipped=id=>slotFor(id)?appearance[slotFor(id)]===id:appearance[id]===true;
 function switchItem(id){const slot=slotFor(id);if(!slot)return equip({[id]:!appearance[id],...(id==='cursor'?{cursorStyle:''}:id==='texture'?{themeStyle:''}:id==='follower'?{buddyStyle:''}:id==='hat'?{accessory:'',favicon:false}:id==='frame'?{borderStyle:''}:id==='gradient'?{nameStyle:''}:id==='username'?{handleStyle:''}:{})});const changes={[slot]:equipped(id)?'':id};if(slot==='cursorStyle')changes.cursor=false;if(slot==='themeStyle')changes.texture=false;if(slot==='buddyStyle')changes.follower=false;if(slot==='accessory'&&!equipped(id)){changes.hat=false;changes.favicon=false;changes.hatStyle='';changes.eyewearStyle='';}if(slot==='hatStyle'&&!equipped(id)){changes.hat=false;changes.favicon=false;changes.accessory='';}if(slot==='eyewearStyle'&&!equipped(id)){changes.glasses=false;if(appearance.accessory==='accHeart')changes.accessory='';}if(slot==='tagStyle'&&!equipped(id))changes.tag=false;if(slot==='borderStyle')changes.frame=false;if(slot==='nameStyle')changes.gradient=false;if(slot==='handleStyle')changes.username=false;return equip(changes);}
-function dailyReady(){return !!wallet&&(!wallet.lastDaily||Date.now()-wallet.lastDaily.toMillis()>=86400000);}
 function has(id){return wallet?.owned?.includes(id)===true;}
 function apply(){
- balance.hidden=!user||!wallet;balance.textContent=wallet?wallet.balance.toLocaleString()+' LC':'';
+ updateChests();balance.hidden=!user||!wallet;balance.textContent=wallet?wallet.balance.toLocaleString()+' LC':'';
  balance.setAttribute('aria-label','Liam Coins balance and ways to earn');
  const b=document.getElementById('profileButton');if(b){let t=b.querySelector('.lc-profile-balance');if(!t){t=document.createElement('span');t.className='lc-profile-balance';b.append(t)}t.textContent=wallet?' · '+wallet.balance.toLocaleString()+' LC':''}
  const otherBuddy=has(appearance.buddyStyle)?buddySVG(appearance.buddyStyle):'';
@@ -730,6 +730,21 @@ function renderProfileStudio(){
  for(const [id,name,icon] of styleCategories){const b=button('',()=>{styleCategory=id;styleSelection='';styleScroll=0;customize()});b.className='lc-avatar-category';b.setAttribute('aria-pressed',String(styleCategory===id));b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon+'</svg>';b.append(element('span',name));nav.append(b);}
  studio.append(top,stage,label,strip,nav);custom.append(studio);strip.scrollLeft=styleScroll;
 }
+let chestState={},chestLoaded=false,chestBusy=false,chestOpen=false,rewardBaseline=null;
+const chestTypes=[['daily','Daily Chest',86400000,[500,250,175,100]],['quick','6-hour Chest',21600000,[250,130,90,50]]];
+const chestButton=document.createElement('button');chestButton.type='button';chestButton.className='lc-chest-fab';chestButton.hidden=true;chestButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10V7l3-3h12l3 3v3M3 10h18v10H3zM10 9h4v5h-4z"/></svg><span>Chests</span><b hidden></b>';document.body.append(chestButton);
+const chestPanel=document.createElement('div');chestPanel.className='lc-chest-overlay';chestPanel.hidden=true;document.body.append(chestPanel);
+const toastRoot=document.createElement('div');toastRoot.className='lc-reward-toasts';toastRoot.setAttribute('aria-live','polite');document.body.append(toastRoot);
+function rewardToast(title,amount){const t=element('div','','lc-reward-toast');const coin=element('span','LC','lc-toast-coin');const copy=element('div');copy.append(element('strong',title),element('span','+'+amount.toLocaleString()+' LC'));t.append(coin,copy);toastRoot.append(t);setTimeout(()=>t.remove(),5000);}
+function observeRewardClaims(next){if(!next)return;const claims=new Set(next.claims||[]);if(rewardBaseline){for(const key of claims){if(rewardBaseline.has(key))continue;const a=achievementById.get(key);if(a)rewardToast('Achievement unlocked: '+a.name,a.reward);else if(key.startsWith('postReward:'))rewardToast('Post reward',5);else if(key.startsWith('featuredReward:'))rewardToast('Featured post reward',150);}}rewardBaseline=claims;}
+function chestNext(kind,ms){const old=kind==='daily'?(wallet?.lastDaily?.toMillis?.()||0):0;return Math.max(Number(chestState[kind+'At'])||0,old)+ms;}
+function chestTime(ms){const sec=Math.max(0,Math.ceil(ms/1000));return [Math.floor(sec/3600),Math.floor(sec/60)%60,sec%60].map(n=>String(n).padStart(2,'0')).join(':');}
+function updateChests(){chestButton.hidden=!user;const badge=chestButton.querySelector('b');const count=wallet&&chestLoaded?chestTypes.filter(([k,,ms])=>Date.now()>=chestNext(k,ms)).length:0;badge.hidden=!count;badge.textContent=count||'';if(!chestOpen)return;for(const [kind,,ms] of chestTypes){const row=chestPanel.querySelector('[data-chest="'+kind+'"]');if(!row)continue;const btn=row.querySelector('button'),ready=wallet&&chestLoaded&&Date.now()>=chestNext(kind,ms);btn.disabled=chestBusy||!ready;btn.textContent=!wallet||!chestLoaded?'Loading…':ready?'Open chest':chestTime(chestNext(kind,ms)-Date.now());}}
+function showChests(){if(!user)return;chestOpen=true;chestPanel.hidden=false;chestPanel.replaceChildren();const dialog=element('section','','lc-chest-dialog');dialog.setAttribute('role','dialog');dialog.setAttribute('aria-label','Free reward chests');const top=element('div','','lc-chest-top');top.append(element('strong','Reward Chests'),button('Close',hideChests));dialog.append(top,element('p','Free rewards. No LC or money needed.'));for(const [kind,title,ms,amounts] of chestTypes){const row=element('article','','lc-chest-row');row.dataset.chest=kind;row.append(element('strong',title),element('span',kind==='daily'?'Every 24 hours':'Every 6 hours'));const odds=element('div','','lc-chest-odds');[1,10,20,69].forEach((p,i)=>odds.append(element('span',amounts[i]+' LC · '+p+'%')));row.append(odds,button('Loading…',()=>openChest(kind),true));dialog.append(row);}const msg=element('p','','lc-chest-message');msg.setAttribute('aria-live','polite');dialog.append(msg);chestPanel.append(dialog);updateChests();}
+function hideChests(){chestOpen=false;chestPanel.hidden=true;}
+chestButton.onclick=showChests;chestPanel.addEventListener('click',e=>{if(e.target===chestPanel)hideChests()});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&chestOpen)hideChests()});setInterval(updateChests,1000);
+async function openChest(kind){const g=generation,account=user;if(chestBusy||!account||!wallet||!chestLoaded)return;const type=chestTypes.find(c=>c[0]===kind);if(!type||Date.now()<chestNext(kind,type[2]))return;chestBusy=true;updateChests();const message=t=>{if(g!==generation)return;const el=chestPanel.querySelector('.lc-chest-message');if(el)el.textContent=t;};message('Opening chest…');try{const token=await account.getIdToken();const res=await fetch(livePaymentConfig.backendUrl+'/rewards/chest',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({kind})});const data=await res.json();if(g!==generation)return;if(!res.ok){if(Number.isSafeInteger(data.nextAt))chestState[kind+'At']=data.nextAt-type[2];throw Error(data.error||'Chest unavailable');}if(!Number.isSafeInteger(data.amount)||!type[3].includes(data.amount)||!Number.isSafeInteger(data.nextAt))throw Error('Unexpected reward response');chestState[kind+'At']=data.nextAt-type[2];message('You opened '+type[1]+' and earned +'+data.amount+' LC!');const el=chestPanel.querySelector('.lc-chest-message');if(el){el.classList.remove('lc-chest-win');void el.offsetWidth;el.classList.add('lc-chest-win');}}catch(e){message(e.message||'Try again');}finally{if(g===generation){chestBusy=false;updateChests();}}}
+
 function customize(){
  if(!custom)return;custom.replaceChildren();if(!user)return;
  const bar=element('div','','lc-filters');
@@ -740,7 +755,7 @@ function customize(){
  if(!profileTab){custom.append(element('p','Open a menu to customize your profile, customize iDot, or earn Liam Coins.'));return;}
  if(profileTab==='earn'){
   custom.append(element('h4','How to earn Liam Coins'),element('p','Your account receives 100 LC once when its wallet is created. Earn more through daily rewards and automatically unlocked achievements.'));
-  const daily=button(dailyReady()?'Claim daily reward · +10 LC':'Daily reward · '+(wallet?.lastDaily?'come back after 24 hours':'loading'),()=>claimDaily(),!dailyReady()||busy);custom.append(daily);
+  custom.append(button('Open reward chests',showChests,!wallet));
   const postReady=wallet&&(!wallet.lastPostReward||Date.now()-wallet.lastPostReward.toMillis()>=3600000);
   custom.append(element('h4','Repeatable rewards'));
   custom.append(button(postReady?'Publish a post · Claim +5 LC':'Post reward · available after one hour',()=>claim('postReward',5),!postReady||busy));
@@ -773,7 +788,6 @@ function render(){apply();shop();customize();}
 async function operate(fn){if(busy||!user)return;const g=generation;busy=true;error='';render();try{await fn()}catch(e){if(g===generation)error=e.message||String(e)}finally{if(g===generation){busy=false;render()}}}
 async function buy(id,price){if(!confirm('Purchase '+catalog.find(x=>x[0]===id)[1]+' for '+price+' LC?'))return;return operate(async()=>{const ref=doc(db,'liamWallets',user.uid);await runTransaction(db,async tx=>{const s=await tx.get(ref),w=s.data();if(!w||w.owned.includes(id))throw Error('Already owned or unavailable.');if(w.balance<price)throw Error('Not enough Liam Coins.');tx.update(ref,{balance:w.balance-price,owned:[...w.owned,id],action:id,postId:''})})})}
 async function equip(changes){return operate(async()=>{const next={...appearance,...changes};if(!rareGranted){if(next.favicon===true)throw Error('This exclusive item has not been granted to your account.');delete next.favicon;}await updateDoc(doc(db,'profiles',user.uid),{liamAppearance:next})})}
-async function claimDaily(){return operate(async()=>{const ref=doc(db,'liamWallets',user.uid);await runTransaction(db,async tx=>{const w=(await tx.get(ref)).data();if(w.lastDaily&&Date.now()-w.lastDaily.toMillis()<86400000)throw Error('Daily reward already claimed. Try again after 24 hours.');tx.update(ref,{balance:w.balance+10,action:'daily',postId:'',lastDaily:serverTimestamp()})})})}
 async function claim(id,amount){return operate(async()=>{
  const uid=user.uid;let postId='';
  const repeat=id==='postReward'||id==='featuredReward';
@@ -830,15 +844,16 @@ async function autoAchievements(){
 }
 
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;chestState={};chestLoaded=false;chestBusy=false;rewardBaseline=null;toastRoot.replaceChildren();hideChests();clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
+ stops.push(onSnapshot(doc(db,'liamRewardChests',current.uid),ss=>{if(g===generation){chestState=ss.data()||{};chestLoaded=true;updateChests()}},()=>{if(g===generation){chestLoaded=false;updateChests()}}));
  if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize();scheduleAchievements()}},()=>{}));
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
   if(g!==generation||!p.exists())return;
   profileDisplay={name:p.data().displayName||p.data().username||'',handle:p.data().username?'@'+String(p.data().username).replace(/^@/,''):''};profileCreatedAt=p.data().createdAt?.toMillis?.()||null;rareGranted=p.data().idotFaviconGranted===true;appearance=appearanceForProfile(p.data());render();if(started)return;started=true;
   try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
-   stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render();scheduleAchievements()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
+   stops.push(onSnapshot(ref,{includeMetadataChanges:true},s=>{if(g!==generation)return;wallet=s.data()||null;if(!s.metadata.hasPendingWrites&&!s.metadata.fromCache)observeRewardClaims(wallet);clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render();scheduleAchievements()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
  },e=>{if(g===generation){error=e.message;render()}}));
 });

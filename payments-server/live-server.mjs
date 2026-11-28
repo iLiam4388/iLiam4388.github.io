@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {getAuth} from 'firebase-admin/auth';
 import {getFirestore,FieldValue} from 'firebase-admin/firestore';
 import {packFor} from './payment-core.mjs';
+import {CHESTS,chestReward,chestEligible} from './chest-core.mjs';
 import {APP,liveOrder,liveSession,reconcile} from './live-core.mjs';
 
 const key=process.env.STRIPE_API_KEY, signing=process.env.STRIPE_WEBHOOK_SECRET;
@@ -78,6 +79,21 @@ async function authorize(req,res,next){
   req.uid=decoded.uid;next();
  }catch{return res.status(401).json({error:'Sign-in verification unavailable'})}
 }
+// Free chests are available to authenticated profiles, independently of paid pilot access.
+app.post('/rewards/chest',async(req,res)=>{
+ const kind=req.body?.kind;if(typeof kind!=='string'||!Object.hasOwn(CHESTS,kind))return res.status(400).json({error:'Invalid chest'});
+ let uid;try{const token=(req.headers.authorization||'').match(/^Bearer (.+)$/)?.[1];if(!token)return res.status(401).json({error:'Sign in first'});uid=(await auth.verifyIdToken(token,true)).uid;}catch{return res.status(401).json({error:'Sign in again'});}
+ const now=Date.now(),amount=chestReward(kind),state=db.collection('liamRewardChests').doc(uid),w=wallet(uid),profile=db.collection('profiles').doc(uid);
+ try{const result=await db.runTransaction(async tx=>{
+ const [ss,ws,ps]=await Promise.all([tx.get(state),tx.get(w),tx.get(profile)]);
+ if(!ws.exists||!ps.exists||!Number.isSafeInteger(ws.data().balance))return {status:409,error:'Initialize your iLiam account first'};
+ const old=ss.data()||{},legacy=kind==='daily'?(ws.data().lastDaily?.toMillis?.()||0):0;
+ const last=Math.max(Number.isSafeInteger(old[kind+'At'])?old[kind+'At']:0,legacy);
+ if(!chestEligible(now,last,kind))return {status:409,error:'Chest is not ready',nextAt:last+CHESTS[kind].ms};
+ const balance=ws.data().balance+amount;if(!Number.isSafeInteger(balance))throw Error('Invalid balance');
+ tx.update(w,{balance});tx.set(state,{[kind+'At']:now,[kind+'Amount']:amount},{merge:true});return {status:200,amount,balance,nextAt:now+CHESTS[kind].ms};
+ });const {status,...data}=result;res.status(status).json(data);}catch{return res.status(503).json({error:'Chest temporarily unavailable. Try again.'});}
+});
 app.get('/wallet',authorize,async(req,res)=>{
  try{const s=await wallet(req.uid).get();if(!s.exists)return res.status(409).json({error:'Open the regular store to initialize your wallet first'});
  res.json({balance:s.data().balance,sandbox:false,checkoutEnabled:enabled})}catch{return res.status(503).json({error:'Wallet unavailable'})}
