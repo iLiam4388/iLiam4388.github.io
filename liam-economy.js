@@ -550,7 +550,8 @@ async function png(id,config,w=280,h=180){
  if(id==='cursor'||extra?.[3]==='Cursors'||extra?.[3]==='Buddies'||extra?.[3]==='iDot'){
   const svg=id==='cursor'||extra?.[3]==='Cursors'?cursorSvg(id):extra?.[3]==='Buddies'?buddySVG(id):dotSVG({[slotFor(id)]:id});const image=await svgImage(svg);const size=id==='cursorPixel'?Math.floor(Math.min(w,h)*.78/32)*32:Math.min(w,h)*.78;if(id==='cursorPixel')ctx.imageSmoothingEnabled=false;ctx.drawImage(image,Math.floor((w-size)/2),Math.floor((h-size)/2),size,size);return canvas.toDataURL('image/png');
  }
- if(extra?.[3]==='Textures'||id==='packGalaxy'){
+ if(id==='packGalaxy'){const v=themeVars('themeGalaxy');const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,v.bg);g.addColorStop(1,v.panel);ctx.fillStyle=g;ctx.fillRect(0,0,w,h);ctx.fillStyle=v.light;for(let i=0;i<95;i++){const x=(i*73+13)%w,y=(i*41+19)%h,s=1+i%3;ctx.globalAlpha=.25+(i%5)/8;ctx.fillRect(x,y,s,s);}ctx.globalAlpha=1;return canvas.toDataURL('image/png');}
+  if(extra?.[3]==='Textures'){
   const skin=extra?.[3]==='Textures'?id:'themeGalaxy',v=themeVars(skin);
   const retro=skin==='themeRetro',cyber=skin==='themeCyber',arcade=skin==='themeArcade',cloud=skin==='themeCloud',crystal=skin==='themeCrystal',midnight=skin==='themeMidnight';
   const fg=retro?'#17385d':cloud?'#233a60':cyber?'#a8ffd1':'#f4f6ff';
@@ -578,8 +579,8 @@ async function png(id,config,w=280,h=180){
   return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Profile'){
-  const slot=slotFor(id),art=cosmeticArt(id);if(slot==='bannerStyle'&&Array.isArray(art)){const g=ctx.createLinearGradient(0,0,w,h);art.forEach((c,i)=>g.addColorStop(i/(art.length-1),c));ctx.fillStyle=g;ctx.fillRect(0,0,w,h);}const image=await svgImage(dotSVG({})),cx=w*.25,cy=h*.49,size=h*.56;if(slot==='avatarColor'&&typeof art==='string'){ctx.fillStyle=art;ctx.beginPath();ctx.arc(cx,cy,size*.49,0,Math.PI*2);ctx.fill();}ctx.drawImage(image,cx-size/2,cy-size/2,size,size);const color={profSilver:'#cddbe8',profNeon:'#72ffba',profSunset:'#ffac91',profMetal:'#c3d6e5',profRainbow:'#d8a1ff',profSparkles:'#ffe7a2',profBanner:'#ae93ff',profGalaxy:'#baa0ff'}[id]||(typeof art==='string'?art:'#e9efff');
-  if(id==='profSilver'||id==='profRainbow'){ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.arc(cx,cy,size*.44,0,Math.PI*2);ctx.stroke()}
+  const slot=slotFor(id),art=cosmeticArt(id);if(slot==='bannerStyle'&&Array.isArray(art)){const g=ctx.createLinearGradient(0,0,w,h);art.forEach((c,i)=>g.addColorStop(i/(art.length-1),c));ctx.fillStyle=g;ctx.fillRect(0,0,w,h);}const image=await svgImage(dotSVG({})),cx=w*.25,cy=h*.49,size=h*.56;if(slot==='avatarColor'&&typeof art==='string'){ctx.fillStyle=art;ctx.beginPath();ctx.arc(cx,cy,size*.49,0,Math.PI*2);ctx.fill();}ctx.drawImage(image,cx-size/2,cy-size/2,size,size);const color={ringSilver:'#e7edf7',ringNeon:'#1ebfff',ringRainbow:'#ff89b4',ringFire:'#ff8132',ringLightning:'#76e7ff',ringGalaxy:'#bc8aff',ringDiamond:'#b8faff',profSilver:'#cddbe8',profNeon:'#72ffba',profSunset:'#ffac91',profMetal:'#c3d6e5',profRainbow:'#d8a1ff',profSparkles:'#ffe7a2',profBanner:'#ae93ff',profGalaxy:'#baa0ff'}[id]||(typeof art==='string'?art:'#e9efff');
+  if(slot==='borderStyle'){ctx.strokeStyle=color;ctx.lineWidth=5;ctx.beginPath();ctx.arc(cx,cy,size*.44,0,Math.PI*2);ctx.stroke()}
   if(id==='profSparkles'||id==='profBanner'){ctx.fillStyle=color;for(let i=0;i<24;i++){ctx.fillRect((i*71+13)%w,(i*37+5)%h,3,3)}}
   ctx.fillStyle=color;ctx.font='bold '+Math.round(w*.065)+'px Verdana';ctx.fillText(slot==='tagStyle'?cosmeticLabel(id):id==='profMetal'||id==='profGalaxy'?'@username':'Display Name',w*.46,h*.45);ctx.font=Math.round(w*.046)+'px Verdana';ctx.fillText(id==='profMetal'||id==='profGalaxy'?'Display Name':'@username',w*.46,h*.59);return canvas.toDataURL('image/png');
  }
@@ -644,14 +645,16 @@ function dotGroup(id){
 }
 function dotItems(){
  const items=[{id:'blue',name:'Classic Blue',price:0,config:{color:'blue'},group:'colors',free:true},...catalog.filter(r=>r[3]==='iDot'&&!storeIds.has(r[0])).map(([id,name,price,group,desc,config])=>({id,name,price,config,group:dotGroup(id)}))];
+ for(const group of ['hats','eyewear','extras','exclusive'])items.unshift({id:'none-'+group,name:'None',price:0,config:{},group,free:true,isNone:true});
  if(rareGranted)items.push({id:'favicon',name:'iLiam Icon Crown',price:0,config:{favicon:true},group:'exclusive',free:true});
  return items;
 }
 const dotOwned=item=>item.free||has(item.id);
-const dotActive=item=>item.group==='colors'?appearance.color===item.id:item.id==='favicon'?appearance.favicon===true:equipped(item.id);
+const dotActive=item=>item.isNone?(item.group==='hats'?!appearance.hat&&!appearance.hatStyle:item.group==='eyewear'?!appearance.glasses&&!appearance.eyewearStyle:item.group==='extras'?!appearance.accessory:!appearance.favicon):item.group==='colors'?appearance.color===item.id:item.id==='favicon'?appearance.favicon===true:equipped(item.id);
 function dotTryOn(item){
  if(!item||dotActive(item))return {...appearance};
  const id=item.id,slot=slotFor(id),next={...appearance};
+ if(item.isNone){if(item.group==='hats')Object.assign(next,{hat:false,hatStyle:''});else if(item.group==='eyewear')Object.assign(next,{glasses:false,eyewearStyle:''});else if(item.group==='extras')next.accessory='';else if(item.group==='exclusive')next.favicon=false;return next;}
  if(item.group==='colors')next.color=id;
  else if(id==='favicon'){Object.assign(next,{favicon:true,accessory:'',hat:false,hatStyle:''});}
  else if(id==='hat'){Object.assign(next,{hat:true,accessory:'',hatStyle:'',favicon:false});}
@@ -663,22 +666,33 @@ function dotTryOn(item){
 }
 function dotAction(item){
  if(!dotOwned(item))return buy(item.id,item.price);
+ if(item.isNone)return equip(dotTryOn(item));
  if(item.group==='colors')return equip({color:item.id});
  if(item.id==='favicon')return equip({favicon:!appearance.favicon,...(!appearance.favicon?{accessory:'',hat:false,hatStyle:''}:{})});
  return switchItem(item.id);
 }
+
+function scrollableChoices(strip){
+ const wrap=element('div','','lc-avatar-scroll-wrap');
+ const arrow=(direction,label)=>{const b=button('',()=>strip.scrollBy({left:direction*(strip.clientWidth*.78),behavior:'smooth'}));b.className='lc-avatar-arrow';b.setAttribute('aria-label',label);b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+(direction<0?'m15 18-6-6 6-6':'m9 18 6-6-6-6')+'"/></svg>';return b;};
+ const prev=arrow(-1,'Scroll items left'),next=arrow(1,'Scroll items right');
+ const update=()=>{prev.disabled=strip.scrollLeft<2;next.disabled=strip.scrollLeft+strip.clientWidth>=strip.scrollWidth-2;};
+ strip.addEventListener('scroll',update,{passive:true});wrap.append(prev,strip,next);requestAnimationFrame(update);return wrap;
+}
+function itemActionLabel(item,owned,active){return item.isNone?(active?'None selected':'Select None'):!owned?'Unlock · '+item.price+' LC':active?(item.group==='colors'?'Equipped':'Unequip'):'Equip';}
+
 function renderDotStudio(){
  const items=dotItems(),categories=dotCategories.filter(c=>c[0]!=='exclusive'||rareGranted);
  if(!categories.some(c=>c[0]===dotCategory)){dotCategory='colors';dotSelection='';dotScroll=0;}
  const visible=items.filter(i=>i.group===dotCategory);
- const selected=visible.find(i=>i.id===dotSelection)||visible.find(dotActive)||visible[0];
+ const selected=visible.find(i=>i.id===dotSelection)||visible.find(dotActive)||null;
  const studio=element('section','','lc-avatar-studio');studio.setAttribute('aria-label','iDot customization editor');
  const top=element('div','','lc-avatar-top');top.append(element('strong','iDot Studio'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));
  const exit=button('',()=>{});exit.onclick=()=>{profileTab='';dotSelection='';dotScroll=0;customize()};exit.className='lc-avatar-close';exit.setAttribute('aria-label','Close iDot Studio');exit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';top.append(exit);
- const stage=element('div','','lc-avatar-stage'),live=element('div','','lc-dot-preview');live.innerHTML=dotSVG(dotTryOn(selected));stage.append(live);
+ const stage=element('div','','lc-avatar-stage'),live=element('div','','lc-dot-preview');live.innerHTML=dotSVG(dotTryOn(selected));stage.append(live,element('span','Live iDot preview','lc-avatar-preview-note'));
  const avatar=button(appearance.avatar?'Profile picture: On':'Use as profile picture',()=>equip({avatar:!appearance.avatar}),busy||!wallet);avatar.className='lc-button lc-avatar-use';avatar.setAttribute('aria-pressed',String(appearance.avatar));stage.append(avatar);
  const label=element('div','','lc-avatar-selection');const title=element('strong',selected?.name||'Select an item');label.append(title);
- if(selected){const active=dotActive(selected),owned=dotOwned(selected);const state=active?'Equipped':owned?'Owned · Preview':selected.price+' LC · Preview';label.append(element('span',state,'lc-avatar-state'));const action=button(!owned?'Unlock · '+selected.price+' LC':active?(selected.group==='colors'?'Equipped':'Unequip'):'Equip',()=>dotAction(selected),busy||!wallet||(!owned&&wallet.balance<selected.price)||(active&&selected.group==='colors'));action.classList.add('lc-avatar-action');label.append(action);}
+ if(selected){const active=dotActive(selected),owned=dotOwned(selected);const state=active?'Equipped':owned?'Owned · Preview':selected.price+' LC · Preview';label.append(element('span',state,'lc-avatar-state'));const action=button(itemActionLabel(selected,owned,active),()=>dotAction(selected),busy||!wallet||(!owned&&wallet.balance<selected.price)||(active&&(selected.group==='colors'||selected.isNone)));action.classList.add('lc-avatar-action');label.append(action);}
  const strip=element('div','','lc-avatar-strip');strip.setAttribute('aria-label','Available '+dotCategory);
  for(const item of visible){
   const b=button('',()=>{dotScroll=strip.scrollLeft;dotSelection=item.id;customize()});b.className='lc-avatar-option';b.setAttribute('aria-pressed',String(selected?.id===item.id));b.setAttribute('aria-label',item.name+', '+(dotOwned(item)?dotActive(item)?'equipped':'owned':item.price+' LC'));
@@ -687,7 +701,7 @@ function renderDotStudio(){
  strip.addEventListener('scroll',()=>{dotScroll=strip.scrollLeft},{passive:true});
  const nav=element('div','','lc-avatar-categories');nav.setAttribute('aria-label','iDot accessory categories');
  for(const [id,name,icon] of categories){const b=button('',()=>{dotCategory=id;dotSelection='';dotScroll=0;customize()});b.className='lc-avatar-category';b.setAttribute('aria-pressed',String(dotCategory===id));b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon+'</svg>';b.append(element('span',name));nav.append(b);}
- studio.append(top,stage,label,strip,nav);custom.append(studio);strip.scrollLeft=dotScroll;
+ studio.append(top,stage,label,scrollableChoices(strip),nav);custom.append(studio);strip.scrollLeft=dotScroll;
 }
 let profileDisplay={};
 let styleCategory='banners',styleSelection='',styleScroll=0;
@@ -699,7 +713,9 @@ const styleCategories=[
  ['names','Names & effects','<path d="m3 19 7-14 7 14M6 13h8M19 5v6m-3-3h6"/>']
 ];
 function styleGroup(id){const slot=slotFor(id);return slot==='bannerStyle'?'banners':slot==='avatarColor'?'pictures':id==='frame'||slot==='borderStyle'?'rings':id==='tag'||slot==='tagStyle'?'tags':'names';}
-function styleItems(){return catalog.filter(r=>r[3]==='Profile'&&!storeIds.has(r[0])).map(([id,name,price,group,desc,config])=>({id,name,price,config,group:styleGroup(id)}));}
+function styleItems(){const items=catalog.filter(r=>r[3]==='Profile'&&!storeIds.has(r[0])).map(([id,name,price,group,desc,config])=>({id,name,price,config,group:styleGroup(id)}));for(const group of ['banners','pictures','rings','tags','names'])items.unshift({id:'none-'+group,name:'None',price:0,config:{},group,free:true,isNone:true});return items;}
+function styleNone(group){return group==='banners'?{bannerStyle:''}:group==='pictures'?{avatarColor:''}:group==='rings'?{frame:false,borderStyle:''}:group==='tags'?{tag:false,tagStyle:''}:{gradient:false,username:false,nameStyle:'',handleStyle:'',profileEffect:''};}
+function styleActive(item){if(item.isNone){const changes=styleNone(item.group);return Object.keys(changes).every(key=>appearance[key]===changes[key]||(!appearance[key]&&!changes[key]));}return equipped(item.id);}
 function styleChange(id,active=false){
  const slot=slotFor(id),next=slot?{[slot]:active?'':id}:{[id]:!active};
  if(!active){
@@ -712,8 +728,8 @@ function styleChange(id,active=false){
 }
 function renderProfileStudio(){
  const items=styleItems(),visible=items.filter(i=>i.group===styleCategory);
- const selected=visible.find(i=>i.id===styleSelection)||visible.find(i=>equipped(i.id))||visible[0];
- const preview={...appearance,...(selected&&!equipped(selected.id)?styleChange(selected.id):{})};
+ const selected=visible.find(i=>i.id===styleSelection)||visible.find(styleActive)||null;
+ const preview={...appearance,...(selected&&!styleActive(selected)?selected.isNone?styleNone(selected.group):styleChange(selected.id):{})};
  const studio=element('section','','lc-avatar-studio lc-profile-studio');studio.setAttribute('aria-label','Profile style editor');
  const top=element('div','','lc-avatar-top');top.append(element('strong','Profile Style'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));
  const exit=button('',()=>{profileTab='';styleSelection='';styleScroll=0;customize()});exit.className='lc-avatar-close';exit.setAttribute('aria-label','Close Profile Style');exit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';top.append(exit);
@@ -724,13 +740,13 @@ function renderProfileStudio(){
  const name=element('strong',profileDisplay.name||'Display Name',preview.gradient?'lc-preview-gradient':'');const handle=element('span',profileDisplay.handle||'@username',preview.username?'lc-blue-name':'');
  handle.classList.add('username');live.append(picture,name,handle);profileClasses(live,preview);styleCosmeticProfile(live,preview);stage.append(live);
  const label=element('div','','lc-avatar-selection');label.append(element('strong',selected?.name||'Select an item'));
- if(selected){const active=equipped(selected.id),owned=has(selected.id);label.append(element('span',active?'Equipped':owned?'Owned · Preview':selected.price+' LC · Preview','lc-avatar-state'));const action=button(!owned?'Unlock · '+selected.price+' LC':active?'Unequip':'Equip',()=>owned?equip(styleChange(selected.id,active)):buy(selected.id,selected.price),busy||!wallet||(!owned&&wallet.balance<selected.price));action.classList.add('lc-avatar-action');label.append(action);}
+ if(selected){const active=styleActive(selected),owned=selected.free||has(selected.id);label.append(element('span',active?'Equipped':owned?'Owned · Preview':selected.price+' LC · Preview','lc-avatar-state'));const action=button(selected.isNone?(active?'None selected':'Select None'):!owned?'Unlock · '+selected.price+' LC':active?'Unequip':'Equip',()=>selected.isNone?equip(styleNone(selected.group)):owned?equip(styleChange(selected.id,active)):buy(selected.id,selected.price),busy||!wallet||(!owned&&wallet.balance<selected.price)||(selected.isNone&&active));action.classList.add('lc-avatar-action');label.append(action);}
  const strip=element('div','','lc-avatar-strip');strip.setAttribute('aria-label','Available profile cosmetics');
- for(const item of visible){const b=button('',()=>{styleScroll=strip.scrollLeft;styleSelection=item.id;customize()});b.className='lc-avatar-option';b.setAttribute('aria-pressed',String(selected?.id===item.id));b.setAttribute('aria-label',item.name+', '+(equipped(item.id)?'equipped':has(item.id)?'owned':item.price+' LC'));const thumb=element('span','','lc-avatar-thumb lc-profile-thumb');const img=element('img');img.alt='';thumbnail(item.id,item.config).then(src=>img.src=src).catch(()=>{});thumb.append(img);b.append(thumb,element('span',item.name,'lc-avatar-item-name'),element('span',equipped(item.id)?'Equipped':has(item.id)?'Owned':item.price+' LC','lc-avatar-item-price'));strip.append(b);}
+ for(const item of visible){const b=button('',()=>{styleScroll=strip.scrollLeft;styleSelection=item.id;customize()});b.className='lc-avatar-option';b.setAttribute('aria-pressed',String(selected?.id===item.id));b.setAttribute('aria-label',item.name+', '+(styleActive(item)?'equipped':item.free||has(item.id)?'owned':item.price+' LC'));const thumb=element('span','','lc-avatar-thumb lc-profile-thumb');if(item.isNone)thumb.textContent='∅';else{const img=element('img');img.alt='';thumbnail(item.id,item.config).then(src=>img.src=src).catch(()=>{});thumb.append(img);}b.append(thumb,element('span',item.name,'lc-avatar-item-name'),element('span',styleActive(item)?'Equipped':item.free||has(item.id)?'Owned':item.price+' LC','lc-avatar-item-price'));strip.append(b);}
  strip.addEventListener('scroll',()=>{styleScroll=strip.scrollLeft},{passive:true});
  const nav=element('div','','lc-avatar-categories');nav.setAttribute('aria-label','Profile categories');
  for(const [id,name,icon] of styleCategories){const b=button('',()=>{styleCategory=id;styleSelection='';styleScroll=0;customize()});b.className='lc-avatar-category';b.setAttribute('aria-pressed',String(styleCategory===id));b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon+'</svg>';b.append(element('span',name));nav.append(b);}
- studio.append(top,stage,label,strip,nav);custom.append(studio);strip.scrollLeft=styleScroll;
+ studio.append(top,stage,label,scrollableChoices(strip),nav);custom.append(studio);strip.scrollLeft=styleScroll;
 }
 let chestState={},chestLoaded=false,chestBusy=false,chestOpen=false,rewardBaseline=null;
 const chestTypes=[['daily','Daily Chest',86400000,[500,250,175,100]],['quick','6-hour Chest',21600000,[250,130,90,50]]];

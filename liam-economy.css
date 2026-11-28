@@ -233,3 +233,25 @@ body.lc-texture :is(.im-entry.selected,.im-bubble.mine,.call-user[aria-selected=
 body.lc-texture :is(.im-input,.im-search,.call-input,.gc-input,.pc-composer input,#search){background:var(--skin-input)!important;color:var(--skin-fg)!important;border-color:var(--skin-edge)!important}
 body.lc-texture :is(.im-sender,.im-hint,.im-status,.call-handle,.call-subtitle,.gc-note,.gc-username,.pc-info,.pc-status,.lc-chest-message,.lc-chest-odds,.lc-reward-toast div span){color:var(--skin-fg)!important}
 body.lc-texture :is(#iliam-notify-panel input[type=checkbox],#iliam-permission-banner input[type=checkbox]){accent-color:var(--skin-edge)}
+
+/* Purchasable profile rings, responsive carousel controls and owner tag. */
+.lc-ringSilver img.avatar,.lc-ringSilver.lc-identity-preview img{outline:3px solid #e7edf7;outline-offset:2px;box-shadow:0 0 12px #c8d1e9a0}
+.lc-ringNeon img.avatar,.lc-ringNeon.lc-identity-preview img{outline:3px solid #1ebfff;outline-offset:2px;box-shadow:0 0 16px #1ebfffcc}
+.lc-ringRainbow img.avatar,.lc-ringRainbow.lc-identity-preview img{outline:3px solid #ff89b4;outline-offset:2px;animation:lc-rainbow-outline 4s linear infinite}
+.lc-ringFire img.avatar,.lc-ringFire.lc-identity-preview img{outline:4px solid #ff8132;outline-offset:2px;animation:lc-ring-fire 1.8s ease-in-out infinite alternate}
+.lc-ringLightning img.avatar,.lc-ringLightning.lc-identity-preview img{outline:3px dashed #76e7ff;outline-offset:2px;box-shadow:0 0 14px #54baff}
+.lc-ringGalaxy img.avatar,.lc-ringGalaxy.lc-identity-preview img{outline:4px solid #bc8aff;outline-offset:2px;animation:lc-ring-galaxy 5s linear infinite}
+.lc-ringDiamond img.avatar,.lc-ringDiamond.lc-identity-preview img{outline:4px double #b8faff;outline-offset:2px;animation:lc-ring-diamond 3s ease-in-out infinite alternate}
+@keyframes lc-ring-fire{to{outline-color:#ffd04d;box-shadow:0 0 20px #ff7819}}
+@keyframes lc-ring-galaxy{33%{outline-color:#7cbeff;box-shadow:0 0 16px #a069ff}66%{outline-color:#ffb5eb;box-shadow:0 0 16px #ff83e1}}
+@keyframes lc-ring-diamond{to{outline-color:#fff;box-shadow:0 0 22px #73eeff}}
+@media(prefers-reduced-motion:reduce){.lc-ringRainbow img.avatar,.lc-ringRainbow.lc-identity-preview img,.lc-ringFire img.avatar,.lc-ringFire.lc-identity-preview img,.lc-ringGalaxy img.avatar,.lc-ringGalaxy.lc-identity-preview img,.lc-ringDiamond img.avatar,.lc-ringDiamond.lc-identity-preview img{animation:none}}
+.lc-avatar-scroll-wrap{display:flex;align-items:center;gap:4px;padding:0 6px}
+.lc-avatar-scroll-wrap .lc-avatar-strip{flex:1;min-width:0}
+#liam-customize .lc-avatar-arrow{flex:0 0 30px;min-width:30px;height:48px;padding:3px;display:grid;place-items:center;color:var(--skin-fg,#eaf7ff);border:1px solid var(--skin-edge,#6f8aab);border-radius:var(--skin-button-radius,10px);background:var(--skin-button,#1e3356);cursor:pointer}
+#liam-customize .lc-avatar-arrow svg{width:19px;height:19px}
+#liam-customize .lc-avatar-arrow:disabled{opacity:.3;cursor:default}
+.lc-avatar-preview-note{font-size:10px;color:var(--skin-muted,#afc6dd)}
+.lc-owner-tag{display:inline-flex;align-items:center;gap:4px;color:#ffde79;border:1px solid #ffcf69;background:#302916;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;letter-spacing:.03em;white-space:nowrap}
+.lc-owner-tag svg{width:13px;height:13px}
+@media(max-width:420px){#liam-customize .lc-avatar-arrow{flex-basis:25px;min-width:25px}.lc-avatar-scroll-wrap{gap:2px;padding:0 2px}}
