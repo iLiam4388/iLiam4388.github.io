@@ -111,7 +111,15 @@ app.post('/checkout-status',authorize,async(req,res)=>{
  try{
   const s=await stripe.checkout.sessions.retrieve(id);
   if(s.livemode!==true||s.metadata?.app!==APP||s.metadata?.uid!==req.uid||s.client_reference_id!==req.uid)return res.status(404).json({error:'Session not found'});
-  const order=liveSession(s),record=order?(await ledger(order.pi).get()).data():null;
+  const order=liveSession(s);let record=order?(await ledger(order.pi).get()).data():null;
+  // A confirmed paid session can be fulfilled on demand when the webhook is delayed.
+  // The same transactional ledger reconciles both paths, so retries do not double-credit.
+  if(order&&!record){
+   const verifiedOrder=await getOrder(order.pi);
+   if(!verifiedOrder||verifiedOrder.uid!==req.uid||verifiedOrder.id!==order.id||verifiedOrder.pi!==order.pi)throw Error('Payment mismatch');
+   await applyOrder(verifiedOrder);
+   record=(await ledger(order.pi).get()).data();
+  }
   res.json({sessionStatus:s.status,paid:!!order,verified:!!record&&record.uid===req.uid&&record.pack===order.id,credited:record?.uid===req.uid?record.credited:0});
  }catch{return res.status(503).json({error:'Session status unavailable'})}
 });

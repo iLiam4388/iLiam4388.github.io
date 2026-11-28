@@ -33,7 +33,8 @@ if(live){
 
 function rewardAmount(result){return result?.verified===true&&Number.isSafeInteger(result.credited)&&result.credited>0?result.credited:0;}
 function showReward(result,sessionId,uid){
- const amount=rewardAmount(result);if(!amount||returnedFromCheckout)return;
+ const amount=rewardAmount(result);if(!amount)return;
+ if(document.visibilityState==='hidden'){const visible=()=>{if(document.visibilityState==='visible'){document.removeEventListener('visibilitychange',visible);if(current?.uid===uid)showReward(result,sessionId,uid);}};document.addEventListener('visibilitychange',visible);return;}
  const key='iliam-reward-shown-'+uid+'-'+sessionId;
  try{if(localStorage.getItem(key))return;localStorage.setItem(key,'1')}catch{}
  const el=document.createElement('div');el.className='lc-reward-overlay';el.setAttribute('role','status');
@@ -70,9 +71,9 @@ function render(){
   card.append(img,name,price,btn);cards.append(card);
  }
 }
-function closeCheckout(){
+function closeCheckout(keepReturnWindow=false){
  checkoutVersion++;polling=false;
- if(checkout){try{checkout.close()}catch{}checkout=null;}
+ if(checkout){if(!keepReturnWindow)try{checkout.close()}catch{}checkout=null;}
  busy=false;render();
 }
 async function openCheckout(id,coins,cents){
@@ -102,28 +103,32 @@ async function openCheckout(id,coins,cents){
   confirmOrder(result.sessionId,uid,v);
  }catch(e){if(v===checkoutVersion){closeCheckout();setStatus('Unable to open checkout. Please try again.');}}
 }
+const resultDelay=i=>document.visibilityState==='hidden'?5000:i<12?1200:i<40?2000:4000;
+let wakePaymentPoll=null;
+function waitPaymentPoll(ms){return new Promise(resolve=>{const done=()=>{clearTimeout(timer);if(wakePaymentPoll===done)wakePaymentPoll=null;resolve()};const timer=setTimeout(done,ms);wakePaymentPoll=done;});}
 async function confirmOrder(sessionId,uid,version){
  if(polling||!validSession(sessionId)||current?.uid!==uid)return;
  polling=true;
  confirmation.textContent='Checking Stripe for verified payment…';
  try{
-  for(let i=0;i<36;i++){
+  for(let i=0;i<100;i++){
    if(current?.uid!==uid||checkoutVersion!==version)return;
    try{
     const result=await api('/checkout-status',{sessionId});
     if(current?.uid!==uid||checkoutVersion!==version)return;
     if(result.verified){
      savePending(null);
-     closeCheckout();
+     closeCheckout(true);
      confirmation.textContent='Purchase verified.';showReward(result,sessionId,uid);
      await refresh();return;
     }
-    if(result.sessionStatus==='expired'||(checkout?.closed&&result.sessionStatus==='open'&&!result.paid)){
-     savePending(null);closeCheckout();confirmation.textContent='Checkout closed or expired. No verified coins were awarded.';await refresh();return;
+    if(result.sessionStatus==='expired'){
+     savePending(null);closeCheckout();confirmation.textContent='Checkout expired. No verified coins were awarded.';await refresh();return;
     }
-    confirmation.textContent=result.paid?'Payment received. Waiting for verified coin delivery…':'Waiting for checkout. Coins are credited only after Stripe verification.';
+    if(checkout?.closed&&result.sessionStatus==='open'&&!result.paid){savePending(null);closeCheckout();confirmation.textContent='Checkout window closed. Any completed payment will still be credited automatically.';await refresh();return;}
+    confirmation.textContent=result.paid?'Payment received. Delivering your coins…':'Complete your purchase in Stripe.';
    }catch(e){if(current?.uid===uid&&checkoutVersion===version)confirmation.textContent='Unable to verify payment right now. Please try again.';}
-   if(i<35)await new Promise(resolve=>setTimeout(resolve,5000));
+   if(i<99)await waitPaymentPoll(resultDelay(i));
   }
   if(current?.uid===uid&&checkoutVersion===version){confirmation.textContent='Payment verification is pending. Select Refresh to check again.';render();}
  }finally{if(checkoutVersion===version)polling=false;}
@@ -136,7 +141,7 @@ async function refresh(){
  setStatus('');
  try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');if(!Number.isSafeInteger(data.balance))throw Error('Wallet returned an invalid balance');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'':'Purchases are currently unavailable for this account.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus('Unable to load your balance. Please try again.')}}
 }
-function checkPending(){if(current&&pending&&!polling)confirmOrder(pending,current.uid,checkoutVersion);}
+function checkPending(){if(current&&pending){if(polling)wakePaymentPoll?.();else confirmOrder(pending,current.uid,checkoutVersion);}}
 onAuthStateChanged(auth,u=>{
  if(current?.uid!==u?.uid){closeCheckout();confirmation.textContent='';pending=null;}
  current=u;balance=null;liveAuthorized=false;requestVersion++;render();
@@ -151,6 +156,7 @@ onAuthStateChanged(auth,u=>{
 },()=>{liveAuthorized=false;balance=null;render();setStatus('Firebase sign-in could not be verified. Sign in again through Community.');});
 document.getElementById('lc-refresh-wallet').addEventListener('click',()=>{refresh();checkPending();});
 window.addEventListener('focus',()=>{if(current){refresh();checkPending();}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&current)checkPending();});
 if(returnedFromCheckout){
  const exit=document.createElement('button');exit.type='button';exit.className='lc-pack-buy';exit.textContent='Close payment window';exit.onclick=()=>{window.close();if(!window.closed)confirmation.textContent='You may close this tab and return to iLiam. Coins are only credited after verified payment.';};
  root.querySelector('.lc-payment-actions').prepend(exit);
