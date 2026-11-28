@@ -775,7 +775,7 @@ async function spinChest(kind,amount,g){
  else if(wheel){const center=(chestBounds[index]+chestBounds[index+1])/2;wheel.style.transform='rotate('+(360-center)+'deg)';}
  if(g!==generation)return;celebrateChest(amount,type[1]);
 }
-function placeChestButton(){const n=document.getElementById('iliam-notify-settings'),r=n?.getBoundingClientRect();if(r&&r.height>0){chestButton.style.bottom=Math.max(12,innerHeight-r.top+8)+'px';chestButton.style.right=Math.max(8,innerWidth-r.right)+'px';}else{chestButton.style.removeProperty('bottom');chestButton.style.removeProperty('right');}}
+function placeChestButton(){const n=document.getElementById('iliam-notify-settings'),r=n?.getBoundingClientRect();chestButton.style.left='auto';if(r&&r.height>0){chestButton.style.bottom=Math.max(12,innerHeight-r.top+8)+'px';chestButton.style.right=Math.max(8,innerWidth-r.right)+'px';}else{chestButton.style.bottom='12px';chestButton.style.right='12px';}}
 window.addEventListener('resize',placeChestButton);
 
 function rewardToast(title,amount){const t=element('div','','lc-reward-toast');const coin=element('span','LC','lc-toast-coin');const copy=element('div');copy.append(element('strong',title),element('span','+'+amount.toLocaleString()+' LC'));t.append(coin,copy);toastRoot.append(t);setTimeout(()=>t.remove(),5000);}
