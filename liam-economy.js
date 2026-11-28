@@ -2,8 +2,8 @@ import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
-import {defaultAppearance,dotSVG,appearanceForProfile} from './idot-render.js?v=3';
-import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars} from './liam-expansion.js?v=1';
+import {defaultAppearance,dotSVG,appearanceForProfile} from './idot-render.js?v=4';
+import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars} from './liam-expansion.js?v=2';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const catalog=[
  ['follower','iDot Assistant',250,'iDot','Your own customized iDot follows your cursor. Eye tracking is included.',{}],
@@ -525,7 +525,7 @@ function apply(){
  const otherBuddy=has(appearance.buddyStyle)?buddySVG(appearance.buddyStyle):'';
  buddy.hidden=!(user&&(otherBuddy||has('follower')&&appearance.follower)&&fine.matches&&!motion.matches);
  if(!buddy.hidden){buddy.innerHTML=otherBuddy||dotSVG(appearance);if(!frame)frame=requestAnimationFrame(tick)}
- const cursor=has(appearance.cursorStyle)?cursorSvg(appearance.cursorStyle):'';
+ const cursor=has(appearance.cursorStyle)?cursorSvg(appearance.cursorStyle):has('cursor')&&appearance.cursor?cursorSvg('cursor'):'';
  document.body.classList.toggle('lc-new-cursor',!!cursor);
  document.body.style.setProperty('--lc-custom-cursor',cursor?'url("data:image/svg+xml,'+encodeURIComponent(cursor)+'") '+(['cursorStar','cursorIce','cursorFire','cursorDot'].includes(appearance.cursorStyle)?'16 16':'3 3')+', auto':'auto');
  document.body.classList.toggle('lc-cursor',!cursor&&has('cursor')&&appearance.cursor);
@@ -545,8 +545,8 @@ async function png(id,config,w=280,h=180){
  const g=ctx.createLinearGradient(0,0,w,h);g.addColorStop(0,'#102a55');g.addColorStop(1,'#38165f');ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
  ctx.fillStyle='#b9d7ff';for(let i=0;i<22;i++){ctx.globalAlpha=.35;ctx.fillRect((i*83+17)%w,(i*41+11)%h,2,2)}ctx.globalAlpha=1;
  const extra=expansionById.get(id);
- if(extra?.[3]==='Cursors'||extra?.[3]==='Buddies'||extra?.[3]==='iDot'){
-  const svg=extra[3]==='Cursors'?cursorSvg(id):extra[3]==='Buddies'?buddySVG(id):dotSVG({accessory:id});const image=await svgImage(svg);const size=Math.min(w,h)*.78;ctx.drawImage(image,(w-size)/2,(h-size)/2,size,size);return canvas.toDataURL('image/png');
+ if(id==='cursor'||extra?.[3]==='Cursors'||extra?.[3]==='Buddies'||extra?.[3]==='iDot'){
+  const svg=id==='cursor'||extra?.[3]==='Cursors'?cursorSvg(id):extra?.[3]==='Buddies'?buddySVG(id):dotSVG({accessory:id});const image=await svgImage(svg);const size=Math.min(w,h)*.78;ctx.drawImage(image,(w-size)/2,(h-size)/2,size,size);return canvas.toDataURL('image/png');
  }
  if(extra?.[3]==='Textures'||id==='packGalaxy'){
   const skin=extra?.[3]==='Textures'?id:'themeGalaxy',v=themeVars(skin);
