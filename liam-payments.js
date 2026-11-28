@@ -1,3 +1,4 @@
+import {createRewardCelebration} from './liam-reward-celebration.js?v=1';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
 import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import {firebaseConfig} from './firebase-config.js';
@@ -46,16 +47,7 @@ function playNextReward(){
  for(const [key,entry] of rewardQueue){
   rewardQueue.delete(key);
   if(current?.uid!==entry.uid||rewardSeen(key))continue;
-  const el=document.createElement('div');el.className='lc-reward-overlay';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
-  const panel=document.createElement('div');panel.className='lc-reward-card';
-  const burst=document.createElement('div');burst.className='lc-reward-burst';burst.setAttribute('aria-hidden','true');
-  for(let i=0;i<12;i++){const spark=document.createElement('span');spark.className='lc-reward-spark';spark.style.setProperty('--angle',i*30+'deg');spark.style.setProperty('--distance',(70+(i%3)*15)+'px');burst.append(spark);}
-  const coin=document.createElement('div');coin.className='lc-reward-coin';coin.setAttribute('aria-hidden','true');coin.textContent='LC';burst.append(coin);
-  const title=document.createElement('strong');title.className='lc-reward-amount';title.textContent='+'+entry.amount.toLocaleString();
-  const subtitle=document.createElement('span');subtitle.className='lc-reward-label';subtitle.textContent=live?'New iLiam Coins!':'New test coins!';
-  const message=document.createElement('span');message.className='lc-reward-success';message.textContent='Purchase successful';
-  const done=document.createElement('button');done.type='button';done.className='lc-reward-done';done.textContent='Continue';done.onclick=()=>finishReward();
-  panel.append(burst,title,subtitle,message,done);el.append(panel);document.body.append(el);
+  const el=createRewardCelebration({amount:entry.amount,label:live?'New iLiam Coins!':'New test coins!',message:'Purchase successful',onDone:()=>finishReward()});
   activeReward={key,entry,el,timer:setTimeout(()=>finishReward(),5500)};return;
  }
 }

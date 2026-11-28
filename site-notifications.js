@@ -19,7 +19,7 @@ const CSS=`
 `;
 document.head.append(Object.assign(document.createElement('style'),{textContent:CSS}));
 const stack=document.createElement('div');stack.id='iliam-announcements';stack.setAttribute('aria-live','polite');document.body.append(stack);
-const toggle=document.createElement('button');toggle.id='iliam-notify-settings';toggle.textContent='🔔 Notifications';document.body.append(toggle);
+const toggle=document.createElement('button');toggle.id='iliam-notify-settings';toggle.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg> Notifications';document.body.append(toggle);
 const panel=document.createElement('section');panel.id='iliam-notify-panel';panel.hidden=true;
 panel.innerHTML='<strong>iLiam notifications</strong><label><input type="checkbox" id="noticeAnnouncements">New announcements</label><label><input type="checkbox" id="noticeVotes">Upvotes and featured posts</label><p style="font-size:12px">Browser notifications work while an iLiam page is open and require browser permission.</p><button type="button" id="iliam-enable-browser">Enable browser notifications</button><p id="iliam-permission-status" style="font-size:12px" role="status"></p>';
 document.body.append(panel);
