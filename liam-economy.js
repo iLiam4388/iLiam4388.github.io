@@ -837,7 +837,7 @@ async function claim(id,amount,knownPostId=''){return operate(async()=>{
   tx.update(ref,{balance:w.balance+amount,claims:[...w.claims,key],action:id,postId,...(id==='postReward'?{lastPostReward:serverTimestamp()}:{})});
  });
 })}
-let autoRunning=false,autoTimer=0;
+let autoRunning=false,autoTimer=0,autoPosts=null;
 function scheduleAchievements(delay=1200){if(!custom||!user||!wallet)return;clearTimeout(autoTimer);autoTimer=setTimeout(autoAchievements,delay);}
 async function autoAchievements(){
  if(autoRunning||busy||!user||!wallet)return;
@@ -845,8 +845,7 @@ async function autoAchievements(){
  try{
   const remaining=achievements.filter(a=>!wallet.claims.includes(a.id));
   const postKinds=['post','image','video','mixed','votes'];
-  let posts=[];
-  posts=(await getDocs(query(collection(db,'posts'),where('uid','==',uid),limit(250)))).docs;
+  const posts=autoPosts||[];
   const claimed=new Set(wallet.claims||[]);
   for(const post of posts){if(g!==generation||user?.uid!==uid)return;if(!busy&&post.data().featured===true&&!post.data().legacy&&!claimed.has('featuredReward:'+post.id))await claim('featuredReward',150,post.id);}
   if(g!==generation||user?.uid!==uid)return;
@@ -869,9 +868,10 @@ async function autoAchievements(){
 }
 
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;chestState={};chestLoaded=false;chestBusy=false;rewardBaseline=null;toastRoot.replaceChildren();dismissChestCelebration();hideChests();clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;autoPosts=null;chestState={};chestLoaded=false;chestBusy=false;rewardBaseline=null;toastRoot.replaceChildren();dismissChestCelebration();hideChests();clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
  stops.push(onSnapshot(doc(db,'liamRewardChests',current.uid),ss=>{if(g===generation){chestState=ss.data()||{};chestLoaded=true;updateChests()}},()=>{if(g===generation){chestLoaded=false;updateChests()}}));
+ if(custom)stops.push(onSnapshot(query(collection(db,'posts'),where('uid','==',current.uid),limit(250)),ps=>{if(g===generation){autoPosts=ps.docs;scheduleAchievements()}},e=>console.warn('Post reward listener unavailable',e)));
  if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize();scheduleAchievements()}},()=>{}));
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
