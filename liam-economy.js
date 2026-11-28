@@ -3,7 +3,7 @@ import {getAuth,onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.
 import {getFirestore,doc,getDoc,onSnapshot,runTransaction,updateDoc,collection,query,where,limit,getDocs,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 import {defaultAppearance,dotSVG,appearanceForProfile} from './idot-render.js?v=4';
-import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars} from './liam-expansion.js?v=2';
+import {expansion,expansionById,slotFor,rarityFor,describe,cursorSvg,buddySVG,profileClasses,themeVars,pixelTextureSVG} from './liam-expansion.js?v=3';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 const catalog=[
  ['follower','iDot Assistant',250,'iDot','Your own customized iDot follows your cursor. Eye tracking is included.',{}],
@@ -557,7 +557,7 @@ async function png(id,config,w=280,h=180){
   ctx.save();ctx.globalAlpha=.18;ctx.strokeStyle=edge;ctx.fillStyle=edge;ctx.lineWidth=1;
   if(cyber){for(let x=0;x<w;x+=18){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=18){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}for(let y=0;y<h;y+=4)ctx.fillRect(0,y,w,1)}
   else if(retro){for(let y=0;y<h;y+=4)ctx.fillRect(0,y,w,1)}
-  else if(arcade){for(let y=0;y<h;y+=12)for(let x=0;x<w;x+=12)if((x/12+y/12)%2===0)ctx.fillRect(x,y,12,12)}
+  else if(arcade){const tile=await svgImage(pixelTextureSVG());ctx.globalAlpha=1;ctx.imageSmoothingEnabled=false;for(let y=0;y<h;y+=96)for(let x=0;x<w;x+=96)ctx.drawImage(tile,x,y,96,96)}
   else if(skin==='themeOcean'){for(let y=0;y<h;y+=18){ctx.beginPath();for(let x=0;x<=w;x+=3){const yy=y+6*Math.sin(x/18);x?ctx.lineTo(x,yy):ctx.moveTo(x,yy)}ctx.stroke()}}
   else if(crystal){for(let x=-h;x<w;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+h,h);ctx.stroke()}}
   else if(skin==='themeSunset'||skin==='themeAurora'||cloud){for(let i=0;i<4;i++){ctx.beginPath();ctx.ellipse(w*(.2+i*.26),h*(.15+i%2*.23),w*.3,h*.18,-.3,0,Math.PI*2);ctx.fill()}}
