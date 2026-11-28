@@ -493,7 +493,7 @@ let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='idot',dailyTimer=0,messageCount=0,rareGranted=false;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
-const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=7';document.head.append(style);
+const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=8';document.head.append(style);
 const buddy=document.createElement('div');buddy.className='lc-buddy';buddy.hidden=true;buddy.setAttribute('aria-hidden','true');document.body.append(buddy);
 let lastX=innerWidth/2,lastY=innerHeight/2,bx=lastX,by=lastY,frame=0;
 const motion=matchMedia('(prefers-reduced-motion: reduce)'),fine=matchMedia('(pointer:fine)');
@@ -687,11 +687,54 @@ function renderDotStudio(){
  for(const [id,name,icon] of categories){const b=button('',()=>{dotCategory=id;dotSelection='';dotScroll=0;customize()});b.className='lc-avatar-category';b.setAttribute('aria-pressed',String(dotCategory===id));b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon+'</svg>';b.append(element('span',name));nav.append(b);}
  studio.append(top,stage,label,strip,nav);custom.append(studio);strip.scrollLeft=dotScroll;
 }
+let profileDisplay={};
+let styleCategory='banners',styleSelection='',styleScroll=0;
+const styleCategories=[
+ ['banners','Banners','<rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m3 16 5-5 4 4 3-3 6 5"/><circle cx="16.5" cy="8.5" r="1"/>'],
+ ['pictures','Picture','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="9" r="3"/><path d="M5.5 18a7 7 0 0 1 13 0"/>'],
+ ['rings','Rings','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/>'],
+ ['tags','Tags','<path d="M3 4h8l10 10-7 7L3 10z"/><circle cx="7.5" cy="8" r="1"/>'],
+ ['names','Names & effects','<path d="m3 19 7-14 7 14M6 13h8M19 5v6m-3-3h6"/>']
+];
+function styleGroup(id){const slot=slotFor(id);return slot==='bannerStyle'?'banners':slot==='avatarColor'?'pictures':id==='frame'||slot==='borderStyle'?'rings':id==='tag'||slot==='tagStyle'?'tags':'names';}
+function styleItems(){return catalog.filter(r=>r[3]==='Profile'&&!storeIds.has(r[0])).map(([id,name,price,group,desc,config])=>({id,name,price,config,group:styleGroup(id)}));}
+function styleChange(id,active=false){
+ const slot=slotFor(id),next=slot?{[slot]:active?'':id}:{[id]:!active};
+ if(!active){
+ if(slot==='borderStyle')next.frame=false;if(id==='frame')next.borderStyle='';
+ if(slot==='tagStyle')next.tag=false;if(id==='tag')next.tagStyle='';
+ if(slot==='nameStyle')next.gradient=false;if(id==='gradient')next.nameStyle='';
+ if(slot==='handleStyle')next.username=false;if(id==='username')next.handleStyle='';
+ }
+ return next;
+}
+function renderProfileStudio(){
+ const items=styleItems(),visible=items.filter(i=>i.group===styleCategory);
+ const selected=visible.find(i=>i.id===styleSelection)||visible.find(i=>equipped(i.id))||visible[0];
+ const preview={...appearance,...(selected&&!equipped(selected.id)?styleChange(selected.id):{})};
+ const studio=element('section','','lc-avatar-studio lc-profile-studio');studio.setAttribute('aria-label','Profile style editor');
+ const top=element('div','','lc-avatar-top');top.append(element('strong','Profile Style'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));
+ const exit=button('',()=>{profileTab='';styleSelection='';styleScroll=0;customize()});exit.className='lc-avatar-close';exit.setAttribute('aria-label','Close Profile Style');exit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';top.append(exit);
+ const stage=element('div','','lc-profile-stage');
+ const live=element('div','','lc-identity-preview lc-profile-live');const picture=element('img');picture.alt='Profile picture preview';
+ const existing=document.querySelector('#profileSummary img.avatar,#profileSummary img');
+ picture.src=appearance.avatar?dotAvatar(preview):existing?.getAttribute('src')||dotAvatar(preview);picture.className='avatar'+(preview.frame?' lc-frame':'');
+ const name=element('strong',profileDisplay.name||'Display Name',preview.gradient?'lc-preview-gradient':'');const handle=element('span',profileDisplay.handle||'@username',preview.username?'lc-blue-name':'');
+ handle.classList.add('username');live.append(picture,name,handle);profileClasses(live,preview);styleCosmeticProfile(live,preview);stage.append(live);
+ const label=element('div','','lc-avatar-selection');label.append(element('strong',selected?.name||'Select an item'));
+ if(selected){const active=equipped(selected.id),owned=has(selected.id);label.append(element('span',active?'Equipped':owned?'Owned · Preview':selected.price+' LC · Preview','lc-avatar-state'));const action=button(!owned?'Unlock · '+selected.price+' LC':active?'Unequip':'Equip',()=>owned?equip(styleChange(selected.id,active)):buy(selected.id,selected.price),busy||!wallet||(!owned&&wallet.balance<selected.price));action.classList.add('lc-avatar-action');label.append(action);}
+ const strip=element('div','','lc-avatar-strip');strip.setAttribute('aria-label','Available profile cosmetics');
+ for(const item of visible){const b=button('',()=>{styleScroll=strip.scrollLeft;styleSelection=item.id;customize()});b.className='lc-avatar-option';b.setAttribute('aria-pressed',String(selected?.id===item.id));b.setAttribute('aria-label',item.name+', '+(equipped(item.id)?'equipped':has(item.id)?'owned':item.price+' LC'));const thumb=element('span','','lc-avatar-thumb lc-profile-thumb');const img=element('img');img.alt='';thumbnail(item.id,item.config).then(src=>img.src=src).catch(()=>{});thumb.append(img);b.append(thumb,element('span',item.name,'lc-avatar-item-name'),element('span',equipped(item.id)?'Equipped':has(item.id)?'Owned':item.price+' LC','lc-avatar-item-price'));strip.append(b);}
+ strip.addEventListener('scroll',()=>{styleScroll=strip.scrollLeft},{passive:true});
+ const nav=element('div','','lc-avatar-categories');nav.setAttribute('aria-label','Profile categories');
+ for(const [id,name,icon] of styleCategories){const b=button('',()=>{styleCategory=id;styleSelection='';styleScroll=0;customize()});b.className='lc-avatar-category';b.setAttribute('aria-pressed',String(styleCategory===id));b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon+'</svg>';b.append(element('span',name));nav.append(b);}
+ studio.append(top,stage,label,strip,nav);custom.append(studio);strip.scrollLeft=styleScroll;
+}
 function customize(){
  if(!custom)return;custom.replaceChildren();if(!user)return;
  const bar=element('div','','lc-filters');
  for(const [id,label] of [['idot','iDot Studio'],['profile','Profile style'],['earn','Earn LC']]){
-  const b=button(label,()=>{profileTab=id;dotSelection='';dotScroll=0;customize()});b.setAttribute('aria-pressed',String(profileTab===id));bar.append(b);
+  const b=button(label,()=>{profileTab=id;dotSelection='';dotScroll=0;styleSelection='';styleScroll=0;customize()});b.setAttribute('aria-pressed',String(profileTab===id));bar.append(b);
  }
  const heading=element('div','','lc-studio-heading');heading.append(element('h3','Customize your profile'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));custom.append(heading,bar);status(custom);
  if(!profileTab){custom.append(element('p','Open a menu to customize your profile, customize iDot, or earn Liam Coins.'));return;}
@@ -724,47 +767,7 @@ function customize(){
   return;
  }
  if(profileTab==='idot'){renderDotStudio();return;}
- const isDot=false;
- const hero=element('div','','lc-studio-hero');
- if(isDot){
-  const live=element('div','','lc-dot-preview');live.innerHTML=dotSVG(appearance);
-  const info=element('div','','lc-studio-info');info.append(element('span','LIVE PREVIEW','lc-eyebrow'),element('h4','Your iDot'),element('p','Move your cursor to see its eyes follow you. Your avatar and assistant share this appearance.'));
-  const avatar=button(appearance.avatar?'iDot profile picture · On':'Use iDot as profile picture',()=>equip({avatar:!appearance.avatar}),busy||!wallet);
-  avatar.setAttribute('aria-pressed',String(appearance.avatar));info.append(avatar);if(rareGranted)info.append(element('p','Exclusive unlocked: iLiam Icon Crown','lc-rare-label'));hero.append(live,info);
- }else{
-  const live=element('div','','lc-identity-preview');const picture=element('img');picture.alt='Avatar preview';picture.src=dotAvatar(appearance);picture.className=appearance.frame?'lc-frame':'';
-  const name=element('strong','Display Name',appearance.gradient?'lc-preview-gradient':'');const handle=element('span','@username',appearance.username?'lc-blue-name':'');
-  live.append(picture,name,handle);profileClasses(live,appearance);styleCosmeticProfile(live,appearance);
-  const info=element('div','','lc-studio-info');info.append(element('span','PROFILE PREVIEW','lc-eyebrow'),element('h4','Your public style'),element('p','Choose how your name and avatar look to the community.'));hero.append(live,info);
- }
- custom.append(hero);
- let grid=element('div','','lc-cosmetic-grid');
- function tile(id,name,price,desc,config,owned,active,onAction,rare=false){
-  const item=element('article','','lc-cosmetic'+(active?' lc-cosmetic-selected':'')+(rare?' lc-cosmetic-rare':''));
-  const img=element('img');img.alt=name+' preview';img.width=280;img.height=180;
-  thumbnail(id,config).then(src=>img.src=src).catch(()=>{});
-  item.append(img,element('h4',name),element('p',desc));
-  if(rare)item.append(element('span','ULTRA RARE · INVITE ONLY','lc-rare-label'));
-  else item.append(element('span',rarityFor(id)+' · '+(owned?'Owned':price+' LC'),'lc-item-price'));
-  const disabled=busy||!wallet||(!owned&&wallet.balance<price);
-  const b=button(owned?(active?'Equipped · Unequip':'Equip'):wallet&&wallet.balance<price?'Not enough LC':'Unlock',onAction,disabled||(id==='blue'&&active));b.setAttribute('aria-pressed',String(active));item.append(b);grid.append(item);
- }
- if(isDot&&rareGranted)tile('favicon','iLiam Icon Crown',0,'A special iLiam favicon worn above your iDot. Awarded to selected accounts.',{favicon:true},true,appearance.favicon===true,()=>equip({favicon:!appearance.favicon,...(!appearance.favicon?{accessory:'',hat:false}:{})}),true);
- const sectionFor=id=>{const slot=slotFor(id);if(isDot){if(['purple','green','gold'].includes(id)||slot==='color')return 'iDot Colors';if(id==='glasses'||id==='accHeart'||slot==='eyewearStyle')return 'Eyewear';if(id==='hat'||['accCap','accSleep','accTop','accPirate','accCrown'].includes(id)||slot==='hatStyle')return 'Hats';return 'Other Accessories';}if(slot==='avatarColor')return 'Profile Picture Colors';if(slot==='bannerStyle')return 'Profile Banners';if(id==='tag'||slot==='tagStyle')return 'Profile Tags';if(id==='frame'||slot==='borderStyle')return 'Profile Rings';return 'Name and Effects';};
- const sections=isDot?['iDot Colors','Eyewear','Hats','Other Accessories']:['Profile Picture Colors','Profile Banners','Profile Tags','Profile Rings','Name and Effects'];
- const initial=grid;grid=element('div','','lc-cosmetic-grid');
- if(isDot&&rareGranted&&initial.children.length)custom.append(element('h4','Exclusive items','lc-section-heading'),initial);
- for(const section of sections){grid=element('div','','lc-cosmetic-grid');
- if(isDot&&section==='iDot Colors')tile('blue','Classic Blue',0,'The original iDot.',{color:'blue'},true,appearance.color==='blue',()=>equip({color:'blue'}));
- for(const [id,name,price,group,desc,config] of catalog){
-  if(storeIds.has(id)||group!==(isDot?'iDot':'Profile')||sectionFor(id)!==section)continue;
-  const color=['purple','green','gold'].includes(id)||slotFor(id)==='color';
-  const active=color?appearance.color===id:equipped(id);
-  tile(id,name,price,desc,config,has(id),active,()=>has(id)?(color?equip({color:active?'blue':id}):switchItem(id)):buy(id,price));
- }
- if(grid.children.length)custom.append(element('h4',section,'lc-section-heading'),grid);
- }
-
+ if(profileTab==='profile')renderProfileStudio();
 }
 function render(){apply();shop();customize();}
 async function operate(fn){if(busy||!user)return;const g=generation;busy=true;error='';render();try{await fn()}catch(e){if(g===generation)error=e.message||String(e)}finally{if(g===generation){busy=false;render()}}}
@@ -827,13 +830,13 @@ async function autoAchievements(){
 }
 
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;styleCategory='banners';styleSelection='';styleScroll=0;profileDisplay={};appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
  if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize();scheduleAchievements()}},()=>{}));
  let started=false;
  stops.push(onSnapshot(profileRef,async p=>{
   if(g!==generation||!p.exists())return;
-  profileCreatedAt=p.data().createdAt?.toMillis?.()||null;rareGranted=p.data().idotFaviconGranted===true;appearance=appearanceForProfile(p.data());render();if(started)return;started=true;
+  profileDisplay={name:p.data().displayName||p.data().username||'',handle:p.data().username?'@'+String(p.data().username).replace(/^@/,''):''};profileCreatedAt=p.data().createdAt?.toMillis?.()||null;rareGranted=p.data().idotFaviconGranted===true;appearance=appearanceForProfile(p.data());render();if(started)return;started=true;
   try{await runTransaction(db,async tx=>{const w=await tx.get(ref);if(!w.exists())tx.set(ref,{balance:100,owned:[],claims:[],action:'starter',postId:''})});if(g!==generation)return;
    stops.push(onSnapshot(ref,s=>{if(g!==generation)return;wallet=s.data()||null;clearTimeout(dailyTimer);const times=[wallet?.lastDaily?wallet.lastDaily.toMillis()+86400000:0,wallet?.lastPostReward?wallet.lastPostReward.toMillis()+3600000:0].filter(t=>t>Date.now());if(times.length)dailyTimer=setTimeout(render,Math.min(...times)-Date.now()+1000);render();scheduleAchievements()},e=>{if(g===generation){error='Wallet unavailable: '+e.message;render()}}));
   }catch(e){if(g===generation){error='Liam Coins unavailable. The updated Firestore rules may need deployment. '+e.message;render()}}
