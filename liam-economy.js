@@ -493,7 +493,7 @@ let profileCreatedAt=null,achievementFilter='All';
 let user=null,wallet=null,appearance={...defaultAppearance},stops=[],generation=0,error='',busy=false,category='All',profileTab='idot',dailyTimer=0,messageCount=0,rareGranted=false;
 const store=document.getElementById('liam-shop'),custom=document.getElementById('liam-customize');
 const balance=document.createElement('a');balance.className='lc-balance';balance.href='community.html?earn=1';balance.hidden=true;document.body.append(balance);
-const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=6';document.head.append(style);
+const style=document.createElement('link');style.rel='stylesheet';style.href='liam-economy.css?v=7';document.head.append(style);
 const buddy=document.createElement('div');buddy.className='lc-buddy';buddy.hidden=true;buddy.setAttribute('aria-hidden','true');document.body.append(buddy);
 let lastX=innerWidth/2,lastY=innerHeight/2,bx=lastX,by=lastY,frame=0;
 const motion=matchMedia('(prefers-reduced-motion: reduce)'),fine=matchMedia('(pointer:fine)');
@@ -624,11 +624,74 @@ function shop(){
  const grid=element('div','','lc-grid');for(const [id,name,price,group,desc,c] of catalog){const displayGroup=id==='cursor'?'Cursors':id==='texture'?'Textures':id==='follower'?'Buddies':group;if(!storeIds.has(id)||(category==='Owned'?!has(id):category!=='All'&&displayGroup!==category))continue;const card=element('article','','lc-card'),img=element('img');img.alt=name;img.width=280;img.height=180;thumbnail(id,c).then(src=>img.src=src).catch(()=>{});card.append(img,element('span',rarityFor(id),'lc-item-rarity'),element('h3',name),element('p',desc),element('strong',price+' LC'));
  if(has(id)){if(id==='wallpaper')card.append(button('Download PNG',async()=>{const a=element('a');a.download='idot-wallpaper.png';a.href=await png(id,appearance,1920,1080);a.click()}));else if(group==='Downloads'){card.append(button('Download PNG pack',()=>downloadPack(id),busy));}else {card.append(button(equipped(id)?'Equipped · Turn off':'Owned · Equip',()=>switchItem(id),busy));if(id==='follower'){const a=element('a','Customize your iDot in Community');a.href='community.html?customize=1';card.append(a)}}}else card.append(button(wallet&&wallet.balance<price?'Not enough LC':'Buy',()=>buy(id,price),!wallet||busy||wallet.balance<price));grid.append(card)}store.append(grid);
 }
+// Compact avatar editor: catalog, ownership and transaction logic remain shared.
+let dotCategory='colors',dotSelection='',dotScroll=0;
+const dotCategories=[
+ ['colors','Colors','<circle cx="12" cy="12" r="9"/><ellipse cx="9" cy="11" rx="1.2" ry="2"/><ellipse cx="15" cy="11" rx="1.2" ry="2"/><path d="M9 16q3 2 6 0"/>'],
+ ['hats','Hats','<path d="M5 13Q5 5 12 5t7 8M3 13h18v3H3z"/><circle cx="12" cy="4" r="1.4"/>'],
+ ['eyewear','Eyewear','<path d="M3 10h7v4a3.5 3.5 0 0 1-7 0zm11 0h7v4a3.5 3.5 0 0 1-7 0zM10 12h4M1 10h2m18 0h2"/>'],
+ ['extras','Accessories','<circle cx="12" cy="12" r="7"/><ellipse cx="12" cy="12" rx="11" ry="3.7" transform="rotate(-28 12 12)"/>'],
+ ['exclusive','Exclusive','<path d="m3 7 4 4 5-7 5 7 4-4-2 11H5zM5 21h14"/>']
+];
+function dotGroup(id){
+ const slot=slotFor(id);
+ if(id==='blue'||['purple','green','gold'].includes(id)||slot==='color')return 'colors';
+ if(id==='hat'||['accCap','accSleep','accTop','accPirate','accCrown'].includes(id)||slot==='hatStyle')return 'hats';
+ if(id==='glasses'||id==='accHeart'||slot==='eyewearStyle')return 'eyewear';
+ return 'extras';
+}
+function dotItems(){
+ const items=[{id:'blue',name:'Classic Blue',price:0,config:{color:'blue'},group:'colors',free:true},...catalog.filter(r=>r[3]==='iDot'&&!storeIds.has(r[0])).map(([id,name,price,group,desc,config])=>({id,name,price,config,group:dotGroup(id)}))];
+ if(rareGranted)items.push({id:'favicon',name:'iLiam Icon Crown',price:0,config:{favicon:true},group:'exclusive',free:true});
+ return items;
+}
+const dotOwned=item=>item.free||has(item.id);
+const dotActive=item=>item.group==='colors'?appearance.color===item.id:item.id==='favicon'?appearance.favicon===true:equipped(item.id);
+function dotTryOn(item){
+ if(!item||dotActive(item))return {...appearance};
+ const id=item.id,slot=slotFor(id),next={...appearance};
+ if(item.group==='colors')next.color=id;
+ else if(id==='favicon'){Object.assign(next,{favicon:true,accessory:'',hat:false,hatStyle:''});}
+ else if(id==='hat'){Object.assign(next,{hat:true,accessory:'',hatStyle:'',favicon:false});}
+ else if(id==='glasses'){Object.assign(next,{glasses:true,eyewearStyle:''});if(next.accessory==='accHeart')next.accessory='';}
+ else if(slot==='hatStyle'){Object.assign(next,{hatStyle:id,hat:false,accessory:'',favicon:false});}
+ else if(slot==='eyewearStyle'){Object.assign(next,{eyewearStyle:id,glasses:false});if(next.accessory==='accHeart')next.accessory='';}
+ else if(slot==='accessory'){Object.assign(next,{accessory:id,hat:false,favicon:false,hatStyle:'',eyewearStyle:''});}
+ return next;
+}
+function dotAction(item){
+ if(!dotOwned(item))return buy(item.id,item.price);
+ if(item.group==='colors')return equip({color:item.id});
+ if(item.id==='favicon')return equip({favicon:!appearance.favicon,...(!appearance.favicon?{accessory:'',hat:false,hatStyle:''}:{})});
+ return switchItem(item.id);
+}
+function renderDotStudio(){
+ const items=dotItems(),categories=dotCategories.filter(c=>c[0]!=='exclusive'||rareGranted);
+ if(!categories.some(c=>c[0]===dotCategory)){dotCategory='colors';dotSelection='';dotScroll=0;}
+ const visible=items.filter(i=>i.group===dotCategory);
+ const selected=visible.find(i=>i.id===dotSelection)||visible.find(dotActive)||visible[0];
+ const studio=element('section','','lc-avatar-studio');studio.setAttribute('aria-label','iDot customization editor');
+ const top=element('div','','lc-avatar-top');top.append(element('strong','iDot Studio'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));
+ const exit=button('',()=>{});exit.onclick=()=>{profileTab='';dotSelection='';dotScroll=0;customize()};exit.className='lc-avatar-close';exit.setAttribute('aria-label','Close iDot Studio');exit.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';top.append(exit);
+ const stage=element('div','','lc-avatar-stage'),live=element('div','','lc-dot-preview');live.innerHTML=dotSVG(dotTryOn(selected));stage.append(live);
+ const avatar=button(appearance.avatar?'Profile picture: On':'Use as profile picture',()=>equip({avatar:!appearance.avatar}),busy||!wallet);avatar.className='lc-button lc-avatar-use';avatar.setAttribute('aria-pressed',String(appearance.avatar));stage.append(avatar);
+ const label=element('div','','lc-avatar-selection');const title=element('strong',selected?.name||'Select an item');label.append(title);
+ if(selected){const active=dotActive(selected),owned=dotOwned(selected);const state=active?'Equipped':owned?'Owned · Preview':selected.price+' LC · Preview';label.append(element('span',state,'lc-avatar-state'));const action=button(!owned?'Unlock · '+selected.price+' LC':active?(selected.group==='colors'?'Equipped':'Unequip'):'Equip',()=>dotAction(selected),busy||!wallet||(!owned&&wallet.balance<selected.price)||(active&&selected.group==='colors'));action.classList.add('lc-avatar-action');label.append(action);}
+ const strip=element('div','','lc-avatar-strip');strip.setAttribute('aria-label','Available '+dotCategory);
+ for(const item of visible){
+  const b=button('',()=>{dotScroll=strip.scrollLeft;dotSelection=item.id;customize()});b.className='lc-avatar-option';b.setAttribute('aria-pressed',String(selected?.id===item.id));b.setAttribute('aria-label',item.name+', '+(dotOwned(item)?dotActive(item)?'equipped':'owned':item.price+' LC'));
+  const thumb=element('span','','lc-avatar-thumb');thumb.innerHTML=dotSVG(item.group==='colors'?{color:item.id}:item.config);b.append(thumb,element('span',item.name,'lc-avatar-item-name'),element('span',dotActive(item)?'Equipped':dotOwned(item)?'Owned':item.price+' LC','lc-avatar-item-price'));strip.append(b);
+ }
+ strip.addEventListener('scroll',()=>{dotScroll=strip.scrollLeft},{passive:true});
+ const nav=element('div','','lc-avatar-categories');nav.setAttribute('aria-label','iDot accessory categories');
+ for(const [id,name,icon] of categories){const b=button('',()=>{dotCategory=id;dotSelection='';dotScroll=0;customize()});b.className='lc-avatar-category';b.setAttribute('aria-pressed',String(dotCategory===id));b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icon+'</svg>';b.append(element('span',name));nav.append(b);}
+ studio.append(top,stage,label,strip,nav);custom.append(studio);strip.scrollLeft=dotScroll;
+}
 function customize(){
  if(!custom)return;custom.replaceChildren();if(!user)return;
  const bar=element('div','','lc-filters');
  for(const [id,label] of [['idot','iDot Studio'],['profile','Profile style'],['earn','Earn LC']]){
-  const b=button(label,()=>{profileTab=id;customize()});b.setAttribute('aria-pressed',String(profileTab===id));bar.append(b);
+  const b=button(label,()=>{profileTab=id;dotSelection='';dotScroll=0;customize()});b.setAttribute('aria-pressed',String(profileTab===id));bar.append(b);
  }
  const heading=element('div','','lc-studio-heading');heading.append(element('h3','Customize your profile'),element('span',wallet?wallet.balance.toLocaleString()+' LC':'Loading…','lc-studio-coins'));custom.append(heading,bar);status(custom);
  if(!profileTab){custom.append(element('p','Open a menu to customize your profile, customize iDot, or earn Liam Coins.'));return;}
@@ -660,7 +723,8 @@ function customize(){
   custom.append(list);
   return;
  }
- const isDot=profileTab==='idot';
+ if(profileTab==='idot'){renderDotStudio();return;}
+ const isDot=false;
  const hero=element('div','','lc-studio-hero');
  if(isDot){
   const live=element('div','','lc-dot-preview');live.innerHTML=dotSVG(appearance);
@@ -763,7 +827,7 @@ async function autoAchievements(){
 }
 
 onAuthStateChanged(auth,async current=>{
- const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
+ const g=++generation;stops.forEach(s=>s());stops=[];user=current;clearTimeout(dailyTimer);clearTimeout(autoTimer);wallet=null;messageCount=0;rareGranted=false;profileCreatedAt=null;achievementFilter='All';profileTab='idot';dotCategory='colors';dotSelection='';dotScroll=0;appearance={...defaultAppearance};busy=false;error='';render();if(!current)return;
  const profileRef=doc(db,'profiles',current.uid),ref=doc(db,'liamWallets',current.uid);
  if(custom)stops.push(onSnapshot(doc(db,'liamMessageStats',current.uid),s=>{if(g===generation){messageCount=s.data()?.count||0;if(profileTab==='earn')customize();scheduleAchievements()}},()=>{}));
  let started=false;
