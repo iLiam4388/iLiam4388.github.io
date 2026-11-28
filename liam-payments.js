@@ -24,11 +24,22 @@ const status=document.getElementById('lc-payment-status'),wallet=document.getEle
 const setStatus=(message)=>{status.textContent=message};
 setStatus('Checking your iLiam sign-in…');
 if(live){
- root.querySelector('.lc-payment-badge').textContent=checkoutConfigured?'LIVE PAYMENT PILOT · REAL MONEY':'LIVE WALLET VERIFICATION · CHECKOUT DISABLED';
- root.querySelector('.lc-payment-note').textContent='Real one-time purchases for approved adult pilot users only. iLiam Coins are spendable on iLiam cosmetics, not redeemable for cash or transferable. Live checkout is disabled until approved.';
- document.getElementById('lc-refresh-wallet').textContent='Refresh wallet';
- heading.textContent='Live checkout';
+ root.querySelector('.lc-payment-badge').textContent=checkoutConfigured?'SECURE CHECKOUT':'CHECKOUT UNAVAILABLE';
+ root.querySelector('.lc-payment-note').textContent='One-time purchases for approved adult users. iLiam Coins can be spent on cosmetics and cannot be transferred or redeemed for cash.';
+ document.getElementById('lc-refresh-wallet').textContent='Refresh';
+ heading.textContent='Secure checkout';
  notice.textContent='Real money will be charged if you complete checkout.';
+}
+
+function rewardAmount(result){return result?.verified===true&&Number.isSafeInteger(result.credited)&&result.credited>0?result.credited:0;}
+function showReward(result,sessionId,uid){
+ const amount=rewardAmount(result);if(!amount||returnedFromCheckout)return;
+ const key='iliam-reward-shown-'+uid+'-'+sessionId;
+ try{if(localStorage.getItem(key))return;localStorage.setItem(key,'1')}catch{}
+ const el=document.createElement('div');el.className='lc-reward-overlay';el.setAttribute('role','status');
+ const coin=document.createElement('div');coin.className='lc-reward-coin';coin.textContent='LC';
+ const title=document.createElement('strong');title.textContent='+'+amount.toLocaleString()+' new iLiam Coins!';
+ el.append(coin,title);document.body.append(el);setTimeout(()=>el.remove(),4200);
 }
 
 async function api(path,body){
@@ -46,7 +57,7 @@ async function api(path,body){
 
 }
 function render(){
- wallet.textContent=modeName+' wallet: '+(balance===null?'—':balance.toLocaleString()+' '+coinsName);
+ wallet.textContent='Balance: '+(balance===null?'—':balance.toLocaleString()+' '+coinsName);
  cards.replaceChildren();
  if(returnedFromCheckout)return;
  for(const [id,coins,cents] of packs){
@@ -94,7 +105,7 @@ async function openCheckout(id,coins,cents){
   notice.textContent=live?'Complete the real purchase in the separate Stripe window. This page will verify it automatically.':'Use a Stripe test card in the separate window. No real money will be charged.';
   const resume=document.createElement('a');resume.className='lc-pack-buy';resume.href=url.href;resume.target='_blank';resume.rel='noopener noreferrer';resume.textContent='Reopen secure Stripe checkout';mount.replaceChildren(resume);
   confirmOrder(result.sessionId,uid,v);
- }catch(e){if(v===checkoutVersion){closeCheckout();setStatus(e.message||'Unable to open checkout');}}
+ }catch(e){if(v===checkoutVersion){closeCheckout();setStatus('Unable to open checkout. Please try again.');}}
 }
 async function confirmOrder(sessionId,uid,version){
  if(polling||!validSession(sessionId)||current?.uid!==uid)return;
@@ -109,14 +120,14 @@ async function confirmOrder(sessionId,uid,version){
     if(result.verified){
      savePending(null);
      closeCheckout();
-     confirmation.textContent='Stripe verified your '+(live?'':'test ')+'purchase. '+result.credited.toLocaleString()+' '+coinsName+' credited (after any refunds or disputes).';
+     confirmation.textContent='Purchase verified.';showReward(result,sessionId,uid);
      await refresh();return;
     }
     if(result.sessionStatus==='expired'){
      savePending(null);closeCheckout();confirmation.textContent='Checkout expired. No verified coins were awarded.';await refresh();return;
     }
     confirmation.textContent=result.paid?'Payment received. Waiting for verified coin delivery…':'Waiting for checkout. Coins are credited only after Stripe verification.';
-   }catch(e){if(current?.uid===uid&&checkoutVersion===version)confirmation.textContent='Payment verification unavailable: '+(e.message||'Try again');}
+   }catch(e){if(current?.uid===uid&&checkoutVersion===version)confirmation.textContent='Unable to verify payment right now. Please try again.';}
    if(i<35)await new Promise(resolve=>setTimeout(resolve,5000));
   }
   if(current?.uid===uid&&checkoutVersion===version){confirmation.textContent='Verification is still pending. Use Refresh wallet to check again, or close the checkout window before starting a new purchase.';render();}
@@ -127,8 +138,8 @@ async function refresh(){
  if(!backend){setStatus(modeName+' checkout is not enabled. No charges can be made.');return;}
  if(!current){setStatus('Sign in through Community to access checkout.');return;}
  if(!ready){setStatus('Payment backend is not configured.');return;}
- setStatus(live?'Connecting to live wallet… The free Render service may need to wake up.':'Connecting to sandbox wallet…');
- try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');if(!Number.isSafeInteger(data.balance))throw Error('Wallet returned an invalid balance');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'Live pilot: real money purchases.':'Live wallet verified. Real purchases remain disabled.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus(e.message)}}
+ setStatus('');
+ try{const data=await api('/wallet');if(v!==requestVersion)return;if(data.sandbox!==!live)throw Error('Payment environment mismatch');if(!Number.isSafeInteger(data.balance))throw Error('Wallet returned an invalid balance');balance=data.balance;liveAuthorized=live&&checkoutConfigured&&data.checkoutEnabled===true;render();setStatus(live?(liveAuthorized?'':'Purchases are currently unavailable for this account.'):'Sandbox only. Test coins cannot be spent in the normal store.');}catch(e){if(v===requestVersion){liveAuthorized=false;render();setStatus('Unable to load your balance. Please try again.')}}
 }
 function checkPending(){if(current&&pending&&!polling)confirmOrder(pending,current.uid,checkoutVersion);}
 onAuthStateChanged(auth,u=>{
